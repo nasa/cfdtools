@@ -1,0 +1,15 @@
+The KDTREE software, used in this collection by program FLOW_INTERP, is the
+open source package made available by Matthew Kennel (kdtree2.f90, without
+change, and test program kdree2_test.f90 that has been edited slightly for
+clarity).
+
+Working with distances in k dimensions, and efficient search trees, this
+package provides what is surely the fastest possible means of determining
+the nearest data point neighbor(s) to a given target point in k-space.
+
+For searching computational meshes, the nearest grid point (cell centroid?)
+may or may not be good enough.  For more precise interpolations within the
+best cell, see the Alternating Digital Tree module in the adt library, and
+the nearly 20 applications of it among the present collection of utilities.
+
+FLOW_INTERP, for instance, makes use of both approaches.

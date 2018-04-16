@@ -1,0 +1,3 @@
+      subroutine system
+      write (6, '(/, a)') ' SGI system routine is not usable.'
+      end

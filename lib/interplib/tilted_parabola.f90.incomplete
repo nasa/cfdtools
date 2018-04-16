@@ -1,0 +1,54 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   subroutine tilted_parabola (nx, x, xl, yl, sl, xr, yr, sr, y)
+!
+!  ONE-LINER:  Quadratic interpolation given two points and two slopes
+!
+!  PURPOSE:
+!
+!     TILTED_PARABOLA performs a form of quadratic interpolation, given two
+!  points and two slopes.  For given X(s), it returns corresponding Y(s).
+!  The relevant formula is:
+!
+!        x**2 + 2hxy + h**2 y**2 + 2gx + 2fy + c = 0  (i.e., h**2 - b = 0)
+!
+!     Since this is nonlinear in h, a safeguarded Newton iteration is performed.
+!
+!     The coefficients are NOT returned.  The parabola is assumed to be only
+!  slightly tilted, so that y = y(x) is unique.  The intended application is
+!  to the shoulder of an atmospheric entry capsule as an alternative to the
+!  earlier CUBINTRP with the same arguments.
+!
+!  HISTORY:  05/24/93  DAS  CUBINTRP original.
+!            07/01/13   "   Tilted parabola in place of a cubic.
+!
+!  AUTHOR:   David Saunders, ERC, Inc./NASA Ames Research Center, CA.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   implicit none
+
+!  Arguments:
+
+   integer, intent (in)  :: nx       ! # abscissas at which to evaluate y
+   real,    intent (in)  :: x(nx)    ! Evaluation abscissas
+   real,    intent (in)  :: &
+      xl, yl, sl, xr, yr, sr         ! Coordinates & 1st derivates at end pts.
+   real,    intent (out) :: y(nx)    ! Evaluations of the parabola at x(1:nx)
+
+!  Local variables:
+
+   integer :: i
+   real    :: c, f, g, h, J(3,3), r(3), v(3)
+
+!  Execution:
+
+!  We need to solve some messy nonlinear equations.
+!  This is more easily done with parametric Bezier curves or similar.
+!  Complete it only if using Gridgen or similar is out of the question.
+
+   do i = 1, nx
+      y(i) = messy
+   end do
+
+   end subroutine tilted_parabola

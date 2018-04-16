@@ -1,0 +1,1059 @@
+C+----------------------------------------------------------------------
+C
+      SUBROUTINE LCSFIT (NDATA, X, Y, NEW, METHOD, NEVAL, XEVAL, YEVAL,
+     &   YPEVAL)
+C
+C     Two-liner:  Storage-efficient local cubic spline fit (2-space)
+C     ----------  (monotonic and piecewise linear options too)
+C
+C     Description and usage:
+C     ----------------------
+C
+C        LCSFIT is the non-parametric analog of PLSFIT (parametric).
+C     It is intended for spline applications which do not require the
+C     spline coefficients as output.  It is efficient for repeated
+C     calls with the same data, so repeated use with NEVAL = 1 may be
+C     preferable to storing vectors of results.
+C
+C        LCSFIT offers monotonic spline and piecewise linear options
+C     also.  And it returns an interpolated first derivative along
+C     with the function value.  (The second derivative is omitted
+C     because Y" is not guaranteed to be continuous by local methods.)
+C
+C        See PLSFIT for more details on local methods.  As with most
+C     numerical methods, scaling of the data to the unit interval (and
+C     unscaling of the result) is recommended to avoid unnecessary
+C     effects attributable to the data units.  Utilities GETSCALE and
+C     USESCALE from the present authors are appropriate.  The data
+C     abscissas should be distinct and either ascending or descending.
+C     PROTECT is available to check this.  Extrapolation is permitted
+C     (mainly in case of round-off; it is normally inadvisable).
+C
+C        The CSFIT/CSEVAL or CSDVAL pair are probably preferable if
+C     efficiency is not an issue, since CSFIT gives Y" continuity.
+C
+C     Arguments:
+C     ----------
+C
+C     Name    Type/Dimension  I/O/S  Description
+C     NDATA   I               I      Length of X, Y input data arrays.
+C
+C     X,      R (NDATA)       I      Input data coordinates.  The Xs
+C     Y                              must be distinct and monotonic,
+C                                    either ascending or descending.
+C                                    (No check here.) 
+C
+C     NEW     L               I      If control flag NEW is .TRUE., the
+C                                    search for a bracket starts from
+C                                    scratch, otherwise locally-saved
+C                                    search and fit information will be
+C                                    assumed to be correct. If calling
+C                                    LCSFIT from within a loop, set
+C                                    NEW = .FALSE. after the first call.
+C
+C     METHOD   C*1            I      (Uppercase) Type of fit to be used:
+C                                    'M' means Monotonic piecewise cubics;
+C                                    'B' means non-monotonic "Bessel"-type
+C                                        piecewise cubics (looser fit);
+C                                    'L' means piecewise Linear fit;
+C                                    'C' means Cyclic (periodic) end
+C                                        conditions: loose fit assumed.
+C
+C     NEVAL   I               I      Number of interpolations requested.
+C                                    NEVAL >= 1.  One call per result
+C                                    (NEVAL = 1) may save storage, and is
+C                                    not too inefficient as long as NEW
+C                                    is set to .FALSE. after the first.
+C
+C     XEVAL   R (NEVAL)       I      Abscissa(s) to interpolate to.  These
+C                                    are normally in the data range, but
+C                                    extrapolation - probably due to
+C                                    round-off - is not prevented.
+C
+C     YEVAL   R (NEVAL)       O      Interpolated function value(s).
+C
+C     YPEVAL  R (NEVAL)       O      Interpolated 1st derivative value(s).
+C                                    Pass the same storage as for YEVAL
+C                                    if no derivatives are required.
+C
+C     Significant local variables:
+C     ----------------------------
+C
+C     MEMORY         Indicates that coefficients are correct for the
+C                    current point.
+C
+C     H, DEL         Delta X and forward difference derivative arrays.
+C
+C     B, C, D        Coefficients of cubic on the bracketing interval.
+C
+C     Procedures:
+C     -----------
+C
+C     INTERVAL  1-D "interpolation" search.
+C     BESSEL    First derivative (central 3-point formula).
+C     BRODLIE   First derivative (central), adjusted for monotonicity.
+C     BUTLAND   First derivative (non-central), adjusted for monotonicity.
+C     THREEPT   First derivative (non-central 3-point formula).
+C
+C     Environment:  FORTRAN 90
+C     ------------
+C
+C     Error handling:  None
+C     ---------------
+C
+C     Notes:
+C     ------
+C
+C     (1)  Since many of the calculations must be repeated at both ends
+C          of an interval, the various finite difference quantities used
+C          are stored as arrays. The following "map" of a typical interior
+C          interval and its neighbors should help in understanding the
+C          notation.  The local array indices are all numbered relative
+C          to the left-hand end of the interval which brackets the point
+C          to be evaluated.
+C
+C                                  LEFT       RIGHT
+C
+C          Point         -1          0         +1          +2
+C
+C          Data           x -------- x -------- x --------- x
+C
+C          Interval      -1          0         +1
+C
+C
+C     Author: Robert Kennelly, Sterling Software/NASA Ames  (PLSFIT)
+C     -------
+C
+C     History:
+C     --------
+C
+C     27 Feb. 1987  R.A.Kennelly  Initial implementation of PLSFIT.
+C     23 Aug. 1989  D.A.Saunders  LCSFIT adapted as non-parametric form,
+C                                 for embedding in other utilities where
+C                                 minimizing work-space is desirable.
+C     20 June 1991    "    "      THREEPT (monotonic) renamed BUTLAND;
+C                                 THREEPT (pure 3-pt. formula) now used
+C                                 for nonmonotonic end-point handling;
+C                                 METHOD='C' case belatedly added, as
+C                                 needed by PLSINTRP for closed curves.
+C     23 July 1991    "    "      The tests for being in the same interval
+C                                 as before were not allowing for the
+C                                 descending-Xs case.
+C     06 May  1998    "    "      Minor Fortran 90 updates.
+C-----------------------------------------------------------------------
+
+      IMPLICIT NONE
+
+C     Arguments:
+
+      INTEGER,   INTENT (IN)  :: NDATA, NEVAL
+      REAL,      INTENT (IN)  :: X (NDATA), Y (NDATA), XEVAL (NEVAL)
+      REAL,      INTENT (OUT) :: YEVAL (NEVAL), YPEVAL (NEVAL)
+      LOGICAL,   INTENT (IN)  :: NEW
+      CHARACTER, INTENT (IN)  :: METHOD * 1
+
+C     Local constants:
+
+      REAL, PARAMETER :: ZERO = 0., ONE = 1., TWO = 2., THREE = 3.
+
+C     Local variables:
+
+      LOGICAL
+     &   CYCLIC, LINEAR, MEMORY, MONO
+      INTEGER
+     &   IEVAL, J, K, LEFT, RIGHT
+      REAL
+     &   ARROW, B (0:1), C, DELY (-1:1), D, DX, H (-1:1), XBYARROW, XE
+
+C     Procedures:
+
+      REAL, EXTERNAL ::
+     &   BESSEL, BRODLIE, BUTLAND, THREEPT
+
+C     Storage:
+
+      SAVE
+     &   ARROW, B, C, D, LEFT, RIGHT
+
+C     Execution:
+C     ----------
+
+      MONO   = METHOD == 'M'
+      CYCLIC = METHOD == 'C'
+      LINEAR = METHOD == 'L'
+
+      IF (CYCLIC) THEN
+         IF (Y (NDATA) /= Y (1)) STOP 'LCSFIT: End points must match.'
+      END IF
+
+C     Initialize search or avoid it if possible:
+
+      IF (NEW) THEN
+         MEMORY = .FALSE.
+         ARROW  = SIGN (ONE, X (2) - X (1))
+         LEFT   = 1
+      END IF
+
+      IEVAL = 1
+      XE = XEVAL (1)
+      XBYARROW = XE * ARROW
+
+      IF (.NOT. NEW) THEN
+      
+C        We can save a lot of time when LCSFIT is being called from within
+C        a loop by setting MEMORY if possible. The out-of-range checking
+C        relies on the fact that RIGHT = LEFT + 1 after the last return.
+C        Cater to the more likely case of XE in the previous, interior
+C        interval.
+
+         MEMORY = XBYARROW >= X (LEFT)  * ARROW .AND.
+     &            XBYARROW <  X (RIGHT) * ARROW
+
+         IF (.NOT. MEMORY) THEN
+            MEMORY =
+     &         LEFT  == 1     .AND. XBYARROW <  X (RIGHT) * ARROW
+     &         .OR.
+     &         RIGHT == NDATA .AND. XBYARROW >= X (LEFT)  * ARROW
+         END IF
+
+      END IF
+
+      IF (MEMORY) GO TO 70 ! Skip the bulk of the computation
+
+C     Loop over evaluation points requiring a new search:
+C     ---------------------------------------------------
+
+   10 CONTINUE
+
+C        Interpolation search for bracketing interval:
+C        ---------------------------------------------
+
+         CALL INTERVAL (NDATA, X, XE, ARROW, LEFT)
+
+         RIGHT = LEFT + 1
+
+C         -------------------------------------------
+C        |                                           |
+C        |   1 <= LEFT < RIGHT = LEFT + 1 <= NDATA   |
+C        |                                           |
+C         -------------------------------------------
+
+C        Compute derivatives by finite-differences:
+C        ------------------------------------------
+
+         IF (NDATA > 2 .AND. .NOT. LINEAR) THEN
+
+C           Interval and derivative approximations:
+C           ---------------------------------------
+
+C           The following duplicates more code than PLSFIT's approach,
+C           but eliminates some indirection - no need to wrap-around here.
+C           Handle the end conditions first to minimize testing LEFT, RIGHT.
+
+            IF (LEFT == 1) THEN
+
+               H (0) = X (2) - X (1)
+               DELY (0) = (Y (2) - Y (1)) / H (0)
+               H (1) = X (3) - X (2)
+               DELY (1) = (Y (3) - Y (2)) / H (1)
+
+               IF (CYCLIC) THEN ! Loose fit assumed
+                  H (-1) = X (NDATA) - X (NDATA - 1)
+                  DELY (-1) = (Y (NDATA) - Y (NDATA - 1)) / H (-1)
+                  B (0) = BESSEL (0, H, DELY)
+                  B (1) = BESSEL (1, H, DELY)
+               ELSE
+                  IF (MONO) THEN
+                     B (0) = BUTLAND (0, H, DELY)
+                     B (1) = BRODLIE (1, H, DELY)
+                  ELSE
+                     B (0) = THREEPT (0, H, DELY)
+                     B (1) = BESSEL  (1, H, DELY)
+                  END IF
+               END IF
+
+            ELSE IF (RIGHT == NDATA) THEN
+
+               H(-1) = X (LEFT) - X (LEFT-1)
+               DELY(-1) = (Y (LEFT) - Y (LEFT-1)) / H (-1)
+               H (0) = X (RIGHT) - X (LEFT)
+               DELY (0) = (Y (RIGHT) - Y (LEFT))  / H (0)
+
+               IF (CYCLIC) THEN
+                  H (1) = X (2) - X (1)
+                  DELY (1) = (Y (2) - Y (1)) / H (1)
+                  B (0) = BESSEL (0, H, DELY)
+                  B (1) = BESSEL (1, H, DELY)
+               ELSE
+
+                  IF (MONO) THEN
+                     B (0) = BRODLIE (0, H, DELY)
+                     B (1) = BUTLAND (1, H, DELY)
+                  ELSE
+                     B (0) = BESSEL  (0, H, DELY)
+                     B (1) = THREEPT (1, H, DELY)
+                  END IF
+               END IF
+
+            ELSE
+
+               K = LEFT
+               DO J = -1, +1
+                  H (J)    =  X (K) - X (K-1)
+                  DELY (J) = (Y (K) - Y (K-1)) / H (J)
+                  K = K + 1
+               END DO
+
+C              Select interpolation scheme:
+C              ----------------------------
+
+C              Compute (possibly adjusted) first derivatives at both
+C              left- and right-hand endpoints of the interval.
+
+               IF (MONO) THEN
+
+C                 Monotone - use Brodlie modification of Butland's
+C                 formula to adjust the derivatives at the knots.
+
+                  B (0) = BRODLIE (0, H, DELY)
+                  B (1) = BRODLIE (1, H, DELY)
+
+               ELSE ! METHOD = 'B'
+
+C                 Bessel - use central difference formula at the knots.
+
+                  B (0) = BESSEL (0, H, DELY)
+                  B (1) = BESSEL (1, H, DELY)
+
+               END IF
+
+            END IF
+
+C           Compute the remaining cubic coefficients.
+
+            C = (THREE * DELY (0) - TWO * B (0) - B (1)) / H (0)
+            D = ( -TWO * DELY (0) + B (0) + B (1)) / H (0) ** 2
+
+         ELSE ! NDATA = 2 .OR. METHOD = 'L'
+
+C           Degenerate case (linear).
+C           -------------------------
+
+            B (0) = (Y (RIGHT) - Y (LEFT)) / (X (RIGHT) - X (LEFT))
+            C     = ZERO
+            D     = ZERO
+
+         END IF
+
+C        Evaluate the cubic (derivative first in case only YEVAL is reqd.):
+C        ------------------------------------------------------------------
+
+   70    CONTINUE ! Start of same-interval loop inside new-interval loop
+
+            DX = XE - X (LEFT)
+            YPEVAL (IEVAL) = B (0) + DX * (TWO * C + DX * THREE * D)
+            YEVAL  (IEVAL) = Y (LEFT) + DX * (B (0) + DX * (C + DX * D))
+
+C           The next evaluation point may be in the same interval:
+C           ------------------------------------------------------
+
+            IF (IEVAL < NEVAL) THEN ! Skips this if NEVAL = 1
+
+               IEVAL = IEVAL + 1
+               XE = XEVAL (IEVAL)
+               XBYARROW = XE * ARROW
+               IF (XBYARROW >= X (LEFT)  * ARROW  .AND.
+     &             XBYARROW <  X (RIGHT) * ARROW) GO TO 70
+            
+               GO TO 10 ! Else much more work required.
+
+            END IF
+
+C     Termination:
+C     ------------
+
+      RETURN
+
+      END SUBROUTINE LCSFIT
+C+----------------------------------------------------------------------
+C
+      SUBROUTINE INTERVAL (NX, X, XFIND, ARROW, LEFT)
+C
+C     One-liner: Interpolation search for interval containing a point.
+C     ----------
+C
+C     Description and usage:
+C     ----------------------
+C
+C        Written primarily for interval-based interpolations such as
+C     piecewise linear or cubic spline, INTERVAL performs a search to
+C     locate the best interval for evaluating the interpolant at a
+C     given point. The normal case returns the "left-hand" endpoint of
+C     the interval bracketing the point, but for the out-of-range cases
+C     below or above the range of the knots, the interval to be used is
+C     the first or last. The array of knots must be monotonic, either
+C     increasing or decreasing. Diagrammatically, LEFT is returned as
+C     shown below for the normal case (no extrapolation):
+C
+C          X (1)  ...   X (LEFT)   X (LEFT+1)   ...      X (NX)
+C                                ^
+C                              XFIND
+C
+C     And for extrapolation:
+C
+C                     X (LEFT = 1)  ...   X (NX)
+C             ^
+C           XFIND
+C
+C     or,
+C                X (1)  ...   X (LEFT = NX-1)    X (NX)
+C                                                           ^
+C                                                         XFIND
+C
+C     If the point to be bracketed (XFIND) matches one of the knots, the
+C     index of that knot is returned as LEFT, i.e., the condition for a
+C     bracket of an interior point is:
+C
+C        X (LEFT) <= XFIND < X (LEFT+1)  if  ARROW = +1.0,  or
+C        X (LEFT) >= XFIND > X (LEFT+1)  if  ARROW = -1.0.
+C
+C        This is a low-level routine with minimal error checking. The
+C     calling program is assumed to have verified the following:
+C
+C     (1)  NX >= 2
+C     (2)  X strictly monotonic
+C     (3)  ARROW = +1.0 or -1.0
+C
+C     Subroutine PROTECT is available from the author for easily checking
+C     conditions (2) and (3). LEFT is verified on input, but efficiency in
+C     loops will benefit from passing the best estimate available, usually
+C     just the result of the last call.
+C
+C        INTERVAL was originally written for use with CSEVAL and TABLE1.
+C     The interpolation search was adapted from ideas in Sedgewick's book
+C     referenced below.
+C
+C     Arguments:
+C     ----------
+C
+C     Name  Dimension  Type  I/O/S  Description
+C     NX                I    I      Number of points in array X; must
+C                                   be >= 2 (no check performed).
+C
+C     X        NX       R    I      Array of points defining the set
+C                                   of intervals to be examined. Only
+C                                   the first NX-1 points are required.
+C
+C     XFIND             R    I      The point for which a bracketing
+C                                   interval is sought.
+C
+C     ARROW             R    I      Monotonicity indicator for input
+C                                   array X:
+C                                     -1.0  strictly decreasing
+C                                      0.0  NOT ALLOWED!
+C                                     +1.0  strictly increasing
+C                                   Supplied by the calling routine for
+C                                   reasons of speed (not checked).
+C
+C     LEFT              I    I/O    Input: guessed index of left-hand
+C                                   endpoint of the interval containing
+C                                   the specified point.
+C
+C                                   Output: index of the largest array
+C                                   value <= specified point (if ARROW=+1.0).
+C                                   Special case for data out of range:
+C                                   return left endpoint of closest interval.
+C                                   Thus, LEFT = 1 for XFIND < X (2), and
+C                                   LEFT = NX-1 for XFIND >= X (NX-1).
+C                                   (If ARROW=-1.0, reverse the inequalities.)
+C
+C     Environment:  Digital VAX-11/780, VMS FORTRAN
+C     ------------  Apple Macintosh, Absoft MacFORTRAN/020 v2.3
+C
+C     Notes:
+C     ------
+C
+C     (1)  IMPLICIT NONE and eight character symbols are not (yet) standard.
+C
+C     (2)  In speed-critical applications, it might be a good idea to build
+C          this algorithm in-line since it is typically called many times
+C          from within a loop. Another potential speed-up is removal of the
+C          ARROW multiplies, which restricts the method to increasing data.
+C          So far, the simplicity of separating out the messy search details
+C          and the generality of bi-directional searching have outweighed
+C          the modest speed penalty incurred.
+C
+C     Bibliography:
+C     -------------
+C
+C     (1) Sedgewick, R.  Algorithms.  Reading: Addison-Wesley, 1983.
+C            (Chap. 14)
+C
+C     Author:  Robert Kennelly and David Saunders, Sterling Federal Systems
+C     -------
+C
+C     Development history:
+C     --------------------
+C
+C     20 Oct. 1987    RAK    Interpolation search adapted (with mods.
+C                            for bidirectional search and some minor
+C                            repair) from CSEVAL (RAK) and TABLE1 (DAS).
+C     08 Aug. 1988    DAS    Clarified descriptions of bracketing, where
+C                            the inequalities depend upon ARROW.
+C
+C-----------------------------------------------------------------------
+
+C     Declarations.
+C     -------------
+
+      IMPLICIT NONE
+
+C     Constants.
+
+      REAL
+     &   ONE
+      PARAMETER
+     &  (ONE = 1.0E+0)
+
+C     Arguments.
+
+      INTEGER
+     &   LEFT, NX
+      REAL
+     &   ARROW, X (NX), XFIND
+
+C     Local variables.
+
+      INTEGER
+     &   LENGTH, NXLESS1, RIGHT, TRIAL
+      REAL
+     &   XBYARROW
+
+C     Execution.
+C     ----------
+
+      XBYARROW = XFIND * ARROW
+
+C     Simplify things by disposing of two important special cases so that
+C     X (LEFT) and X (RIGHT) can really bracket XFIND. As a by-product,
+C     this also takes care of the NX = 2, 3 cases.
+
+      NXLESS1 = NX - 1
+
+      IF (XBYARROW .GE. X (NXLESS1) * ARROW) THEN
+         LEFT = NXLESS1
+         GO TO 990
+      ELSE IF (XBYARROW .LT. X (2) * ARROW) THEN
+         LEFT = 1
+         GO TO 990
+      END IF
+
+C      ---------------------------------
+C     |                                 |
+C     |   X (2) <= XFIND < X (NX - 1)   |
+C     |            - or -               |
+C     |   X (2) > XFIND >= X (NX - 1)   |
+C     |                                 |
+C     |   NX > 3                        |
+C     |                                 |
+C      ---------------------------------
+
+C     Adjust the pointers. We hope that the calling routine has provided
+C     a reasonable guess (since it's probably working on an ordered array
+C     of points to evaluate), but check anyway.
+
+      LEFT = MIN (MAX (2, LEFT), NX - 2)
+
+      IF (XBYARROW .GE. X (LEFT) * ARROW) THEN
+         IF (XBYARROW .LT. X (LEFT + 1) * ARROW) THEN
+
+C           XFIND is in the original guessed-at interval.
+
+            GO TO 990
+         ELSE
+
+C           We'll look farther to the right. Evidently LEFT was < NX - 2.
+
+            RIGHT = NXLESS1
+            LEFT  = LEFT + 1
+         END IF
+      ELSE
+
+C        Look to the left of the guess. Evidently LEFT was > 2.
+
+         RIGHT = LEFT
+         LEFT  = 2
+      END IF
+
+C      ----------------------------------
+C     |                                  |
+C     |   2 <= LEFT < RIGHT <= NX - 1    |
+C     |                                  |
+C      ----------------------------------
+
+C     The interval length must decrease each time through - terminate
+C     when the correct interval is found or when the interval length
+C     cannot be decreased.
+
+   10 CONTINUE
+         LENGTH = RIGHT - LEFT
+         IF (LENGTH .GT. 1) THEN
+
+C           The trial value is a "linear" estimate of the left-hand endpoint
+C           of the interval bracketing the target XFIND, with protection
+C           against round-off (which can affect convergence).
+
+            TRIAL = MIN (RIGHT - 1, LEFT + MAX (0, INT (REAL (LENGTH) *
+     &         (XFIND - X (LEFT)) / (X (RIGHT) - X (LEFT)))))
+
+C            ------------------------------------------
+C           |                                          |
+C           |   2 <= LEFT <= TRIAL < RIGHT <= NX - 1   |
+C           |                                          |
+C            ------------------------------------------
+
+C           Adjust pointers. Increase LEFT or decrease RIGHT until done.
+
+            IF (XBYARROW .GE. X (TRIAL + 1) * ARROW) THEN
+               LEFT  = TRIAL + 1
+            ELSE IF (XBYARROW .LT. X (TRIAL) * ARROW) THEN
+               RIGHT = TRIAL
+            ELSE
+
+C              We're done: XFIND is in the interval [X (TRIAL), X (TRIAL+1)).
+
+               LEFT  = TRIAL
+               GO TO 990
+            END IF
+            GO TO 10
+
+         END IF
+
+C     Termination.
+C     ------------
+
+  990 RETURN
+
+      END SUBROUTINE INTERVAL
+C+----------------------------------------------------------------------
+C
+      FUNCTION BESSEL (J, H, DEL)
+C
+C     One-liner: First derivative using central 3-point formula
+C     ----------
+C
+C     Description and usage:
+C     ----------------------
+C
+C        Computes a first derivative approximation using the central
+C     3-point formula.  The data must be in the form of arrays containing
+C     finite difference interval lengths and 2-point forward difference
+C     derivatives.  BESSEL is intended to be used by PLSFIT for determin-
+C     ing end conditions on an interval for (non-monotonic) interpolation
+C     by piecewise cubics.  See the PLSFIT header for more details.
+C
+C     Arguments:
+C     ----------
+C
+C     Name    Type/Dimension  I/O/S  Description
+C     J       I               I      Indicates at which end of the
+C                                    interval the derivative is to be
+C                                    estimated. J = 0 means left-hand
+C                                    side, J = 1 means right.
+C
+C     H       R (-1:1)        I      Array of interval lengths. The 0th
+C                                    element is the length of the interval
+C                                    on which the cubic is to be deter-
+C                                    mined.
+C
+C     DEL     R (-1:1)        I      Array of derivative estimates. The
+C                                    0th element is the forward difference
+C                                    derivative over the interval on which
+C                                    the cubic is to be determined.
+C                                     
+C     BESSEL  R                 O    The function value is the adjusted
+C                                    derivative.
+C
+C     Author:  Robert Kennelly, Sterling Federal Systems/NASA-Ames
+C     -------
+C
+C     History:
+C     --------
+C
+C     18 Feb. 1987    RAK    Initial design and coding.
+C
+C-----------------------------------------------------------------------
+
+C     Declarations.
+C     -------------
+
+      IMPLICIT NONE
+
+C     Constants.
+
+      REAL
+     &   ONE
+      PARAMETER
+     &  (ONE = 1.0E+0)
+
+C     Arguments.
+
+      INTEGER
+     &   J
+      REAL
+     &   H (-1:1), DEL (-1:1), BESSEL
+
+C     Local variables.
+
+      REAL
+     &   WEIGHT
+
+C     Execution.
+C     ----------
+
+C     Estimate first derivative on left (J = 0) or right side (J = 1) of
+C     an interval.
+
+      WEIGHT = H (J) / (H (J) + H (J - 1))
+      BESSEL = WEIGHT * DEL (J - 1) + (ONE - WEIGHT) * DEL (J)
+
+      END FUNCTION BESSEL
+C+----------------------------------------------------------------------
+C
+      FUNCTION BRODLIE (J, H, DEL)
+C
+C     One-liner: First derivative, adjusted for monotonicity
+C     ----------
+C
+C     Description and usage:
+C     ----------------------
+C
+C        BRODLIE is intended to be used by PLSFIT for determining end
+C     conditions on an interval for monotonic interpolation by piecewise
+C     cubics. The data must be in the form of arrays containing finite
+C     difference interval lengths and 2-point forward difference deriva-
+C     tives. See the PLSFIT header for more details.
+C
+C        The method is due to Brodlie, Butland, Carlson, and Fritsch,
+C     as referenced in the PLSFIT header.
+C
+C     Arguments:
+C     ----------
+C
+C     Name    Type/Dimension  I/O/S  Description
+C     J       I               I      Indicates at which end of the
+C                                    interval the derivative is to be
+C                                    estimated. J = 0 means left-hand
+C                                    side, J = 1 means right.
+C
+C     H       R (-1:1)        I      Array of interval lengths. The 0th
+C                                    element is the length of the interval
+C                                    on which the cubic is to be deter-
+C                                    mined.
+C
+C     DEL     R (-1:1)        I      Array of derivative estimates. The
+C                                    0th element is the forward difference
+C                                    derivative over the interval on which
+C                                    the cubic is to be determined.
+C
+C     BRODLIE R                 O    The function value is the adjusted
+C                                    derivative.
+C
+C     Author:  Robert Kennelly, Sterling Federal Systems/NASA-Ames
+C     -------
+C
+C     History:
+C     --------
+C
+C     18 Feb. 1987    RAK    Initial design and coding.
+C     04 Dec. 2002    DAS    SIGN work-around for Intel compiler bug.
+C
+C-----------------------------------------------------------------------
+
+C     Declarations.
+C     -------------
+
+      IMPLICIT NONE
+
+C     Constants.
+
+      REAL
+     &   ZERO, ONE, THIRD
+      PARAMETER
+     &  (ZERO   = 0.0E+0,
+     &   ONE    = 1.0E+0,
+     &   THIRD  = ONE / 3.0E+0)
+
+C     Arguments.
+
+      INTEGER
+     &   J
+      REAL
+     &   BRODLIE, H (-1:1), DEL (-1:1)
+
+C     Local variables.
+
+      REAL
+     &   ALPHA, PRODUCT
+
+C     Execution.
+C     ----------
+
+C     Compare the algebraic signs of the two DEL's.  Have to test that
+C     at least one is positive to avoid a zero denominator (this fancy
+C     test permits one term to be zero, but the answer below is zero
+C     anyway in these cases).  The trick is to work around the SIGN
+C     function, which returns positive even if its 2nd argument is zero.
+
+C**** NO:  SIGN misbehaves on Intel systems when the 2nd argument is zero.
+
+      PRODUCT = DEL (J - 1) * DEL (J)
+
+      IF (PRODUCT == ZERO) THEN
+
+         BRODLIE = ZERO
+
+      ELSE IF (SIGN (ONE, -DEL (J - 1)) .NE. SIGN (ONE, DEL (J))) THEN
+
+C        Form "weighted harmonic mean" of the two finite-difference
+C        derivative approximations.  Note that we try to avoid overflow
+C        by not multiplying them together directly.
+
+         ALPHA   = THIRD * (ONE + H (J) / (H (J - 1) + H (J)))
+         BRODLIE = PRODUCT / (ALPHA * DEL (J) +
+     &      (ONE - ALPHA) * DEL (J - 1))
+      ELSE
+
+C        The signs differ, so make this point a local extremum.
+
+         BRODLIE = ZERO
+      END IF
+
+      END FUNCTION BRODLIE
+C+----------------------------------------------------------------------
+C
+      FUNCTION BUTLAND (J, H, DEL)
+C
+C     One-liner: First derivative, non-central 3-point formula, adjusted
+C     ----------
+C
+C     Description and usage:
+C     ----------------------
+C
+C        Computes a first derivative approximation for PLSFIT over an
+C     interval at a data boundary, using a modified forward or backward
+C     3-point formula.  The data must be in the form of arrays containing
+C     finite difference interval lengths and 2-point forward difference
+C     derivatives, and the differencing direction is controlled by a flag.
+C     See PLSFIT for more details, or THREEPT for the pure 3-pt. formula.
+C
+C        The "shape preserving adjustments" are from PCHIP, a monotone
+C     piecewise cubic interpolation package by F. N. Fritsch.
+C
+C     Arguments:
+C     ----------
+C
+C     Name    Type/Dimension  I/O/S  Description
+C     J       I               I      Indicates at which end of the
+C                                    interval the derivative is to be
+C                                    estimated. J = 0 means left-hand
+C                                    side, J = 1 means right.
+C
+C     H       R (-1:1)        I      Array of interval lengths. The 0th
+C                                    element is the length of the interval
+C                                    on which the cubic is to be deter-
+C                                    mined.
+C
+C     DEL     R (-1:1)        I      Array of derivative estimates. The
+C                                    0th element is the forward difference
+C                                    derivative over the interval on which
+C                                    the cubic is to be determined.
+C
+C     BUTLAND R                 O    The function value is the adjusted
+C                                    derivative.
+C
+C     Author:  Robert Kennelly, Sterling Federal Systems/NASA-Ames
+C     -------
+C
+C     History:
+C     --------
+C
+C     18 Feb. 1987    RAK    Initial design and coding, as THREEPT.
+C     20 June 1991    DAS    Monotonic form renamed BUTLAND; THREEPT
+C                            is now the pure 3-point formula.
+C     04 Dec. 2002     "     SIGN work-arounds for Intel compiler bug.
+C
+C-----------------------------------------------------------------------
+
+C     Declarations.
+C     -------------
+
+      IMPLICIT NONE
+
+C     Arguments.
+
+      INTEGER
+     &   J
+      REAL
+     &   H (-1:1), DEL (-1:1), BUTLAND
+
+C     Local constants.
+
+      REAL, PARAMETER ::
+     &   ZERO  = 0.0E+0,
+     &   ONE   = 1.0E+0,
+     &   THREE = 3.0E+0
+
+C     Local variables.
+
+      INTEGER
+     &   STEP
+      REAL
+     &   DMAX, WEIGHT
+      LOGICAL
+     &   CONSTRAIN
+
+C     Execution.
+C     ----------
+
+C     Estimate first derivative on a left-hand boundary using a 3-point
+C     forward difference (STEP = +1), or with a backward difference for
+C     the right-hand boundary (STEP = -1).
+
+      STEP = 1 - J - J   ! J here is consistent with related modules.
+
+C     In {H, DEL} form, the derivative looks like a weighted average.
+
+C***  Avoid zero as the second argument of SIGN: Intel compiler misbehaves.
+
+      IF (DEL (0) == ZERO) THEN
+
+         BUTLAND = ZERO
+
+      ELSE ! BUTLAND below cannot be zero
+
+         WEIGHT  = -H (0) / (H (0) + H (STEP))
+         BUTLAND = WEIGHT * DEL (STEP) + (ONE - WEIGHT) * DEL (0)
+
+C        Shape-preserving adjustments.  Note that we try to avoid overflow
+C        by not multiplying quantities directly.
+
+         IF (SIGN (ONE, BUTLAND) /= SIGN (ONE, DEL (0))) THEN
+
+C           Defer to the estimate closest to the boundary.
+
+            BUTLAND = ZERO
+
+C******  ELSE IF (SIGN (ONE, DEL (0)) .NE. SIGN (ONE, DEL (STEP))) THEN
+         ELSE
+
+            IF (DEL (STEP) == ZERO) THEN
+               CONSTRAIN = DEL (0) < ZERO
+            ELSE
+               CONSTRAIN = SIGN (ONE, DEL (0)) /= SIGN (ONE, DEL (STEP))
+            END IF
+
+            IF (CONSTRAIN) THEN
+
+C              If the monotonicity switches, may need to bound the estimate.
+
+               DMAX = THREE * DEL (0)
+               IF (ABS (BUTLAND) > ABS (DMAX)) BUTLAND = DMAX
+            END IF
+
+         END IF
+
+      END IF
+
+      END FUNCTION BUTLAND
+C+----------------------------------------------------------------------
+C
+      FUNCTION THREEPT (J, H, DEL)
+C
+C     One-liner: First derivative, non-central 3-point formula
+C     ----------
+C
+C     Description and usage:
+C     ----------------------
+C
+C        Computes a first derivative approximation for PLSFIT over an
+C     interval at a data boundary, using a forward or backward 3-point
+C     formula.  The data must be in the form of arrays containing finite
+C     difference interval lengths and 2-point forward difference deriva-
+C     tives, and the differencing direction is controlled by a flag. See
+C     PLSFIT for more details.
+C
+C        See module BUTLAND for a version with "shape-preserving"
+C     adjustments.
+C
+C     Arguments:
+C     ----------
+C
+C     Name    Type/Dimension  I/O/S  Description
+C     J       I               I      Indicates at which end of the
+C                                    interval the derivative is to be
+C                                    estimated. J = 0 means left-hand
+C                                    side, J = 1 means right. 
+C
+C     H       R (-1:1)        I      Array of interval lengths. The 0th
+C                                    element is the length of the interval
+C                                    on which the cubic is to be deter-
+C                                    mined.
+C
+C     DEL     R (-1:1)        I      Array of derivative estimates. The
+C                                    0th element is the forward difference
+C                                    derivative over the interval on which
+C                                    the cubic is to be determined.
+C                                     
+C     THREEPT R                 O    The function value is the derivative.
+C
+C     Author:  Robert Kennelly, Sterling Federal Systems/NASA-Ames
+C     -------
+C
+C     History:
+C     --------
+C
+C     18 Feb. 1987    RAK    Initial design and coding.
+C     06 June 1991    DAS    Original THREEPT renamed BUTLAND; THREEPT
+C                            now gives unmodified 1-sided 3-pt. results.
+C
+C-----------------------------------------------------------------------
+
+      IMPLICIT NONE
+
+C     Arguments.
+
+      INTEGER
+     &   J
+      REAL
+     &   H (-1:1), DEL (-1:1), THREEPT
+
+C     Local constants.
+
+      REAL
+     &   ONE
+      PARAMETER
+     &  (ONE = 1.0E+0)
+
+C     Local variables.
+
+      INTEGER
+     &   STEP
+      REAL
+     &   WEIGHT
+
+C     Execution.
+C     ----------
+
+C     Estimate first derivative on a left-hand boundary using a 3-point
+C     forward difference (STEP = +1), or with a backward difference for
+C     the right-hand boundary (STEP = -1).
+
+      STEP = 1 - J - J   ! J here is consistent with related modules.
+
+C     In {H, DEL} form, the derivative looks like a weighted average.
+
+      WEIGHT  = -H (0) / (H (0) + H (STEP))
+      THREEPT = WEIGHT * DEL (STEP) + (ONE - WEIGHT) * DEL (0)
+
+      END FUNCTION THREEPT

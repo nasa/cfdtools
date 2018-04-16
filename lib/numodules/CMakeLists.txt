@@ -1,0 +1,42 @@
+add_library(numodules
+  bessel.f
+  bounds.f
+  brodlie.f
+  butland.f
+  circ_shift.f
+  copy.f
+  d4coefs.f
+  deriv3.f
+  derivs_123.f90
+  fd12k.f
+  fd1sid.f
+  fdcntr.f
+  fdcurv.f
+  fivepoint.f
+  gaussian.f
+  getblock.f
+  getrow.f
+  getscale.f
+  getxform.f
+  irverse.f
+  meanx.f
+  nmlizx.f
+  power2.f
+  protect.f
+  putrow.f
+  rverse.f
+  shiftx.f
+  splitxyz.f90
+  stdev1p.f
+  stdev2p.f
+  stdevi2.f
+  sumx.f
+  table_coordinates.f90
+  table_derivatives.f90
+  threept.f
+  trapezoid_recursion.f90
+  usescale.f
+  utcopy.f
+)
+target_link_libraries(numodules global)
+install(FILES README DESTINATION doc)

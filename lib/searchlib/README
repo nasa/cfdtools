@@ -1,0 +1,28 @@
+The searchlib collection contains a small number of 1-D search and sort
+utilities, along with some 2- and 3-space structured grid searching tools
+that are no longer recommended.
+
+For mesh searching, see the adt (Alternating Digital Tree) collection
+elsewhere.
+
+For nearest-data point(s) in k-space, see KDTREE elsewhere.
+
+asrch3d.f      ! Essentially INTERVAL (below) applied to a 3-space curve
+bsrchr.f       ! Binary search through a sorted list of reals
+hsortcc.f      ! Heap sort of a list of a character list & a 2nd char. list
+hsortii.f      ! Heap sort of a list of integers & a second integer list
+hsortiind.f    ! HSORTII variant that doesn't overwrite the first list
+hsortri.f      ! Heap sort of a list of reals & a second integer list
+hsortrr.f      ! Heap sort of a list of reals & a second real list
+insertxy.f90   ! Insert (xin, yin) into x(:), y(:) where x(:) is ordered
+interval.f     ! Interpolation search of a real list (ascending|descending)
+interval_i.f   ! Variant of INTERVAL for an integer list
+merger.f       ! Merge 2 real lists (one of which is sorted); uses INTERVAL
+merger2.f      ! Variant of MERGER for pairs of (X, Y) arrays sorted in X
+ripple2d.f     ! Search (1 block of) a 2-space structured grid; see adt
+ripple2p.f     ! Variant of RIPPLE2D for (2,ni,nj) data; see adt
+ripple3d.f     ! Search (1 block of) a 3-spc. structured vol. grid; see adt
+ripple_surf.f  ! Search (1 block of) a 3-spc. structured srf. grid; see adt
+ssrchr.f       ! Sequential search for real number in real list (unsorted?)
+unique_ri.f90  ! Use with HSORTRI if duplicates may be present
+xsort.f        ! Bubble sort analog of HSORTRI; heap sort is preferable

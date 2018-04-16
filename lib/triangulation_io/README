@@ -1,0 +1,60 @@
+Module triangulation_io packages I/O for unstructured surface or volume
+datasets in 3-space.  For surface datasets, two types of Tecplot format
+are supported: triangulations with optional function values that are
+either vertex-centered or cell-centered.  Hooks appear for binary Tecplot
+files, but only ASCII files may be read or written presently.
+
+   public :: tri_read               ! Read  an entire unstructured surface
+   public :: tri_write              ! Write an entire unstructured surface
+
+   public :: tri_header_read        ! Read  an unstructured surface header
+   public :: tri_header_write       ! Write fn unstructured surface header
+   public :: tri_zone_allocate      ! Allocate the arrays for one surface zone
+   public :: tri_zone_read          ! Read  one zone of a surface dataset
+   public :: tri_zone_write         ! Write one zone of a surface dataset
+
+   public :: deallocate_tri_zones   ! Deallocate arrays of indicated zones
+
+   public :: tri_data_range         ! x/y/z data ranges over all surface zones
+   public :: tri_area               ! Total wetted area over all surface zones
+   public :: tri_volume             ! Total volume enclosed by surface zone(s)
+   public :: tri_center_of_mass     ! CM of all surface zones (and of each zone)
+   public :: tri_moments_of_inertia ! Surf. moments of inertia about Ox/y/z
+   public :: tri_apply_rotation_R   ! Apply matrix from tri_moments_of_inertia
+   public :: tri_zone_data_range    ! x/y/z data ranges for one surface zone
+   public :: tri_zone_area          ! Total wetted area of a triangulated zone
+   public :: tri_zone_volume        ! Volume def. by surface zone & interior pt.
+   public :: tri_zone_center_of_mass! CM of surf. zone + cell centroids & areas
+
+!  Analogous utilities for volume meshes (tets or hexahedra);
+!  some can use the tri* utility directly, but this avoids confusion:
+
+   public :: vol_read               ! Read  an entire unstructured volume
+   public :: vol_write              ! Write an entire unstructured volume
+
+   public :: vol_get_element_type   ! Read enough of a surf|vol to determine ET
+   public :: vol_header_read        ! Read  unstructured volume dataset header
+   public :: vol_header_write       ! Write unstructured volume dataset header
+   public :: vol_zone_allocate      ! Allocate arrays for a zone of volume
+   public :: vol_zone_read          ! Read  one zone of an unstructured volume
+   public :: vol_zone_write         ! Write one zone of an unstructured volume
+
+   public :: deallocate_vol_zones   ! Deallocate arrays of the indicated zone(s)
+
+   public :: vol_data_range         ! Compute x/y/z data ranges over all zones
+   public :: vol_volume             ! Total volume of all elements of all zones
+   public :: vol_center_of_mass     ! CM of all vol. zones (and of each zone)
+   public :: vol_moments_of_inertia ! Vol. moments of inertia about Ox/y/z
+   public :: vol_apply_rotation_R   ! Applies matrix from vol_moments_of_inertia
+   public :: vol_zone_data_range    ! x/y/z data ranges for one volume zone
+   public :: vol_zone_volume        ! Volume of all cells of one volume zone
+   public :: vol_zone_center_of_mass! CM of vol. zone + cell centroids & volumes
+
+Two derived data types also appear in triangulation_io.f90:
+
+   tri_header_structure
+   tri_zone_structure
+
+See TRI_TO_QUAD, NEQAIR_Integration for sample applications of surface reading.
+See TRI_TO_TRI, HEMISPHERES_OF_SIGHT for writing examples.
+See TRIANGULATION_TOOL for driving recently-added geometric operations.

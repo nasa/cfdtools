@@ -1,0 +1,324 @@
+      subroutine calcphi (x,y,z,xyz,ndc,phi,epsilon)
+
+c  Compute phi for (x,y,z) in cell xyz(1..3,ndc(1..4)).
+c
+c  Negative indices indicate original volume is negative, those two
+c  vertices were swapped to make the volume positive.
+c  <What is Scott really saying here?>
+c
+c  29-JUN-1999..2-JUL-1999,9-JUL-1999..12-JUL-1999.
+c               Scott D. Thomas, Raytheon ITSS Corporation
+c               Contract NAS 2-98080/172, NASA Ames Research Center.
+c
+c  11-AUG-2000  David Saunders  One-precision version.  (Use -r4 or -r8 switch.)
+
+      implicit none
+
+      integer ndc(4)
+      integer n1,n2,n3,n4,nmin,m,m1,m2,m3
+      real    x,y,z,epsilon
+      real    xyz(3,*)
+      real    phi(3)
+      real    a(3),b(3),c(3),d(3),dot1,dot2,dot3,dot4,h,phi0,sum
+      real    xyzd(3),phi0n
+      real    phitmp
+c
+      n1 = abs(ndc(1))
+      n2 = abs(ndc(2))
+      n3 = abs(ndc(3))
+      n4 = abs(ndc(4))
+c
+c  Check for a point match on one of the vertices.
+c
+      if(abs(x-xyz(1,n1)).le.epsilon.and.
+     .   abs(y-xyz(2,n1)).le.epsilon.and.
+     .   abs(z-xyz(3,n1)).le.epsilon) then
+        phi(1) = 0.0
+        phi(2) = 0.0
+        phi(3) = 0.0
+        goto 40
+      else if(abs(x-xyz(1,n2)).le.epsilon.and.
+     .        abs(y-xyz(2,n2)).le.epsilon.and.
+     .        abs(z-xyz(3,n2)).le.epsilon) then
+        phi(1) = 1.0
+        phi(2) = 0.0
+        phi(3) = 0.0
+        goto 40
+      else if(abs(x-xyz(1,n3)).le.epsilon.and.
+     .        abs(y-xyz(2,n3)).le.epsilon.and.
+     .        abs(z-xyz(3,n3)).le.epsilon) then
+        phi(1) = 0.0
+        phi(2) = 1.0
+        phi(3) = 0.0
+        goto 40
+      else if(abs(x-xyz(1,n4)).le.epsilon.and.
+     .        abs(y-xyz(2,n4)).le.epsilon.and.
+     .        abs(z-xyz(3,n4)).le.epsilon) then
+        phi(1) = 0.0
+        phi(2) = 0.0
+        phi(3) = 1.0
+        goto 40
+      endif
+c
+c  (1) n1,n2,n3 face.
+c
+      nmin = min(n1,n2,n3)
+      if(n1.eq.nmin) then
+        m1 = n1
+        m2 = n2
+        m3 = n3
+      else if(n2.eq.nmin) then
+        m1 = n2
+        m2 = n3
+        m3 = n1
+      else
+        m1 = n3
+        m2 = n1
+        m3 = n2
+      endif
+      do m=1,3
+        a(m) = xyz(m,m2) - xyz(m,m1)
+        b(m) = xyz(m,m3) - xyz(m,m1)
+      end do
+      c(1) = a(2)*b(3)-a(3)*b(2)
+      c(2) = a(3)*b(1)-a(1)*b(3)
+      c(3) = a(1)*b(2)-a(2)*b(1)
+      d(1) = x-xyz(1,m1)
+      d(2) = y-xyz(2,m1)
+      d(3) = z-xyz(3,m1)
+      dot1 = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(dot1.lt.0.0) goto 10
+      do m=1,3
+        d(m) = xyz(m,n4)-xyz(m,m1)
+      end do
+      h    = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(h.lt.0.0) goto 20
+      if(h.eq.0.0) then
+        phi(3) = 0.0
+      else
+        phi(3) = dot1/h
+      endif
+c
+c  (2) n1,n4,n2 face.
+c
+      nmin = min(n1,n4,n2)
+      if(n1.eq.nmin) then
+        m1 = n1
+        m2 = n4
+        m3 = n2
+      else if(n4.eq.nmin) then
+        m1 = n4
+        m2 = n2
+        m3 = n1
+      else
+        m1 = n2
+        m2 = n1
+        m3 = n4
+      endif
+      do m=1,3
+        a(m) = xyz(m,m2) - xyz(m,m1)
+        b(m) = xyz(m,m3) - xyz(m,m1)
+      end do
+      c(1) = a(2)*b(3)-a(3)*b(2)
+      c(2) = a(3)*b(1)-a(1)*b(3)
+      c(3) = a(1)*b(2)-a(2)*b(1)
+      d(1) = x-xyz(1,m1)
+      d(2) = y-xyz(2,m1)
+      d(3) = z-xyz(3,m1)
+      dot2 = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(dot2.lt.0.0) goto 10
+      do m=1,3
+        d(m) = xyz(m,n3)-xyz(m,m1)
+      end do
+      h    = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(h.lt.0.0) goto 20
+      if(h.eq.0.0) then
+        phi(2) = 0.0
+      else
+        phi(2) = dot2/h
+      endif
+c
+c  (3) n2,n4,n3 face.
+c
+      nmin = min(n2,n4,n3)
+      if(n2.eq.nmin) then
+        m1 = n2
+        m2 = n4
+        m3 = n3
+      else if(n4.eq.nmin) then
+        m1 = n4
+        m2 = n3
+        m3 = n2
+      else
+        m1 = n3
+        m2 = n2
+        m3 = n4
+      endif
+      do m=1,3
+        a(m) = xyz(m,m2) - xyz(m,m1)
+        b(m) = xyz(m,m3) - xyz(m,m1)
+      end do
+      c(1) = a(2)*b(3)-a(3)*b(2)
+      c(2) = a(3)*b(1)-a(1)*b(3)
+      c(3) = a(1)*b(2)-a(2)*b(1)
+      d(1) = x-xyz(1,m1)
+      d(2) = y-xyz(2,m1)
+      d(3) = z-xyz(3,m1)
+      dot3 = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(dot3.lt.0.0) goto 10
+      do m=1,3
+        d(m) = xyz(m,n1)-xyz(m,m1)
+      end do
+      h    = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(h.lt.0.0) goto 20
+      if(h.eq.0.0) then
+        phi0 = 0.0
+      else
+        phi0 = dot3/h
+      endif
+c
+c (4) n3,n4,n1 face.
+c
+      nmin = min(n3,n4,n1)
+      if(n3.eq.nmin) then
+        m1 = n3
+        m2 = n4
+        m3 = n1
+      else if(n4.eq.nmin) then
+        m1 = n4
+        m2 = n1
+        m3 = n3
+      else
+        m1 = n1
+        m2 = n3
+        m3 = n4
+      endif
+      do m=1,3
+        a(m) = xyz(m,m2) - xyz(m,m1)
+        b(m) = xyz(m,m3) - xyz(m,m1)
+      end do
+      c(1) = a(2)*b(3)-a(3)*b(2)
+      c(2) = a(3)*b(1)-a(1)*b(3)
+      c(3) = a(1)*b(2)-a(2)*b(1)
+      d(1) = x-xyz(1,m1)
+      d(2) = y-xyz(2,m1)
+      d(3) = z-xyz(3,m1)
+      dot4 = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(dot4.lt.0.0) goto 10
+      do m=1,3
+        d(m) = xyz(m,n2)-xyz(m,m1)
+      end do
+      h    = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(h.lt.0.0) goto 20
+      if(h.eq.0.0) then
+        phi(1) = 0.0
+      else
+        phi(1) = dot4/h
+      endif
+c
+c  Normalize, just to be sure they add up to 1.
+c
+      sum = phi0 + phi(1) + phi(2) + phi(3)
+      if(sum.eq.0.0) goto 30
+      do m=1,3
+        phi(m) = phi(m)/sum
+      end do
+c
+      goto 40
+
+   10 continue
+      write(6,*) 'CALCPHI:  The point (x,y,z) is not in the cell.'
+      write(6,*) 'n1,n2,n3,n4 =',n1,n2,n3,n4
+      write(6,*) '(x,y,z)     =',x,y,z
+      write(6,*) 'xyz(1..3,n1)=',xyz(1:3,n1)
+      write(6,*) 'xyz(1..3,n2)=',xyz(1:3,n2)
+      write(6,*) 'xyz(1..3,n3)=',xyz(1:3,n3)
+      write(6,*) 'xyz(1..3,n4)=',xyz(1:3,n4)
+      goto 99
+
+   20 continue
+      write(6,*) 'CALCPHI:  The cell has negative volume.'
+      write(6,*) 'n1,n2,n3,n4 =',n1,n2,n3,n4
+      write(6,*) '(x,y,z)     =',x,y,z
+      write(6,*) 'xyz(1..3,n1)=',xyz(1:3,n1)
+      write(6,*) 'xyz(1..3,n2)=',xyz(1:3,n2)
+      write(6,*) 'xyz(1..3,n3)=',xyz(1:3,n3)
+      write(6,*) 'xyz(1..3,n4)=',xyz(1:3,n4)
+      write(6,*) 'Volume      =',h/6.0
+      goto 99
+
+   30 continue
+      write(6,*) 'CALCPHI:  Sum of phis is not positive.'
+      write(6,*) 'n1,n2,n3,n4 =',n1,n2,n3,n4
+      write(6,*) '(x,y,z)     =',x,y,z
+      write(6,*) 'xyz(1..3,n1)=',xyz(1:3,n1)
+      write(6,*) 'xyz(1..3,n2)=',xyz(1:3,n2)
+      write(6,*) 'xyz(1..3,n3)=',xyz(1:3,n3)
+      write(6,*) 'xyz(1..3,n4)=',xyz(1:3,n4)
+      write(6,*) 'Volume #4   =',h/6.0
+      write(6,*) 'phi(0..3)   =',phi0,phi
+      write(6,*) 'sum of phis =',sum
+      goto 99
+
+   40 continue
+c
+c  Negative indices indicate original volume is negative, those two
+c  vertices were swapped to make the volume positive.  Have to swap
+c  the phis so they will match original order.
+c
+      nmin = min(ndc(1),ndc(2),ndc(3),ndc(4))
+      if(nmin.lt.0) then
+        if(ndc(3).lt.0.and.ndc(4).lt.0) then
+          phitmp = phi(2)
+          phi(2) = phi(3)
+          phi(3) = phitmp
+        else if(ndc(1).lt.0) then
+          phi0n = phi(1)+phi(2)+phi(3)
+          phi0n = 1.0-phi0n
+          if(ndc(2).lt.0) then
+            phi(1) = phi0n
+          else if(ndc(3).lt.0) then
+            phi(2) = phi0n
+          else if(ndc(4).lt.0) then
+            phi(3) = phi0n
+          else
+            write(6,*) 'CALCPHI:  Pair of negative vertices not found.'
+            write(6,*) 'ndc(1..4)=',ndc
+            goto 99
+          endif
+        else if(ndc(2).lt.0) then
+          if(ndc(3).lt.0) then
+            phitmp = phi(1)
+            phi(1) = phi(2)
+            phi(2) = phitmp
+          else if(ndc(4).lt.0) then
+            phitmp = phi(1)
+            phi(1) = phi(3)
+            phi(3) = phitmp
+          else
+            write(6,*) 'CALCPHI:  Pair of negative vertices not found.'
+            write(6,*) 'ndc(1..4)=',ndc
+            goto 99
+          endif
+        else if(ndc(3).lt.0) then
+          if(ndc(4).lt.0) then
+            phitmp = phi(2)
+            phi(2) = phi(3)
+            phi(3) = phitmp
+          else
+            write(6,*) 'CALCPHI:  Pair of negative vertices not found.'
+            write(6,*) 'ndc(1..4)=',ndc
+            goto 99
+          endif
+        else
+          write(6,*) 'CALCPHI:  Pair of negative vertices not found.'
+          write(6,*) 'ndc(1..4)=',ndc
+          goto 99
+        endif
+      endif
+
+      return
+
+   99 stop 'ERROR'
+
+      end subroutine calcphi

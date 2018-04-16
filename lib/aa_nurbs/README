@@ -1,0 +1,24 @@
+The aa_nurbs collection (Applied Aerodynamics NURBS software) supplements
+the DT_NURBS collection (q.v.) obtained by NASA Ames Research Center from
+the David Taylor Naval Research Center in 1993.  These additions facilitate
+application of NURBS (nonuniform rational B-spline) curves to airfoil shape
+optimization.  See also the BSPROFILE and WINGSECTIONS programs.
+
+bsaf2xy.f   ! Discretize an airfoil given in DT_NURBS B-spline form
+bsafgeom.f  ! Determine standard geometric properties of a B-spline airfoil
+bsafnorm.f  ! Adjust chord, LE coords., & max. thickness of an airfoil
+bsafy4x.f   ! Discretize one surface of a B-spline airfoil at specified Xs
+bsarcmap.f  ! B-spline curve arc-length-based mapping of parametric var. T
+bsarea.f    ! Calculate the area under a B-spline curve on [XA, XB]
+bscrvmod.f  ! Apply shift/scale/rotate/... transforms to a B-spline curve
+bscrvrd.f   ! Read 1 B-spline curve of 1 or more in C-array form of DTRDWR
+bseval.f    ! Evaluate an XY B-spline curve: Y for given X or vice versa
+bsfit.f     ! B-spline curve fit to data pts. in n-space; nonlinear option
+bsinsert.f  ! Knot insertion w/ specified multiplicity for a B-spline curve
+bszeromn.f  ! Find a B-spline curve zero, minimum, or maximum in some range
+conarea.f   ! Find area under a conic arc (rational quadratic Bezier curve)
+dtlsa.f     ! Variant of a DT_NURBS weighted linear least squares utility
+dtradc.f    ! Variant of a DT_NURBS radius of curvature utility
+dtrdwr.f    ! Read or write a B-spline curve in DT_NURBS C-array format
+dtsepp.f    ! Variant of a DT_NURBS equispaced-in-T discretization utility
+lsknots.f   ! Generate interior knots for a least-sqrs. B-spline curve fit

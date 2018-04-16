@@ -1,0 +1,84 @@
+C+---------------------------------------------------------------------
+C
+      SUBROUTINE DECOMP ( N, NDIM, A, IP )
+C
+C     COMPUTES THE DECOMPOSITION LU = PA, WHERE  P  IS A PERMUTATION
+C     MATRIX,  BY GAUSSIAN ELIMINATION WITH PARTIAL PIVOTING.
+C     THE INPUT MATRIX IS OVERWRITTEN WITH THE FACTORIZATION.
+C     USE SUBROUTINE  SOLVE  TO OBTAIN SOLUTION OF LINEAR SYSTEM(S).
+C     THIS IMPLEMENTATION VARIES THE FIRST INDEX IN ALL INNER LOOPS.
+C
+C     REFERENCE:  FORSYTHE, MALCOLM, AND MOLER,  1972.
+C
+C     INPUT :
+C           N   : ORDER OF MATRIX  A.   N>=2
+C           NDIM: ROW DIM. OF ARRAY  A  DECLARED IN CALLING PROGRAM
+C           A   : MATRIX TO BE FACTORIZED
+C     OUTPUT:
+C           A(I,J), I<=J: UPPER TRIANGULAR FACTOR,  U
+C           A(I,J), I>J : I - L, WHERE  L  IS UNIT LOWER TRIANGULAR
+C           IP(K),  K<N : INDEX OF KTH PIVOT ROW
+C           IP(N)       : (-1)**(NO. OF INTERCHANGES), OR 0
+C
+C           IP(N) = 0  ON RETURN MEANS  A  WAS FOUND TO BE SINGULAR,
+C           AND  SOLVE  SHOULD NOT BE CALLED IN THIS CASE.
+C
+C     DET(A) CAN BE FOUND FROM  A(1,1)*A(2,2)*...*A(N,N) * IP(N).
+C
+C----------------------------------------------------------------------
+C
+      IMPLICIT REAL ( A-H, O-Z )
+C
+      DIMENSION  A(NDIM,N), IP(N)
+C
+      IP(N) = 1
+      NM1   = N-1
+C
+      DO 60 K=1,NM1
+C
+C  *     DETERMINE PIVOT ELEMENT:
+C
+         KP1 = K+1
+         M = K
+         DO 20 I=KP1,N
+            IF ( ABS( A(I,K) ).GT.ABS( A(M,K) ) )  M = I
+ 20      CONTINUE
+C
+         IP(K)  = M
+         T      = A(M,K)
+         IF ( M.EQ.K ) GO TO 25
+            IP(N)  = -IP(N)
+            A(M,K) = A(K,K)
+            A(K,K) = T
+C
+ 25      IF ( T.EQ.0.E+0 )  GOTO 90
+C
+C  *     STORE THE MULTIPLIERS:
+C
+         T = -1.E+0/T
+         DO 30 I=KP1,N
+            A(I,K) = A(I,K)*T
+ 30      CONTINUE
+C
+C  *     APPLY THE MULTIPLIERS TO CURRENT SUBMATRIX:
+C
+         DO 50 J=KP1,N
+            T      = A(M,J)
+            A(M,J) = A(K,J)
+            A(K,J) = T
+            IF ( T.EQ.0.E+0 )  GOTO 50
+            DO 40 I=KP1,N
+               A(I,J) = A(I,J) + A(I,K)*T
+ 40         CONTINUE
+ 50      CONTINUE
+ 60   CONTINUE
+C
+      IF ( A(N,N).EQ.0.E+0 ) GO TO 90
+      RETURN
+C
+ 90   CONTINUE
+C  *  ERROR RETURN: MATRIX IS SINGULAR.
+C
+      IP(N) = 0
+      RETURN
+      END

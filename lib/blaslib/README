@@ -1,0 +1,42 @@
+Two subsets of the Level 1 Basic Linear Algebra Subprograms (for vector
+operations) are maintained here as needed for certain applications among
+the CFD Utilities collection.
+
+Routines beginning with s imply single precision (d => double), but
+compiling the "s" routines with the -r8 switch or equivalent is also an
+option for 64-bit arithmetic.
+
+These utilities precede the generic procedures of Fortran 90 and later
+dialects of the language that would be preferable today, but we persist
+with them for pragmatic reasons.
+
+
+blas1a.f contents:
+
+      subroutine saxpy(n,sa,sx,incx,sy,incy)
+      subroutine scopy(n,sx,incx,sy,incy)
+      subroutine srot (n,sx,incx,sy,incy,c,s)
+      subroutine srotg(sa,sb,c,s)
+      subroutine sscal(n,sa,sx,incx)
+      subroutine sswap (n,sx,incx,sy,incy)
+
+      integer function isamax(n,sx,incx)
+      integer function ISAMIN(n,sx,incx)
+      INTEGER FUNCTION ISRCHEQ (N, X, INC, TARGET)
+      real function sasum(n,sx,incx)
+      real function sdot(n,sx,incx,sy,incy)
+      real function smach(job)
+      real function snrm2 ( n, sx, incx)
+
+
+blas1b.f contents:
+
+      subroutine daxpy ( n, alpha, x, incx, y, incy )
+      subroutine dcopy ( n, x, incx, y, incy )
+      subroutine dscal ( n, alpha, x, incx )
+      subroutine dswap ( n, x, incx, y, incy )
+      subroutine drot  ( n, x, incx, y, incy, c, s )
+
+      double precision function ddot  ( n, x, incx, y, incy )
+      double precision function dnrm2 ( n, x, incx )
+      integer function idamax( n, x, incx )

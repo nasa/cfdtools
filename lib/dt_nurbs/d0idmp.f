@@ -1,0 +1,21 @@
+      SUBROUTINE D0IDMP (IMEMX, LOWHDR, MXI, OUTINT)
+C
+C   Format an integer for D1EDMP
+
+C****
+      INTEGER IMEMX, LOWHDR, MXI
+      CHARACTER OUTINT*12
+
+      INTEGER IHDR
+C****
+      IHDR = IMEMX/256
+      IF (IHDR .LT. LOWHDR .OR. IHDR .GE. MXI) THEN
+        WRITE (OUTINT, '(I12)') IMEMX
+      ELSE IF (MOD(MXI-IHDR,8) .NE. 0) THEN
+        WRITE (OUTINT, '(I12)') IMEMX
+      ELSE
+        WRITE (OUTINT, 10) IHDR, MOD(IMEMX,256)
+   10   FORMAT( I8,'#',I3.3)
+      END IF
+      RETURN
+      END

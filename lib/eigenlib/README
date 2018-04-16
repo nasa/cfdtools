@@ -1,0 +1,10 @@
+The eigenlib collection contains just the utilities needed by a CAVITY_MAP
+utility (rotation_matrix.f90) to determine principal axes from an inertia
+matrix.  These utilities originate from Argonne National Lab. (EISPACK).
+
+pythag.f
+rs.f   ! Finds the eigensystem of a real symmetric matrix; uses tred1, etc.
+tql1.f
+tql2.f
+tred1.f
+tred2.f

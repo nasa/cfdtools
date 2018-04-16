@@ -1,0 +1,32 @@
+Module Tecplot_io_module provides utilities for reading 2- or 3-space
+structured multiblock (multizone) grids and associated function data in
+Tecplot format:
+
+   public :: Tecplot_read       ! Read  an entire structured Tecplot file
+   public :: Tecplot_write      ! Write an entire structured Tecplot file
+
+   public :: Tec_header_read    ! Read  Tecplot file header records
+   public :: Tec_header_write   ! Write Tecplot file header records
+   public :: Tec_block_allocate ! Allocate the array fields for one block
+   public :: Tec_block_read     ! Read  one block of a structured file
+   public :: Tec_block_write    ! Write one block of a structured file
+
+   public :: clone_header       ! Derive one dataset header from another
+   public :: clone_zone         ! Derive one zone (block) from another
+   public :: deallocate_header  ! Deallocate any dataset auxiliaries
+   public :: deallocate_blocks  ! Deallocate arrays of indicated blocks
+
+A superset of the derived data type employed by xyzq_io.f90 for PLOT3D-type
+files is included in tecplot_io.f90 to accommodate zone header information,
+along with a file header derived data type.
+
+
+For unstructured surface data with triangular elements, a Tecplot_tri_io
+module is also available:
+
+   public :: Tecplot_tri_read   ! Read  1 dataset (+ header on call 1)
+   public :: Tecplot_tri_write  ! Write 1   "     "     "     "     "
+
+
+See also a later module for surface triangulations under the heading
+triangulation_io (also Tecplot-specific).

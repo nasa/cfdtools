@@ -1,0 +1,21 @@
+C***** DTLNB *****
+C   FIND POSITION OF LAST NON-BLANK CHARACTER IN A STRING.
+C     RETURNS ZERO IF STRING IS ALL BLANK.
+C
+      INTEGER FUNCTION DTLNB (STRING)
+C
+      CHARACTER STRING*(*)
+C
+      INTEGER J
+C-------------------------------
+      J=LEN(STRING)
+C     START LOOP
+   10   CONTINUE
+        IF (STRING(J:J).NE.' ') GO TO 20
+        J=J-1
+        IF (J.GT.0) GO TO 10
+C     END LOOP
+   20 CONTINUE
+      DTLNB=J
+      RETURN
+      END

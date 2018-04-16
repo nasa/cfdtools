@@ -1,0 +1,56 @@
+C+---------------------------------------------------------------------
+C
+      SUBROUTINE SOLVE ( N, NDIM, A, B, IP )
+C
+C     SOLVES  AX = B  USING  LU-DECOMPOSITION FROM  DECOMP.
+C     THE RIGHT-HAND-SIDE IS OVERWRITTEN WITH THE SOLUTION.
+C
+C     INPUT :
+C           N   : ORDER OF MATRIX  A.   N>=2
+C           NDIM: ROW DIM. OF ARRAY  A  DECLARED IN CALLING PROGRAM
+C           A   : FACTORIZED MATRIX OBTAINED FROM  DECOMP
+C           B   : RIGHT-HAND-SIDE VECTOR
+C           IP  : PIVOT VECTOR FROM  DECOMP
+C                 (IF  DECOMP  SET IP(N) TO ZERO,  SOLVE  SHOULD NOT
+C                 BE USED.)
+C     OUTPUT:
+C           B   : SOLUTION VECTOR  X
+C
+C     REFERENCE:  FORSYTHE, MALCOLM, AND MOLER,  1972.
+C
+C----------------------------------------------------------------------
+C
+      IMPLICIT REAL ( A-H, O-Z )
+C
+      DIMENSION  A(NDIM,N), B(N), IP(N)
+C
+C  *  WE HAVE        LU X  =  P B.
+C  *  FIRST, SOLVE   L Y   =  P B:
+C
+      NM1 = N-1
+      DO 20 K=1,NM1
+         KP1 = K+1
+         M = IP(K)
+         T    = B(M)
+         B(M) = B(K)
+         B(K) = T
+         DO 10 I=KP1,N
+            B(I) = B(I) + A(I,K)*T
+ 10      CONTINUE
+ 20   CONTINUE
+C
+C  *  NOW SOLVE   U X  =  Y:
+C
+      DO 40 KB=1,NM1
+         KM1 = N-KB
+         K = KM1+1
+         T = B(K)/A(K,K)
+         B(K) = T
+         DO 30 I=1,KM1
+            B(I) = B(I) - A(I,K)*T
+ 30      CONTINUE
+ 40   CONTINUE
+      B(1) = B(1)/A(1,1)
+C
+      RETURN
+      END

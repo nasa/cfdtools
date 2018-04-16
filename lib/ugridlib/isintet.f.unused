@@ -1,0 +1,185 @@
+      logical function isintet (x,y,z,xyz,ndc,epsilon)
+
+c  Check to see whether (x,y,z) is in the cell.  Cell indices are
+c  assumed to be oriented so that the triple product is positive:
+c
+c                  |x(2)-x(1) y(2)-y(1) z(2)-z(1)|
+c    volume*6 = det|x(3)-x(1) y(3)-y(1) z(3)-z(1)|
+c                  |x(4)-x(1) y(4)-y(1) z(4)-z(1)|
+c
+c  When computing face cross products, put the smallest index first;
+c  this will improve repeatability for face-abutting cells.
+c
+c  Negative indices indicate original volume is negative, those two
+c  vertices were swapped to make the volume positive.
+c
+c  28-JUN-1999..2-JUL-1999,9-JUL-1999..12-JUL-1999.
+c               Scott D. Thomas, Raytheon ITSS Corporation
+c               Contract NAS 2-98080/172, NASA Ames Research Center.
+c
+c  11-AUG-2000  David Saunders  One-precision version.  (Use -r4 or -r8 switch.)
+
+      implicit none
+
+      integer ndc(4)
+      integer n1,n2,n3,n4,nmin,m,m1,m2,m3
+      real    x,y,z,epsilon
+      real    xyz(3,*)
+      real    a(3),b(3),c(3),d(3),dot1,dot2,dot3,dot4
+c
+c  By default we assume it's not in the cell.
+c
+      isintet = .false.
+c
+      n1 = abs(ndc(1))
+      n2 = abs(ndc(2))
+      n3 = abs(ndc(3))
+      n4 = abs(ndc(4))
+c
+c  Check for a point match on one of the vertices.
+c
+      if(abs(x-xyz(1,n1)).le.epsilon.and.
+     .   abs(y-xyz(2,n1)).le.epsilon.and.
+     .   abs(z-xyz(3,n1)).le.epsilon) then
+        isintet = .true.
+        goto 10
+      else if(abs(x-xyz(1,n2)).le.epsilon.and.
+     .        abs(y-xyz(2,n2)).le.epsilon.and.
+     .        abs(z-xyz(3,n2)).le.epsilon) then
+        isintet = .true.
+        goto 10
+      else if(abs(x-xyz(1,n3)).le.epsilon.and.
+     .        abs(y-xyz(2,n3)).le.epsilon.and.
+     .        abs(z-xyz(3,n3)).le.epsilon) then
+        isintet = .true.
+        goto 10
+      else if(abs(x-xyz(1,n4)).le.epsilon.and.
+     .        abs(y-xyz(2,n4)).le.epsilon.and.
+     .        abs(z-xyz(3,n4)).le.epsilon) then
+        isintet = .true.
+        goto 10
+      endif
+c
+c  (1) n1,n2,n3 face.
+c
+      nmin = min(n1,n2,n3)
+      if(n1.eq.nmin) then
+        m1 = n1
+        m2 = n2
+        m3 = n3
+      else if(n2.eq.nmin) then
+        m1 = n2
+        m2 = n3
+        m3 = n1
+      else
+        m1 = n3
+        m2 = n1
+        m3 = n2
+      endif
+      do m=1,3
+        a(m) = xyz(m,m2) - xyz(m,m1)
+        b(m) = xyz(m,m3) - xyz(m,m1)
+      end do
+      c(1) = a(2)*b(3)-a(3)*b(2)
+      c(2) = a(3)*b(1)-a(1)*b(3)
+      c(3) = a(1)*b(2)-a(2)*b(1)
+      d(1) = x-xyz(1,m1)
+      d(2) = y-xyz(2,m1)
+      d(3) = z-xyz(3,m1)
+      dot1 = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(dot1.lt.0.0) goto 10
+c
+c  (2) n1,n4,n2 face.
+c
+      nmin = min(n1,n4,n2)
+      if(n1.eq.nmin) then
+        m1 = n1
+        m2 = n4
+        m3 = n2
+      else if(n4.eq.nmin) then
+        m1 = n4
+        m2 = n2
+        m3 = n1
+      else
+        m1 = n2
+        m2 = n1
+        m3 = n4
+      endif
+      do m=1,3
+        a(m) = xyz(m,m2) - xyz(m,m1)
+        b(m) = xyz(m,m3) - xyz(m,m1)
+      end do
+      c(1) = a(2)*b(3)-a(3)*b(2)
+      c(2) = a(3)*b(1)-a(1)*b(3)
+      c(3) = a(1)*b(2)-a(2)*b(1)
+      d(1) = x-xyz(1,m1)
+      d(2) = y-xyz(2,m1)
+      d(3) = z-xyz(3,m1)
+      dot2 = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(dot2.lt.0.0) goto 10
+c
+c  (3) n2,n4,n3 face.
+c
+      nmin = min(n2,n4,n3)
+      if(n2.eq.nmin) then
+        m1 = n2
+        m2 = n4
+        m3 = n3
+      else if(n4.eq.nmin) then
+        m1 = n4
+        m2 = n3
+        m3 = n2
+      else
+        m1 = n3
+        m2 = n2
+        m3 = n4
+      endif
+      do m=1,3
+        a(m) = xyz(m,m2) - xyz(m,m1)
+        b(m) = xyz(m,m3) - xyz(m,m1)
+      end do
+      c(1) = a(2)*b(3)-a(3)*b(2)
+      c(2) = a(3)*b(1)-a(1)*b(3)
+      c(3) = a(1)*b(2)-a(2)*b(1)
+      d(1) = x-xyz(1,m1)
+      d(2) = y-xyz(2,m1)
+      d(3) = z-xyz(3,m1)
+      dot3 = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(dot3.lt.0.0) goto 10
+c
+c (4) n3,n4,n1 face.
+c
+      nmin = min(n3,n4,n1)
+      if(n3.eq.nmin) then
+        m1 = n3
+        m2 = n4
+        m3 = n1
+      else if(n4.eq.nmin) then
+        m1 = n4
+        m2 = n1
+        m3 = n3
+      else
+        m1 = n1
+        m2 = n3
+        m3 = n4
+      endif
+      do m=1,3
+        a(m) = xyz(m,m2) - xyz(m,m1)
+        b(m) = xyz(m,m3) - xyz(m,m1)
+      end do
+      c(1) = a(2)*b(3)-a(3)*b(2)
+      c(2) = a(3)*b(1)-a(1)*b(3)
+      c(3) = a(1)*b(2)-a(2)*b(1)
+      d(1) = x-xyz(1,m1)
+      d(2) = y-xyz(2,m1)
+      d(3) = z-xyz(3,m1)
+      dot4 = c(1)*d(1)+c(2)*d(2)+c(3)*d(3)
+      if(dot4.lt.0.0) goto 10
+c
+      isintet = .true.
+c
+   10 continue
+c
+      return
+c
+      end function isintet

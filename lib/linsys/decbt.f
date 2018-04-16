@@ -1,0 +1,131 @@
+C+----------------------------------------------------------------------
+C
+      SUBROUTINE DECBT ( M, MDIM, N, A, B, C, IP, IER )
+C
+C  BLOCK TRIDIAGONAL MATRIX DECOMPOSITION ROUTINE.
+C  THE INPUT MATRIX CONTAINS THREE BLOCKS OF ELEMENTS IN EACH BLOCK-ROW,
+C  INCLUDING BLOCKS IN THE (1,3) AND (N,N-2) BLOCK POSITIONS.
+C  DECBT USES BLOCK GAUSS ELIMINATION, WITH SUBROUTINES DECOMP AND
+C  SOLVE FOR SOLUTION OF BLOCKS.  PARTIAL PIVOTING IS DONE WITHIN
+C  BLOCK ROWS ONLY.
+C  USE SOLBT TO SOLVE THE ASSOCIATED LINEAR SYSTEM(S).
+C
+C  INPUT...
+C     M    = ORDER OF EACH BLOCK.
+C     MDIM = DECLARED ROW DIMENSION OF ALL MULTI-DIMENSIONAL ARRAYS.
+C            (3-D ARRAYS MUST BE DECLARED WITH THE VALUE OF MDIM FOR
+C            BOTH THE FIRST TWO DIMENSIONS.  MDIM PERMITS USE OF THE
+C            SAME ARRAYS FOR SOLVING SYSTEMS WITH DIFFERENT SIZES OF
+C            BLOCK, IN THE SAME PROGRAM.)
+C     N    = NUMBER OF BLOCKS IN EACH DIRECTION OF THE MATRIX.
+C            N MUST BE 3 OR MORE. THE COMPLETE MATRIX HAS ORDER M*N.
+C     A    = MDIM*MDIM*N ARRAY CONTAINING THE M*M*N DIAGONAL BLOCKS.
+C            A(I,J,K) CONTAINS THE (I,J) ELEMENT OF THE K-TH BLOCK.
+C     B    = MDIM*MDIM*N ARRAY CONTAINING THE M*M*N SUPERDIAGONAL BLOCKS
+C            (IN B(,,K) FOR K=1 TO N-1) AND THE BLOCK IN THE (N,N-2)
+C            BLOCK POSITION IN B(,,N).
+C     C    = MDIM*MDIM*N ARRAY CONTAINING THE M*M*N SUBDIAGONAL BLOCKS
+C            (IN C(,,K) FOR K = 2(1)N) AND THE BLOCK IN THE (1,3)
+C            POSITION (IN C(,,1))
+C     IP   = MDIM*N INTEGER ARRAY FOR STORING PIVOT INFORMATION
+C  OUTPUT...
+C     A,B,C= MDIM*MDIM*N ARRAYS CONTAINING THE BLOCK BIDIAGONAL
+C            DECOMPOSITION OF THE INPUT MATRIX.
+C     IP   = MDIM*N ARRAY OF PIVOT INFORMATION.  IP(,K) CONTAINS
+C            INFORMATION FOR THE K-TH DIAGONAL BLOCK.
+C     IER  = 0 IF NO TROUBLE OCCURRED, OR
+C          =-1 IF THE INPUT VALUE OF M OR N WAS ILLEGAL, OR
+C          = K IF KTH (MODIFIED) DIAGONAL BLOCK WAS FOUND SINGULAR.
+C
+C  REFERENCE...
+C     LAWRENCE LIVERMORE LABORATORY (ACQUIRED BY NASA AMES, 1980)
+C
+C  HISTORY...
+C     10/23/81  DAS  SPECIAL CASE OF N=3 HANDLED.
+C     03/25/81  DAS  PARAMETER MDIM INTRODUCED; ADAPTED TO USE SAME
+C                    DECOMP AND SOLVE MODULES ALREADY AVAILABLE.
+C
+C-----------------------------------------------------------------------
+C
+      IMPLICIT REAL ( A-H, O-Z )
+C
+      DIMENSION  A(MDIM,MDIM,N), B(MDIM,MDIM,N), C(MDIM,MDIM,N),
+     +           IP(MDIM,N)
+C
+      IER = -1
+      IF ( M.LT.2 .OR. N.LT.3 ) GO TO 999
+      NM1 = N-1
+      NM2 = N-2
+C.....PROCESS THE FIRST BLOCK-ROW.....
+      CALL DECOMP ( M, MDIM, A, IP )
+      IER = 1
+      IF ( IP(M,1).EQ.0 ) GO TO 999
+      DO 10 J = 1,M
+         CALL SOLVE ( M, MDIM, A, B(1,J,1), IP )
+         CALL SOLVE ( M, MDIM, A, C(1,J,1), IP )
+ 10   CONTINUE
+C ... ADJUST B(,,2)
+      DO 40 J = 1,M
+         DO 30 I = 1,M
+            DP = 0.E+0
+            DO 20 L = 1,M
+               DP = DP + C(I,L,2)*C(L,J,1)
+ 20         CONTINUE
+            B(I,J,2) = B(I,J,2) - DP
+ 30      CONTINUE
+ 40   CONTINUE
+C.....MAIN LOOP: PROCESS BLOCK-ROWS 2 TO N-1.....
+      DO 100 K = 2,NM1
+         KM1 = K-1
+         DO 70 J = 1,M
+            DO 60 I = 1,M
+               DP = 0.E+0
+               DO 50 L = 1,M
+                  DP = DP + C(I,L,K)*B(L,J,KM1)
+ 50            CONTINUE
+               A(I,J,K) = A(I,J,K) - DP
+ 60         CONTINUE
+ 70      CONTINUE
+         CALL DECOMP ( M, MDIM, A(1,1,K), IP(1,K) )
+         IER = K
+         IF ( IP(M,K).EQ.0 ) GO TO 999
+         DO 80 J = 1,M
+            CALL SOLVE ( M, MDIM, A(1,1,K), B(1,J,K), IP(1,K) )
+ 80      CONTINUE
+ 100  CONTINUE
+C.....PROCESS LAST BLOCK-ROW.....
+      DO 130 J = 1,M
+         DO 120 I = 1,M
+            DP = 0.E+0
+            DO 110 L = 1,M
+               DP = DP + B(I,L,N)*B(L,J,NM2)
+ 110        CONTINUE
+            C(I,J,N) = C(I,J,N) - DP
+ 120     CONTINUE
+ 130  CONTINUE
+      DO 160 J = 1,M
+         DO 150 I = 1,M
+            DP = 0.E+0
+            DO 140 L = 1,M
+               DP = DP + C(I,L,N)*B(L,J,NM1)
+ 140        CONTINUE
+            A(I,J,N) = A(I,J,N) - DP
+ 150     CONTINUE
+ 160  CONTINUE
+C ... CHECK FOR EXTRA BLOCKS COLLIDING. (HAPPENS ONLY WITH 3 BLOCKS.)
+      IF ( N.GT.3 ) GO TO 200
+      DO 190 J = 1,M
+         DO 180 I = 1,M
+            DP = 0.E+0
+            DO 170 L = 1,M
+               DP = DP + B(I,L,3)*C(L,J,1)
+ 170        CONTINUE
+            A(I,J,3) = A(I,J,3) - DP
+ 180     CONTINUE
+ 190  CONTINUE
+ 200  CALL DECOMP ( M, MDIM, A(1,1,N), IP(1,N) )
+      IER = 0
+      IF ( IP(M,N).EQ.0 ) IER = N
+C
+ 999  RETURN
+      END

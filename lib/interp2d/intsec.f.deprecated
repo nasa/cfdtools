@@ -1,0 +1,257 @@
+C+-----------------------------------------------------------------------------+
+
+      SUBROUTINE INTSEC (NPRIM, XPRIM, YPRIM,
+     &                   NSEC, DIMSEC, N2CURV, XSEC, YSEC,
+     &                   XINT, YINT, PINDEX, SINDEX,
+     &                   IER)
+
+C ACRONYM:   INTerSECtion of a curve with one or more other curves in 2-space
+C
+C PURPOSE:
+C   Finds the linear intersection of one curve (primary) with one or more 
+C   other curves (secondary).  The curves are defined by sets of discrete
+C   points, with the primary curve in a pair of 1D arrays, and the secondary
+C   curve(s) in a pair of 2D arrays.  (1D is OK if only 1 secondary curve.)
+C   All secondary curves must have the same number of points.  They don't
+C   have to fill the arrays.  The routine was designed to find the intersection
+C   of an arbitrary curve with a computational mesh.
+C   NOTE:  The abscissas of all curves are assumed to be INCREASING.
+C
+C   INTSEC also returns the indices of the points in each curve that precede 
+C   the intersection.  The primary curve must intersect each of the secondary 
+C   curves only once within the range of the points given. 
+C
+C METHOD:
+C   (0)  Check for vertical segments in the primary curve, and return with
+C        IER = 1, and PINDEX(1) = the first index of the segment.
+C        More precisely: check for non-increasing x_coordinates in the
+C        primary curve.
+C   (1)  Fit a local cubic spline to the primary curve.
+C        If an error results, return with IER=fit_error+10.
+C   (2)  For each secondary curve, use a binary-search-type partitioning
+C        scheme to find the two successive array elements that bracket the
+C        intersection point.  Then estimate the intersection by linear
+C        interpolation between these elements.  Return the intersection
+C        point and the indices from both curves of the array points before
+C        the intersection.  Detail description:
+C        (a) Set up the initial partition on the secondary curve so that its
+C            range matches the range of the primary.
+C        (b) Calculate the primary ordinate at the lower bound
+C            of the initial partition, but not at the upper bound.
+C        (c) Calculate the midpoint index of the partition.
+C        (d) Evaluate the primary at the midpoint.
+C        (e) Check for intersection in low half of partition.
+C        (f) if (e) is true, reset partition to lower half
+C            else reset partition to higher half.
+C        (g) Repeat (c) - (f) until partition bounds are one index apart.
+C        (h) Make sure the intersection is in the final partition, and return
+C            an error if not.
+C	 (h) Find linear intersection in partition. If an error
+C            is generated, return with IER=LININT_error+20.
+C        (i) Save lower index of partition to be returned.
+C        (j) Find corresponding index of primary curve and save that too.
+C   (3)  Repeat (2) for each secondary curve.
+C
+C ARGUMENTS:
+C    ARG       DIM     TYPE I/O/S DESCRIPTION
+C   NPRIM       -       I   I     number of points in primary curve
+C   XPRIM     NPRIM     R   I     x_coordinates of primary curve (increasing)
+C   YPRIM     NPRIM     R   I     y_coordinates of primary curve
+C   NSEC        -       I   I     number of valid points in secondary curve
+C   DIMSEC      -       I   I     column dimension of secondary curve array
+C   N2CURV      -       I   I     number of secondary curves ( >=1 )
+C   XSEC     DIMSEC,    R   I     x_coordinates of secondary curve (increasing)
+C            N2CURV
+C   YSEC     DIMSEC,    R   I     y_coordinates of secondary curve
+C            N2CURV
+C   XINT     N2CURV     R    O    x_values of intersections
+C   YINT     N2CURV     R    O    y_values of intersections
+C   PINDEX   N2CURV     I    O    indices of primary curve at intersections
+C   SINDEX   N2CURV     I    O    indices of secondary curves at   "
+C   IER         -       I    O    error flag - see below
+C
+C EXTERNAL REFERENCES:
+C   INTERVAL  "interpolation" search for real value (also used by LCSFIT)
+C   LCSFIT    local cubic spline fit and evaluation
+C   LININT    finds linear intersection of two lines, given two points per line
+C
+C ERROR HANDLING:
+C   IER =  0: REASON: successful completion
+C   IER <  0: REASON: one of the secondary curves doesn't intersect the primary
+C                     in the secondary's given range.
+C             ACTION: return with |IER| = curve # of the secondary curve
+C   IER =  1: REASON: a segment of the primary curve is vertical, 
+C             ACTION: return with PINDEX(1) = index of beginning of segment.  
+C   IER = 1n: REASON: Error splining primary curve. 
+C             ACTION: Return. fit error = n. (not applicable to LCSFIT version)
+C   IER = 2n: REASON: Error finding linear intersection (step h)
+C             ACTION: Return. LININT error = n.
+C
+C ENVIRONMENT:  VAX/VMS; FORTRAN 77
+C
+C HISTORY:
+C   9/19/85   dbs      Initial design.
+C   9/23/85   dbs      Initial coding. version 1.0
+C   12/85     dbs      Cleaned up for entry into SoftLib.
+C   12/86     dbs      Improved error handling
+C   11/90  D.Saunders  Replaced CSFIT/CSEVAL with LCSFIT to avoid coefs.;
+C                      replaced FINDR with INTERVAL (also used by LCSFIT).
+C
+C AUTHOR: David B. Serafini, NASA Ames/Informatics General, Palo Alto, CA.
+C
+C-------------------------------------------------------------------------------
+
+
+C     >>arguments
+      INTEGER  NPRIM, NSEC, DIMSEC, N2CURV,
+     &         PINDEX (N2CURV), SINDEX (N2CURV),
+     &         IER
+      REAL     XPRIM (NPRIM), YPRIM (NPRIM),
+     &         XSEC (DIMSEC, N2CURV), YSEC (DIMSEC, N2CURV),
+     &         XINT (N2CURV), YINT (N2CURV)
+
+C     >>local constants
+      REAL     ARROW, ZERO
+      PARAMETER (ARROW = 1.E+0, ZERO = 0.E+0)
+
+C     >>local variables
+      LOGICAL  NOEVAL
+      INTEGER  CURVNO, LOWER, UPPER, MID, I, IPRIM
+      REAL     LDIFF, MDIFF, YPLOW, YPMID, YPUP
+
+C     >>external references:
+      EXTERNAL INTERVAL, LCSFIT, LININT
+
+C------------------------  begin execution ----------------------------
+
+C     >>Initialize.
+      IER = 0
+
+C     >>Check for vertical segments in the primary curve.
+      DO 10, I = 1, NPRIM-1
+         IF (XPRIM (I) .EQ. XPRIM (I+1)) THEN
+            PINDEX(1) = I
+            IER = 1
+            GO TO 99
+         END IF
+   10 CONTINUE
+
+C     >>Do each secondary curve, one at a time.
+
+      IPRIM = 1                  ! For lack of a better input for CURVNO = 1.
+      DO 90, CURVNO = 1, N2CURV
+
+C        >>By successively halving the partition in which the intersection
+C          occurs, find the two secondary-curve points which define the
+C          interval of intersection.  Assume that the intersection must occur 
+C          somewhere in the range of the points given for the secondary curve.
+
+C        >>Initialize - set partition to the whole secondary curve.
+         LOWER = 1
+         UPPER = NSEC
+         NOEVAL = .TRUE.
+
+C        >>Evaluate the primary curve at the lower secondary absissca.
+         CALL LCSFIT (NPRIM, XPRIM, YPRIM, .TRUE., 'B',
+     &                1, XSEC (LOWER, CURVNO), YPLOW, YPLOW)
+
+C        >>LOOP: divide partition in half and check for intersection.
+   40    MID = (LOWER + UPPER) / 2 
+
+C           >>Evaluate primary curve at mid-point of partition.
+            CALL LCSFIT (NPRIM, XPRIM, YPRIM, .FALSE., 'B',
+     &                   1, XSEC (MID, CURVNO), YPMID, YPMID)
+
+C           >>The signs of the differences between ordinates are relevant.
+            LDIFF = YPLOW - YSEC (LOWER, CURVNO)
+            MDIFF = YPMID - YSEC (MID, CURVNO)
+
+C           >>Check for possible intersection cases.
+            IF (LDIFF .EQ. ZERO) THEN
+C              >>Intersection is at lower partition bound point.
+               XINT (CURVNO) = XSEC (LOWER, CURVNO)
+               YINT (CURVNO) = YSEC (LOWER, CURVNO)
+
+C              >>Set the secondary index to the element before the inter-
+C                section, except when LOWER is 1 (beginning of array).
+               SINDEX (CURVNO) = MAX (LOWER-1, 1)
+
+C              >>Pick up where PINDEX is evaluated.
+               GO TO 50
+
+            ELSE IF (MDIFF .EQ. ZERO) THEN
+C              >>Intersection is at upper bound point.
+               XINT (CURVNO) = XSEC (MID, CURVNO)
+               YINT (CURVNO) = YSEC (MID, CURVNO)
+               SINDEX (CURVNO) = MID - 1
+
+C              >>Pick up where PINDEX is evaluated.
+               GO TO 50
+
+            END IF
+
+C           >>Determine which half of the partition has the intersection.
+C           >>If the signs of the differences are different, the
+C             intersection is in the partition.
+C             [ NOTE: .NEQV. is the same as XOR ]
+
+            IF (LDIFF .GT. ZERO  .NEQV.  MDIFF .GT. ZERO) THEN
+C              >>Intersection is in lower half - move upper bound down.
+               UPPER = MID
+               YPUP = YPMID
+               NOEVAL = .FALSE.
+
+            ELSE
+C              >>Intersection is in upper half - move lower bound up.
+               LOWER = MID
+               YPLOW = YPMID
+               NOEVAL = .TRUE.
+            END IF
+
+C        >>ENDLOOP: if partition size is greater than 1, loop again.
+         IF (LOWER+1 .LT. UPPER) GO TO 40
+
+C        >>Calculate primary curve at upper bound if necessary.
+         IF (NOEVAL)
+     &      CALL LCSFIT (NPRIM, XPRIM, YPRIM, .FALSE., 'B',
+     &                   1, XSEC (UPPER, CURVNO), YPUP, YPUP)
+
+C        >>Make sure the intersection is in this partition, because if it's
+C          not, it must be outside the range of the secondary curve, and the
+C          linear intersection will be meaningless.
+C          [NOTE: reuse MDIFF for the upper bound difference.]
+         LDIFF = YPLOW - YSEC (LOWER, CURVNO)
+         MDIFF = YPUP  - YSEC (UPPER, CURVNO)
+         IF (LDIFF .GT. ZERO .EQV. MDIFF .GT. ZERO) THEN
+C           >>Error - intersection is not in this partition.
+            IER = -CURVNO
+            GO TO 99
+         END IF
+
+C        >>Calculate the linear intersection of the curves.
+         CALL LININT (XSEC (LOWER, CURVNO), YPLOW,
+     &                XSEC (UPPER, CURVNO), YPUP,
+     &                XSEC (LOWER, CURVNO), YSEC (LOWER, CURVNO),
+     &                XSEC (UPPER, CURVNO), YSEC (UPPER, CURVNO),
+     &                XINT (CURVNO), YINT (CURVNO),
+     &                IER)
+         IF (IER .GT. 0) THEN
+            IER = IER + 20
+            GO TO 99
+         END IF
+
+C        >>Save the lower secondary partition index to return to caller.
+         SINDEX (CURVNO) = LOWER
+
+   50    CONTINUE
+C        >>Find the primary curve index strictly preceding the intersection.
+C          [We could give INTERVAL a better guess if LCSFIT returned an index.]
+
+         CALL INTERVAL (NPRIM, YPRIM, YINT (CURVNO), ARROW, IPRIM)
+         PINDEX (CURVNO) = MAX (IPRIM-1, 1)
+
+C     >>Done with this secondary curve.
+   90 CONTINUE
+
+   99 RETURN
+      END

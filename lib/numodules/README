@@ -1,0 +1,49 @@
+The numodules library contains miscellaneous numerical utilities such as
+those used for finite difference derivatives, means & standard deviations,
+and linear transformations.
+
+One of the more recent additions, TRAPEZOID_RECURSION, implements the
+recurrence relations for a time series mean and standard deviation using
+the trapezoidal rule for quadrature as opposed to the rectangle rule.
+It was prompted by the need to visualize averaged data in the unsteady
+wake flow behind atmospheric entry vehicles.  This method avoids the
+potentially large sums encountered over thousands of flow iterations by
+the straightforward method.
+
+bessel.f               3-pt. differencing utility in LCSFIT & its relatives
+bounds.f               Min./max. (so far) across 1 or more 1- or 2-D arrays
+brodlie.f              3-pt. differencing utility in LCSFIT & its relatives
+butland.f              3-pt. differencing utility in LCSFIT & its relatives
+circ_shift.f           Left or right shift in place for a real 1-D array
+copy.f                 Simple copy of a real 1-D [sub]array to another one
+d4coefs.f              4th-derivative finite differencing utility
+deriv3.f               3-pt. differencing utility invoking BESSEL & THREEPT
+derivs_123.f90         1st 3 derivs. at x(i) for 3 <= i <= n-2; quartic fit
+fd12k.f                1st/2nd derivs. + curvature at (x(i), f(i)), i = 1:n
+fd1sid.f               Lower-level 3-point utility used by FD12K
+fdcntr.f               Lower-level 3-point utility used by FD12K
+fdcurv.f               Lower-level 3-point utility used by FD12K
+fivepoint.f            1st 4 derivatives at middle of 5 points, for D4COEFS
+gaussian.f             Calc. pts. in a Gaussian distribn., mean 0, sigma 1
+getblock.f             Transfer part of a 3-D array to another 3-D array
+getrow.f               Transfer part of row i of a 2-D array to a vector
+getscale.f             Determine scales/shifts for normalizing x[y[z]] data
+getxform.f             Calc. scale, shift for x in [a, b] --> x' in [p, q]
+meanx.f                Average of real array via recurrence relation
+nmlizx.f               Normalizes/denormalizes real vector to/from [0, 1]
+power2.f               Determine if integer l is a power of 2 or not
+protect.f              Test for data monotonicity and distinctness
+putrow.f               GETROW companion to update [part of] row i of A(:,:)
+rverse.f               Reverse order of a real vector, possibly in place
+shiftx.f               Add constant to elements of a real vector, in place
+splitxyz.f90           Split x/y/z cloud in place via cutoff & <|<=|== ..
+stdev1p.f              Mean/std. deviation via recurrence relations, 1 pass
+stdev2p.f              Mixed-precisn. 2-pass mean/std. dev. for real*4 data
+stdevi2.f              Mean & standard deviation for integer*2 A/D data
+sumx.f                 Sum of real*4 vector elements (double precisn. adds)
+table_coordinates.f90  Expand coords. of rectangular table (2-6 dimensions)
+table_derivatives.f90  f'/f" for nf fns. wrt each of ndim coords.; ndim 1-5
+threept.f              3-pt. differencing utility in LCSFIT & its relatives
+trapezoid_recursion.f90  Update running mean/var.: recursion/trapez. quadr.
+usescale.f             Apply scales/shifts determined by GETSCALE
+utcopy.f               Variant of COPY that allows for in-place shifting

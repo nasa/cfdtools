@@ -1,0 +1,85 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   subroutine solid_angle_tri (nnodes, ntris, xyz, conn, itri, px, py, pz, &
+                               area, domega)
+!  Description:
+!
+!     For cell itri of a triangulated surface zone, estimate the solid angle
+!     subtended at a given point P(px,py,pz).
+!
+!     This was prompted by a need to integrate radiant intensity vs. solid
+!     angle in order to estimate radiative heat flux at a point more correctly
+!     than with the tangent-slab approximation.
+!
+!  Technique:
+!
+!     Wikipedia's Solid Angle web page shows that the solid angle for an
+!     arbitrary oriented surface element S subtended at a point P is
+!
+!                    omega = integral over S of (r.n/r^3) ds
+!
+!     where r is the vector position of a point on S w.r.t. P and n is the
+!     local unit normal vector.  We simply average the three values of this
+!     integrand calculated at the cell vertices and multiply by the cell
+!     area, which is presumed to be small.  Existing utilities provide that
+!     cell area and the unit normals.
+!
+!     Unlike the structured grid case of quadrilaterals, we can't (easily)
+!     identify cell neighbors in order to estimate a refined unit normal at
+!     each cell vertex.  Therefore, we simply employ the same normal for
+!     each vertex.
+!
+!  History:
+!
+!     Feb. 25, 2014  D.A.Saunders  Adaptation of solid_angle_quad.
+!
+!  Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   implicit none
+
+!  Arguments:
+
+   integer, intent (in)  :: nnodes         ! # x/y/z points/nodes
+   integer, intent (in)  :: ntris          ! # triangular elements
+   real,    intent (in)  :: xyz(3,nnodes)  ! Node coordinates
+   integer, intent (in)  :: conn(3,ntris)  ! Vertex indices in xyz(:,*)
+   integer, intent (in)  :: itri           ! Indicated triangular cell
+   real,    intent (in)  :: px, py, pz     ! Coordinates of P
+   real,    intent (out) :: area           ! Cell area as a by-product
+   real,    intent (out) :: domega         ! Desired solid angle element
+
+!  Local constants:
+
+   real, parameter :: third = 1.0/3.0, zero = 0.0
+
+!  Local variables;
+
+   integer :: inode, iv
+   real    :: rsq, rbar(3), unormal(3)
+
+!  Procedures:
+
+   external :: tri_normal_and_area
+
+!  Execution:
+
+   call tri_normal_and_area (nnodes, ntris, xyz, conn, itri, area, unormal)
+
+!  Compute the averaged r vector and apply it to the common unit normal:
+
+   rbar(:) = zero
+
+   do iv = 1, 3
+      inode = conn(iv,itri)
+      rbar(1) = rbar(1) + xyz(1,inode) - px
+      rbar(2) = rbar(2) + xyz(2,inode) - py
+      rbar(3) = rbar(3) + xyz(3,inode) - pz
+   end do
+
+   rbar(:) = third * rbar(:)
+   rsq     = dot_product (rbar, rbar)
+   domega  = area * dot_product (rbar, unormal) / (rsq * sqrt (rsq))
+
+   end subroutine solid_angle_tri

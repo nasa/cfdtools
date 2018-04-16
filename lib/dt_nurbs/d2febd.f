@@ -1,0 +1,98 @@
+      SUBROUTINE D2FEBD (CMEM, IMEM, DMEM, IDE, JBLO, JBHI, IER)
+
+C     PURPOSE:
+C        Fetch Bounds of Entity's double precision space.  All memory in
+C        the double precision space up to JBHI is locked.
+C
+C     DYNAMIC MEMORY INPUT-OUTPUT:
+C        CMEM     Dynamically managed character data
+C        IMEM     Dynamically managed integer data
+C        DMEM     Dynamically managed double precision data
+C
+C     INPUT:
+C        IDE      Pointer to entity to fetch
+C
+C     OUTPUT:
+C        JBLO     Lower bound of the entity's double precision space
+C        JBHI     Upper bound of the entity's double precision space
+C        IER      Error flag.  If negative, the bounds are set to 0.
+C                 -1 =  Dynamic memory is corrupt or uninitialized.
+C                 -2 =  Null pointer (IDE = 0)
+C                 -3 =  Garbage value in pointer (points outside valid
+C                       range in IMEM)
+C                 -4 =  Either a deleted entity or a garbage value in
+C                       pointer
+C                 -5 =  Pointer refers to a deleted entity
+C                 -6 =  LEND = 0
+C
+C     CALLS:
+C        D0PTR
+C
+C     HISTORY:
+C        27Feb92  D. Parsons  Created.
+C        13Apr92  D. Parsons  Add check of dynamic memory.
+C        21Jun93  D. Parsons  Add IER = -6
+C
+C     ------
+
+C     Long name alias:
+C        ENTRY D2_FETCH_DMEM_BOUNDS (CMEM, IMEM, DMEM, IDE, JBLO,
+C    +         JBHI, IER)
+
+      CHARACTER         CMEM*(*)
+      INTEGER           IMEM(*), IDE
+      DOUBLE PRECISION  DMEM(*)
+
+      INTEGER           IHDR, ITYP, LEND, JBLO, JBHI, IER
+
+      CHARACTER*6 SUBNAM
+      DATA SUBNAM /'D2FEBD'/
+
+C     ------
+
+C     Call the general pointer-check utility routine
+
+      CALL D0PTR (CMEM, IMEM, DMEM, IDE, 0, 0, IHDR, ITYP, IER)
+      IF (IER .NE. 0) GOTO 9000
+
+      JBLO = IMEM(IHDR+3)
+      LEND = ABS(IMEM(IHDR+6))
+      JBHI = JBLO + LEND - 1
+                  
+      IF (LEND .LE. 0) THEN
+         IER = -6
+         GOTO 9000
+      ENDIF
+      
+C     Lock all double precision memory up to JBHI
+
+C     ...Set "next unlocked location in CMEM to JBHI+1
+C     ...Set "highest locked header location" to IHDR
+
+      IF (IMEM(9) .LE. JBHI) THEN
+         IMEM(9) = JBHI+1
+         IMEM(12) = IHDR
+      ENDIF
+
+C     ...Set Length of double precision memory to negative
+
+      IMEM(IHDR+6) = -LEND
+
+C     ...Set "lowest location to check" to above this entity's space
+
+      IMEM(15) = MIN(IMEM(15),JBLO)
+
+      GOTO 9999
+
+C     Error return
+
+ 9000 CONTINUE
+
+      JBLO = 0
+      JBHI = 0
+      CALL DTERR (1, SUBNAM, IER, 0)
+
+ 9999 CONTINUE
+
+      RETURN
+      END

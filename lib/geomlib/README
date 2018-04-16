@@ -1,0 +1,88 @@
+The geomlib collection contains single-function utilities arising from
+geometric or graphical applications in 2- or 3-space.  See also the
+gridlib and numodules collections for related utilities such as for
+curvature calculations.
+
+Note that the NEAREST_*_POINT utilities all return the point inside or on
+the boundary of the specified cell along with interpolation coefficients
+for that point, to be applied to data at the cell vertices.  The associated
+squared distance may or may not be zero, because the returned point is not
+allowed to be outside the cell being investigated.  This functionality is
+key to the effectiveness of the ADT search packages for various mesh types
+(see /adt).
+
+Conversely, PROJECT3 and PROJECT4 allow interpolation coefficients to be
+outside [0, 1], meaning the foot of the computed perpendicular may be
+outside the indicated triangle or quadrilateral in 3-space.  But searching
+cells until one is found for which all coefficients are within [0, 1] is
+NOT the recommended strategy. The NEAREST_*_POINT utilities employed by the
+ADT (Alternating Digital Tree) packages are likely to be preferable, as the
+searches are not affected by whether the target point is inside the grid
+being searched or outside it.  Two-space variants, nearest_edge_pt_2d and
+nearest_tri_pt_2d, have most recently been prompted by the need to work with
+Delaunay triangulations of (x,y) data.
+
+Two recent additions, DETECT_VERTICES and VERTEX_CURVATURE, are now options
+in CURVDIS[2] (see gridlib) as needed by the CAPSULE_GRID application.
+
+Two more recent additions are also used by gridlib/curvdis.f: detect_flatness
+and handle_flatness, for broadening high-curvature regions onto flat regions.
+
+angle2d.f90          ! 2-space angle at point i between adjacent segments
+angle_between_planes ! Angle between planes defined by two triangles
+arcs2d.f             ! Normalized arcs for a surface grid stored as triples
+arcs3d.f             ! Normalized arcs for a volume  grid stored as triples
+area3.f              ! 3-space triangle area; cross-products/determinants
+area4.f              ! 3-space quadrilateral area, as that of 2 triangles
+areaxy.f             ! 2-space polygon area; no square roots
+beval.f              ! "Sine-bump" type shape functions (see PROFILE app.)
+catenary_parameters.f90   ! Find a in y = a cosh (x/a) - a for given defln.
+chord3d.f            ! Chord length sum between points on a 3-space curve
+chord.f              ! Chord length sum between points on a 2-space curve
+chords2d.f           ! Cumulative chords lengths, 2-space, normalize option
+chords3d.f           ! Cumulative chords lengths, 3-space, normalize option
+chordsrf.f           ! Variant of CHORDS3D for a row of a surface grid
+chordsrow.f          ! 2-space analogue of CHORDSRF; normalize option
+circle_slope.f90     ! Find the point on a circle with a specified slope
+cross.f              ! Cross product vector of two 3-space vectors
+curv2d.f             ! Signed curvature(s) for a 2-space curve
+curv3d.f             ! Arc-length-based curvature(s) for a 3-space curve
+detect_flatness.f90  ! Detect low/zero-curvature regions in a distribtion
+detect_vertices.f90  ! Detect 1-point spikes in a curvature distribution
+distptol.f           ! Perpendicular dist. from a point to an n-space line
+distptop.f           ! (Careful) distance between two points in 3-space
+distptos.f           ! Distance from a 3-sp. point to a finite line segment
+gaussian_curvature.f90    ! Gaussian & mean curvatures, structured surface
+handle_flatness.f90       ! Companion to detect_flatness & gridlib/curvdis.f
+nearest_brick_point.f90   ! Structured-vol.-grid var. of nearest_hex_point
+nearest_cell_point.f90    ! Nearest pt. in or on a cell of given mixed type
+nearest_curve_point.f90   ! Nearest pt. not off a finite 3-space curve
+nearest_edge_pt_2d.f90    ! 2-space variant of nearest_edge_point
+nearest_edge_point.f90    ! Nearest pt. not off a 3-spc. 2-pt. line segment
+nearest_hex_point.f90     ! Nearest pt. in or on a hex cell, Fluent order
+nearest_prism_point.f90   ! To be completed if it's ever needed
+nearest_pyramid_point.f90 ! To be completed if it's ever needed
+nearest_quad_point.f90    ! Nearest pt. in or on a quad cell, Fluent order
+nearest_tet_point.f90     ! Nearest pt. not outside a tet cell
+nearest_tri_pt_2d.f90     ! 2-space variant of nearest_tri_point
+nearest_tri_point.f90     ! Nearest pt. in or on a triangular cell, 3-space
+param2d.f            ! [Un]normalized arc lengths in a 3-space surface grid
+param2do.f           ! Variant of PARAM2D with optional Umax, Vmax outputs
+paramxy.f            ! Normalized arc lengths in a 2-space structured grid
+paramxyz.f           ! 3-space variant of PARAMXY (surface or volume grid)
+polygon3.f           ! Centroid and area of a 2-space triangle
+polygon4.f           ! Centroid and area of a 2-space quadrilateral
+project3.f           ! Nearest point on a plane defined by a 3-sp. triangle
+project4.f           ! Nearest point on a surface defined by a 3-sp. quad.
+rigid_transform.f90  ! Transforms interior points given new curve end pts.
+rotate2.f            ! Rotate 2-space point(s) about a 2-sp. pt.
+rotate2d.f           ! Rotate 2-space point(s) about a 2-sp. pt. in place
+rotate3d.f           ! Rotate 3-space point(s) about a 3-sp. pt. in place
+rotate_xyz.f90       ! Variant of ROTATE3D for xyz(1:3) triple(s)
+solid_angle_quad.f90 ! Solid angle element at a point for quad. cell (i,j)
+surface_normal.f90   ! (Careful) unit normal to a structured surface
+tri_normal_and_area.f90   ! Unit normal, area of surface triangulation cell
+unitnorm.f           ! Unit normals at points defining a 2-space curve
+unitnorm2d.f90       ! Unit normal to a 2-space curve at any arc length
+vertex_curvature.f90 ! Moderate 1-pt. curvature spikes at indicated indices
+xderivs.f            ! Given dx/dt, dy/dt, d2*/dt2, compute dy/dx & d2y/dx2

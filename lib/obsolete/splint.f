@@ -1,0 +1,112 @@
+C***********************************************************************
+C
+      SUBROUTINE SPLINT ( NX,  X,  Y,  COEFS, MODE, DERIVA, DERIVB,
+     +                    NXE, XE, YE, IER )
+C
+C PURPOSE: SPLINT (SPLINE INTERPOLATION) FITS AN INTERPOLATING SPLINE
+C          TO THE INPUT DATA X(*), Y(*), THEN EVALUATES THE SPLINE AT
+C          THE REQUESTED POINTS XE(*). IT PROVIDES FOR USER KNOWLEDGE
+C          OF EITHER  FIRST OR  SECOND DERIVATIVES AT THE END POINTS,
+C          AND FOR USER EVALUATION OF DERIVATIVES UPON RETURN.
+C     
+C METHOD:  SPLINT IS DESIGNED AROUND THE IMSL ROUTINES ICSICU, ICSEVU
+C          FOR THE COMMON CASE OF A SINGLE SET OF EVALUATIONS OF  THE
+C          FITTED SPLINE, THE INTENT BEING TO RELIEVE THE USER OF THE
+C          CUMBERSOME BOUNDARY CONDITION HANDLING REQUIRED BY ICSICU.
+C          THE USER MAY NOW PROVIDE EITHER FIRST DERIVATIVES (MODE=1)
+C          OR SECOND DERIVATIVES (MODE=2) TO APPLY AT THE END POINTS.
+C          (DERIVA=DERIVB=0. WITH MODE=2 GIVES THE 'NATURAL' SPLINE.)
+C
+C          THE IMSL ROUTINES ARE PROBLEMATICAL WHEN IT COMES TO EVAL-
+C          UATING DERIVATIVES FROM THE SPLINE COEFFICIENTS.    ICSICU
+C          EXPLICITLY AVOIDS USE OF COEFS(NX,*) FOR SOME REASON. THIS
+C          DEFICIENCY IS REMEDIED HERE.    (ACCESS TO THE SOURCE CODE
+C          FOR ICSICU WOULD HAVE PERMITTED A CLEANER SOLUTION...)
+C
+C PARAMETERS (IN ORDER PASSED):
+C    VAR    DIM    TYPE   I/O/S   DESCRIPTION
+C   NX       -      I       I     NUMBER OF DATA POINTS SPLINE IS FIT
+C                                 TO (ABSCISSAS STRICTLY INCREASING).
+C                                 NX >= 2.
+C   X       NX      R       I     ABSCISSAS OF DATA POINTS.
+C   Y       NX      R       I     ORDINATES OF DATA POINTS.
+C   COEFS  NX,3     R      S/O    WORKSPACE FOR THE SPLINE COEFFICIENT
+C                                 CALCULATIONS; COEFS(I,J) IS RETURNED
+C                                 WITH INFO. FOR THE JTH DERIVATIVE AT
+C                                 THE ITH INPUT ABSCISSA, FOR I = 1:NX
+C                                 AND J = 1:3, AS FOLLOWS:
+C                                      COEFS(I,1) = S'( X(I) )
+C                                      COEFS(I,2) = S''( X(I) )/2
+C                                      COEFS(I,3) = S'''( X(I) )/6
+C   MODE     -      I       I     = 1  MEANS 1ST DERIVATIVES SUPPLIED
+C                                      AT THE END POINTS;
+C                                 = 2  MEANS 2ND DERIVATIVES SUPPLIED
+C                                      AT THE END POINTS.
+C   DERIVA   -      R       I     DERIVATIVE AT X(1).  (SEE MODE.)
+C   DERIVB   -      R       I     DERIVATIVE AT X(NX). (SEE MODE.)
+C   NXE      -      I       I     NUMBER OF POINTS SPLINE IS TO BE
+C                                 EVALUATED AT.
+C   XE      NXE     R       I     ABSCISSAS OF POINTS SPLINE IS TO BE
+C                                 EVALUATED AT.  (NO ORDERING REQD.)
+C   YE      NXE     R       O     DESIRED ORDINATES FROM SPLINE APPROX.
+C   IER      -      I       O     ERROR RETURN CODE, AS SET BY IMSL
+C                                 ROUTINES. (IER=0 MEANS NO ERROR.)
+C                                 THE CALLING ROUTINE SHOULD CHECK IER.
+C COMMONS: NONE.
+C
+C LOCAL VARIABLES:
+C    VAR       DIM      TYPE      DESCRIPTION
+C    BPAR       4        R        USED TO INDICATE END-POINT CONDITIONS
+C                                 TO IMSL ROUTINES.
+C
+C EXTERNAL REFERENCES:
+C    NAME      DESCRIPTION AND SOURCE 
+C   ICSICU     INTERPOLATING CUBIC SPLINE APPROXIMATION, IMSL LIBRARY
+C   ICSEVU     EVALUATION OF INTERPOLATING CUBIC SPLINE, IMSL LIBRARY
+C
+C ENVIRONMENT: CDC 7600, SCOPE 2.1, FORTRAN EXTENDED, IMSL.
+C
+C AUTHOR:      Greg Howe, Informatics Inc., Sept. 1981.
+C              Use of COEFS(NX,*) for end-point derivatives added Nov.81
+C
+C***********************************************************************
+C
+      DIMENSION   X(NX), Y(NX), COEFS(NX,3), XE(NXE), YE(NXE)
+      DIMENSION   BPAR(4)
+C
+      D = X(NX) - X(NX-1)
+C
+C ... SET UP BPAR(*) FOR 2ND DERIVATIVE BOUNDARY CONDITIONS...
+C
+      BPAR(1) = 0.E0
+      BPAR(2) = DERIVA+DERIVA
+      BPAR(3) = 0.E0
+      BPAR(4) = DERIVB+DERIVB
+      IF ( MODE.EQ.2 ) GO TO 10
+C
+C ...... ELSE, SET UP BPAR(*) FOR 1ST DERIVATIVE BOUNDARY CONDITIONS...
+C
+         BPAR(1) = 1.E0
+         BPAR(2) = ( (Y(2)-Y(1))/(X(2)-X(1)) - DERIVA )*6.E0/(X(2)-X(1))
+         BPAR(3) = 1.E0
+         BPAR(4) = ( DERIVB - ( Y(NX)-Y(NX-1) )/D )*6.E0/D
+C
+   10 CONTINUE
+C
+C ... FIT AN INTERPOLATING CUBIC SPLINE TO THE INPUT DATA...
+C
+      CALL ICSICU ( X, Y, NX, BPAR, COEFS, NX, IER )
+      IF ( IER.NE.0 ) GO TO 99
+C
+C ... EVALUATE THE SPLINE AT EACH REQUESTED ABSCISSA...
+C
+      CALL ICSEVU ( X, Y, NX, COEFS, NX, XE, YE, NXE, IER )
+C
+C ... PROVIDE FOR THE 'MISSING' DERIVATIVES AT X(NX)...
+C
+      COEFS(NX,3) =   COEFS(NX-1,3)
+      COEFS(NX,2) =   COEFS(NX-1,3)*3.E0*D + COEFS(NX-1,2)
+      COEFS(NX,1) = ( COEFS(NX-1,3)*3.E0*D + COEFS(NX-1,2)*2.E0 )*D +
+     +                COEFS(NX-1,1)
+   99 RETURN
+      END

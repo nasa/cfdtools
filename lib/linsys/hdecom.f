@@ -1,0 +1,61 @@
+C+----------------------------------------------------------------------
+C
+      SUBROUTINE HDECOM ( MDIM, M, N, A, U )
+C
+C     HOUSEHOLDER REDUCTION OF RECTANGULAR MATRIX  A  (M*N,M.GE.N) TO
+C     UPPER TRIANGULAR FORM.  USE WITH SUBROUTINE  HSOLVE  FOR  LEAST
+C     SQUARES SOLUTION OF OVERDETERMINED SYSTEMS.
+C     ALSO FOR USE WITH SUBROUTINE HSULVE FOR MINIMAL-LENGTH SOLUTION
+C     OF UNDERDETERMINED SYSTEMS.
+C     HDESOL  IS PREFERABLE IF THERE IS ONLY ONE RHS PER MATRIX A....
+C
+C     REFERENCE: "NOTES ON MATRIX COMPUTATIONS", BY CLEVE MOLER, 1972
+C
+C     MDIM: DECLARED ROW-DIMENSION OF  A.
+C     M   : NUMBER OF ROWS OF  A.
+C     N   : NUMBER OF COLUMNS OF  A.
+C     A   : MATRIX TO BE REDUCED; A IS OUTPUT WITH THE REDUCED MATRIX,
+C                                 AND INFORMATION ABOUT THE REDUCTION.
+C     U   : M-VECTOR INPUT IGNORED; OUTPUT WITH REDUCTION INFORMATION.
+C
+C     PROGRAMMER:  DAVID SAUNDERS, INFORMATICS INC, 1975.
+C
+C-----------------------------------------------------------------------
+C
+      IMPLICIT REAL ( A-H, O-Z )
+C
+      DIMENSION A(MDIM,N), U(M)
+C
+      DO 5 K=1,N
+C
+C  *     FIND REFLECTION WHICH ZEROS A(I,K), I=K+1,...,M:
+         ALPHA = 0.E+0
+         DO 1 I=K,M
+            U(I) = A(I,K)
+            ALPHA= U(I)**2 + ALPHA
+ 1       CONTINUE
+         ALPHA = SQRT(ALPHA)
+         IF ( U(K).LT.0.E+0 )  ALPHA = -ALPHA
+         U(K) = U(K) + ALPHA
+         BETA = U(K)*ALPHA
+         A(K,K) = -ALPHA
+         IF ( BETA.EQ.0.E+0 .OR. K.EQ.N )  GOTO 5
+C
+C  *     APPLY REFLECTION TO REMAINING COLUMNS OF  A:
+         KP1 = K+1
+         DO 4 J=KP1,N
+            GAMMA = 0.E+0
+            DO 2 I=K,M
+               GAMMA = U(I)*A(I,J) + GAMMA
+ 2          CONTINUE
+            GAMMA = GAMMA/BETA
+            DO 3 I=K,M
+               A(I,J) = A(I,J) - GAMMA*U(I)
+ 3          CONTINUE
+ 4       CONTINUE
+ 5    CONTINUE
+C
+C  *  TRIANGULAR RESULT STORED IN A(I,J), I.LE.J;
+C  *  VECTORS DEFINING REFLECTIONS STORED IN  U  AND REST OF  A.
+      RETURN
+      END

@@ -1,0 +1,17 @@
+This modest collection of numerical quadrature utilities contains just one
+2-D subroutine; the rest are for 1-D datasets, where the monotonic option
+of LCSQUAD is recommended (or LCSAREAS if partial integrals are required
+as for heat load time histories).  See also TRAPEZOIDAL_RECURSION in the
+NUMODULES collection for the integrals associated with means and standard
+deviations.
+
+avint.f       Early approach involving averages of pairs of quadratic fits
+csquad.f      Special formulation suited only to CSFIT spline coefficients
+fsquad.f      Integrates a function in finite Fouries series form
+integrate.f   Drives most of the 1-D utilities here on 1 or more datasets
+lcsareas.f    Variant of LCSQUAD for time histories and partial sums
+lcsquad.f     Quadrature of [mono.] local cubic spline fits; any interval
+msquad.f      Earlier variant for cubic spline coefs. from MSFIT or CSFIT
+quanc8rc.f    Reverse communicn. form of adaptive QUANC8 (Forsythe, et al.)
+sctrpz.f      Quadrature on [x(1), x(n)] via the composite trapezoidal rule
+trapezoidal_quadrature_2d.f   On a 2-D structured grid, 1 or more functions

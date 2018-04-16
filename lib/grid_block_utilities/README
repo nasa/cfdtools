@@ -1,0 +1,16 @@
+Module grid_block_utilities is a companion to surface_patch_utilities for
+multiblock structured grid manipulation:
+
+block_data_range   (block)                 Min & max values of x, y, z
+centroids_volumes  (blockin, blockout)     blockout%* = centroids, volumes
+clone_structured_grid  (nb, nf, g1, g2)    Allocate/copy header info.
+get_bounding_boxes (lun, nb, grid, form, bbox)     B-boxes; read if lun > 0
+reflect_block_xyz  (block, n)              Reflect coord. n vs plane thru O
+reverse_block_i    (block, nf)             Reverse the i indices
+reverse_block_j    (block, nf)             Reverse the j indices
+reverse_block_k    (block, nf)             Reverse the k indices
+scale_shift_block  (block, scale, dx, dy, dz, pout)     Scale/shift x, y, z
+swap_block_xyz     (block, m, n)           Swap coordinates m and n
+update_block       (block1, block2, nf)    Transfer block1 to block2
+
+See also xyzq_io for structured grid I/O utilities.

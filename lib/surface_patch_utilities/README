@@ -1,0 +1,52 @@
+The surface_patch_utilities module packages a few routines for manipulating
+surface grid patches and optional surface data.  It was prompted by a need
+to reorganize patches into standard form for comparison of corresponding
+results.
+
+centroids_areas   (patchin, patchout)    patchout%xyzf = centroids & areas
+clone_grid        (np, nf, grid1, grid2) allocates and copies header info.
+match_patch_edges (np, grid, tol)        averages common edge coordinates
+patch_data_range  (patch)                assigns patch%xmin/xmax, etc.
+reflect_x_y_or_z  (patch, n)             reflects about any coord. plane
+reverse_patch_i   (patch, nf)            reverses the i indices
+reverse_patch_j   (patch, nf)            reverses the j indices
+scale_and_shift   (patch, scale, dx, dy, dz, pout)  scales/shifts x, y, z
+surface_connectivity (np, grid, tol, icon)  sets up patch abutment info
+surface_vectors   (np,grid,ip,i,j,tani,tanj,unorm) -> unit norm @ ip(i,j)
+swap_coordinates  (patch, m, n)          swaps coordinates m and n
+transpose_patch   (patch, nf)            swaps i and j in place
+update_patch      (patch1, patch2, nf)   transfers patch1 to patch2
+
+04/09/05  D. A. Saunders   Initial implementation for Shuttle cavity grids.
+06/16/05     "      "      Added scale and/or shift option.
+06/20/05     "      "      Added calculation of cell centroids and areas.
+02/22/06     "      "      Premature STOPs on Steve Alter's Opteron were
+                           traced to an ier /= 0 test in centroids_areas that
+                           should not have been there.
+03/31/09     "      "      Added update_patch option.
+07/26/10     "      "      %mi, %mj, %mk are now set in centroids_areas
+                           in case of I/O via xyzq_io.
+09/18/15     "      "      Started adding a surface_vectors utility that
+                           produces unique results along patch edges for unit
+                           normal vectors (at grid points only, for now).
+09/22/15     "      "      Started adding a surface_connectivity utility that
+                           is needed by surface_vectors.
+09/28/15     "      "      Started adding a match_patch_edges utility, which
+                           is really needed first for surface_vectors to do
+                           what it promises (unique results at edge points).
+10/06/15     "      "      The surface_vectors utility appears to be working
+                           in a version of SURFACE_CURVATURE, including
+                           averaged unit normals at corner points.  We still
+                           don't have more than a stub for match_patch_edges.
+11/30/15     "      "      Completed match_patch_edges with match_corners and
+                           y0_edges.
+05/19/15     "      "      Two glitches were detected when the CONVEX_GRID
+                           application made use of surface_vectors:
+                           patches reflected about y = 0 DO need to be
+                           rectified, and "if (jev == 2)" had iev, not jev.
+ 
+For a sample application, see CAPSULE_GRID.  For use of the most recent
+surface_vectors and match_patch_edges, see SURFACE_PATCHES.  In particular,
+observe the use of first_unit_normal in the "Impose fissures along all
+patch edges" option associated with the use of surface_vectors.
+See also CONVEX_GRID's use of surface_vectors.

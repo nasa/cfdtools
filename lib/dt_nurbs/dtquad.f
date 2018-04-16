@@ -1,0 +1,251 @@
+      SUBROUTINE DTQUAD(FUN,CSPL,A,B,TOL,N,LIM,ANS,LEVEL
+     *                            ,WORK,NWORK,ERR,IER)
+      DOUBLE PRECISION A,B,TOL,ANS,ERR
+      DOUBLE PRECISION WORK(*), CSPL(*)
+      EXTERNAL FUN
+      DOUBLE PRECISION FUN
+      INTEGER N,LIM,LEVEL,IER,NWORK
+C******
+C  DTQUAD EVALUATES A SINGLE INTEGRAL USING AN ADAPTIVE LEGENDRE-GAUSS
+C  QUADRATURE PROCESS.  QUAD IS DESIGNED TO HANDLE INTEGRABLE
+C  SINGULARITIES.
+C
+C
+C     INPUT    CSPL  SPLINE ARRAY
+C              A,B   LIMITS OF INTEGRATION
+C              TOL   DESIRED RELATIVE ACCURACY
+C              N     SINGULARITY FLAG (0 MEANS NO SINGULARITY)
+C              LIM   LIMIT TO NUMBER OF SUBDIVISIONS
+C
+C     WORKING STORAGE
+C              WORK  ARRAY OF LENGTH NWORK
+C              NWORK Length of array work;  
+C              NWORK >= CSPL(3)**2 + 3 * CSPL(3)
+C
+C     OUTPUT   ERR   COMPUTED ESTIMATE OF RELATIVE ERROR
+C              ANS   COMPUTED INTEGRAL
+C              LEVEL NUMBER OF SUBDIVISIONS
+C              IER   ERROR FLAG (.GE.0 MEANS SUCCESS,.LE.0 MEANS FAILURE
+C
+C     USER SUPPLIED
+C     FUNCTION FUN   REQUIRED TO CALCULATE INTEGRAND
+C                      F = FUN(X)
+C*******
+C   MODIFIED BY W PETERSEN, 9 DEC. 1985
+C   MODIFIED JULY, 1989 FOR USE IN CALCULATING 
+C   ARC LENGTH OF SPLINE CURVES
+      DOUBLE PRECISION W4(2),W8(4),W12(6), Z4(2),Z8(4),Z12(6)
+      DOUBLE PRECISION
+     1   ABG,C,D1,D2,E,EPS,EPSSQR,ER,EW,F,F1,F2,G4,G8,G12,H,HCP,P,PARM
+      DOUBLE PRECISION Q,Q16,RE,SGN,SMALL,TE,TEMP,X,Y,YDBLE
+      DOUBLE PRECISION DTMCON
+      CHARACTER*8 SUBNAM
+      INTEGER LAST,MODE,NCNSEC,NCUT
+      DATA SUBNAM /'DTQUAD'/
+C
+C     --------------------  4-POINT WEIGHTS
+C
+      DATA W4 /.652145154862546D0,.347854845137454D0/
+C
+C     --------------------  8-POINT WEIGHTS
+C
+      DATA W8 /.362683783378362D0,.313706645877887D0,.222381034453375D0,
+     1         .101228536290376D0 /
+C
+C     -------------------- 12-POINT WEIGHTS
+C
+      DATA W12/.249147045813403D0,.233492536538355D0,.203167426723066D0,
+     1        .160078328543346D0,.106939325995318D0, .047175336386512D0/
+C
+C     --------------------  4-POINT ABSCISSAE
+C
+      DATA Z4 /.339981043584856D0,.861136311594053D0 /
+C
+C     --------------------  8-POINT ABSCISSAE
+C
+      DATA Z8 /.183434642495650D0,.525532409916329D0,
+     1         .796666477413627D0,.960289856497536D0 /
+C
+C     -------------------- 12-POINT ABSCISSAE
+C
+      DATA Z12/.125233408511469D0,.367831498998180D0,.587317954286617D0,
+     1         .769902674194305D0,.904117256370475D0,.981560634246719D0/
+C
+C
+C     -------------------- INITIALIZATION SECTION
+C
+      IER=0
+      NWORK1 = CSPL(3)**2 + 3 * CSPL(3)
+      IF(NWORK1 .GT. NWORK) THEN
+          IER=-3
+          MODE=1
+          GO TO 290
+      ENDIF
+      EPS=DTMCON(5)
+      EPSSQR=EPS*EPS
+      SMALL = 1.0D2*DTMCON(4)
+      C=TOL
+C     IS  C  SET TOO SMALL
+      IF (C.LT. 100.0D0*EPS) C=100.0D0*EPS
+      HCP = 0.0
+      LEVEL = 0
+      IF (LIM.LT.1) THEN
+          IER=-1
+          MODE=1
+          GO TO 290
+      END IF
+      NCNSEC = 0
+      NCUT = 1
+      ANS = 0.0D0
+      F2 = 0.0D0
+      Y = A
+      YDBLE = Y
+      F = C/200.0D0
+      E = 0.0D0
+      IF (A .EQ. B) GO TO 300
+C***********************************************************************
+C     FIRST TRY ON FULL SPAN AND ALSO LAST STEP GO THROUGH HERE
+   20 H = (B-Y)*0.5D0
+      SGN=SIGN(1.0D0,H)
+      H=ABS(H)
+      LAST = 1
+C     ALL INTERMEDIATE STEPS BEGIN HERE
+   30 X = Y + H*SGN
+C     IS  H  TOO SMALL TO BE SENSED RELATIVE TO  X
+      TEMP=.1D0*H
+      TEMP=X+TEMP
+      IF(TEMP.EQ.X) THEN
+          IER=2
+          GO TO 295
+      END IF
+      IF(LEVEL.GT.LIM) THEN
+          IER=1
+          GO TO  295
+      END IF
+C***********************************************************************
+C
+C     -------------------- COMPUTE 4- AND 8-POINT ESTIMATES
+C
+      G4=0.0D0
+      DO 40 I=1,2
+          PARM=Z4(I)*H
+          G4=G4+(W4(I)*(FUN(X-PARM,CSPL,WORK,NWORK) 
+     *             + FUN(X+PARM,CSPL,WORK,NWORK)))
+  40  CONTINUE
+      G4=H*G4
+      G8=0.0D0
+      DO 50 I=1,4
+          PARM=Z8(I)*H
+          G8=G8+(W8(I)*(FUN(X-PARM,CSPL,WORK,NWORK) 
+     *              + FUN(X+PARM,CSPL,WORK,NWORK)))
+  50  CONTINUE
+      G8=H*G8
+C***********************************************************************
+C
+C     -------------------- ESTIMATE ERROR
+C
+      ABG=ABS(G8)+EPSSQR
+      TE=ABS(G8-G4)+EPS*ABG
+C     RE IS THE RELATIVE ERROR IN THE SUBINTERVAL THE 4 PT. RESULT MAKES
+C        IF THE 8 PT. RESULT IS EXACT
+      RE = EPS + TE/ABG
+      IF(LEVEL.EQ.0) P=ABG
+C     P IS THE MAX ABS VALUE OF ENTIRE INTEGRAL AS WE KNOW IT UP TO HERE
+C     LEVEL IS THE COUNTER OF THE NUMBER OF ATTEMPTS
+      LEVEL = LEVEL + 1
+      EW = F*P
+      ER = TE*RE + SMALL
+      Q= EW/ER
+      Q16 = Q**.0625D0
+      D1 = H*0.5D0/RE**.125D0
+      D2 = H/D1*Q16
+C     D1 IS THE ESTIMATE OF THE DISTANCE "A" TO THE SINGULARITY
+C     D2 IS AN IMPORTANCE FACTOR WHICH NORMALLY RANGES FROM ABOUT 10.
+C        TO 0.1 .  WHEN THE RESULT IS UNIMPORTANT, D2 IS LARGE.
+C
+C     THE MAGIC GO-GO OR NO-GO QUANTITY IS  100Q , FOUND AS FOLLOWS.
+C     WE REQUIRE THAT THE RELATIVE ERROR IN THE 8 PT. SUBINTERVAL
+C     VALUE  (RE**2) TIMES THE IMPORTANCE OF THE SUBINTEGRAL (ABG/P)
+C     BE LESS THAN HALF THE REQUIRED TOLERANCE  C .
+C     ALTERNATIVELY, (C/2)*(P/ABG)/(RE**2)  MUST BE GREATER THAN 1.0
+C     THE ABOVE EXPRESSION, WHEN MULTIPLIED OUT, IS 100Q.
+      IF(Q.LE. 0.01D0) THEN
+C
+C         THIS REGION OF THE PROGRAM MODIFIES THE STEP LENGTH WHEN
+C            SUBINTERVAL IS NOT SMALL ENOUGH
+          IF(NCUT .EQ. 1) THEN
+C             FIRST CUTBACK
+              F1 = Q16
+              H=MIN(.75D0*H,D1*Q16)
+          ELSE
+C             SUBSEQUENT CUTBACKS IN THIS SERIES.
+              F1 = F1*Q16
+              H = F1*H
+          END IF
+          NCNSEC = 0
+          NCUT = 0
+          LAST = 0
+          GO TO  30
+      END IF
+C     COMPARISON OF 4 PT. AND 8 PT. LOOKS GOOD.
+      IF(N.NE.0) THEN
+C     CHECK THE 12 POINT RESULT
+          G12=0.0D0
+          DO 100 I=6,1,-1
+              PARM=Z12(I)*H
+              G12=G12+(W12(I)*(FUN(X-PARM,CSPL,WORK,NWORK) 
+     *                + FUN(X+PARM,CSPL,WORK,NWORK)))
+ 100      CONTINUE
+          G12=H*G12
+          ER=ABS(G12-G8)
+          G8=G12
+          IF(ER .GT. 100.0D0*EW)  THEN
+C         NOT GOOD ENOUGH.  TRY AGAIN.
+              H=H/4.0D0
+              F1 = 0.25D0
+              NCNSEC = 0
+              NCUT = 0
+              LAST = 0
+              GO TO  30
+          END IF
+      END IF
+C***********************************************************************
+C***********************************************************************
+C
+C     SUCCESSFUL SUBINTERVAL INTEGRATION
+C     INCREASE STEP AS INDICATED
+ 200  ANS=ANS+G8
+      E = E + MAX(ER,EPS*ABG)
+      IF(LAST.EQ.1) GO TO  300
+C     HCP IS AN OLD SUCCESSFUL STEP
+      IF(HCP .LE. 0.0D0) HCP=H
+      F2 = 0.50D0*F2 + LOG(H/HCP)
+      HCP = H
+      YDBLE = YDBLE + 2.0D0*H*SGN
+      Y = YDBLE
+      NCNSEC = NCNSEC + 1
+      IF( NCNSEC .GT. 4  .OR.  F2 .GE. 0.0D0 ) THEN
+C         SAYS THE HISTORY HAS BEEN SUCCESSFUL
+          H = D2*(D1+2.*H)*Q16
+      ELSE
+C         PAST FAILURES NOT FORGOTTEN YET
+          H = D1*D2/(1.0D0+2.0D0*D2)
+      END IF
+      NCUT = 1
+      P = MAX(P,ABG)
+      IF(SGN*Y + 2.0D0*H - SGN*B) 30,20,20
+C***********************************************************************
+C
+C     ERROR EXITS
+  290 CALL DTERR(MODE,SUBNAM,IER,0)
+      ANS = DTMCON(1)
+      RETURN
+C
+C       ...........  PRINT WARNING BEFORE RETURNING
+295   MODE = 0
+      CALL DTERR (MODE,SUBNAM,IER,0)
+C     HERE WE RETURN TO THE MAIN PROGRAM WITH OR WITHOUT AN ANSWER
+  300 ERR= 2.0D0*E/(ABS(ANS)+10.0D0*DTMCON(4))
+      IF(B-A.LT.0.0D0) ANS=-ANS
+      RETURN
+      END

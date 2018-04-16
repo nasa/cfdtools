@@ -1,0 +1,48 @@
+Outline of table_io.f90 module:
+
+   Utilities for reading and writing common text tables are packaged as a
+module that may be extended as necessary.  In its first incarnation, all
+header records (0 or more of them) are assumed to be at the top only;
+embedded non-numeric lines are treated as errors.  Thus, handling of
+commented-out numeric lines remains has not been implemented yet.
+
+   public :: table_io_scan         ! Determines table dimensions
+   public :: table_io_read_alpha   ! Reads  a table as alphanumeric tokens
+   public :: table_io_write_alpha  ! Writes a table as alphanumeric tokens
+   public :: table_io_read_real    ! Reads  a table of real columns
+   public :: table_io_write_real   ! Writes a table of real columns
+   public :: table_io_thin         ! Option to repack every nth row in-place
+   public :: table_io_deallocate   ! Deallocates table arrays
+
+Included is a derived data type that can represent a common table:
+
+   type table_type
+      integer                                      :: nheader
+      integer                                      :: nrows
+      integer                                      :: ncols
+      integer, dimension (max_table_columns)       :: column_type
+      integer, dimension (max_table_columns)       :: column_width
+      real,                                pointer :: values (:,:)
+      character (max_table_file_name)              :: filename
+      character (max_table_header_length), pointer :: header (:)
+      character (max_table_token_length),  pointer :: tokens (:,:)
+   end type table_type
+
+Run-time-variable formatting of written tables is supported, in addition
+to hard-coded formatting with a choice of column separators.
+
+More recently, if a run-time format contains integer editing, the
+appropriate column(s) are written as though they are integers even though
+they are stored as reals.  This is implemented by adjusting the format,
+writing to a buffer, then removing unwanted decimal points before writing
+to the output table.  E.g., (i1, 4es16.8, f6.1, i3) would be changed to
+(f2.0, 4es16.8, f6.1, f4.0).  If column 1 contains 1.0 (stored as real),
+the f2.0 gives 1. from the initial write, then the buffer is repacked to
+suppress the decimal point before the buffer is written.
+
+Most recently, table_io_read_alpha has been extended to handle a dataset
+that is alphanumeric rather than numeric.  This is detected by seeming to
+be all header with no rows.  The dataset is rescanned to check that all
+rows contain the same number of tokens, and if so the number of header
+lines is set to 0 and the rows are returned as characters, not numbers,
+as they are for the original case of [optional] header + numeric tokens.

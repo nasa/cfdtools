@@ -1,0 +1,5 @@
+Most of the intrinsics collection has gone now (redundant thanks to
+language improvements).  Here is the only one left, and it too should
+be redundant:
+
+trig_functions_in_degrees.f90  Prompted by apparent flaws in g95 cosd, etc.

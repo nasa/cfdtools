@@ -1,0 +1,34 @@
+Six variants of an Alternating Digital Tree mesh-searching package have
+been derived at NASA Ames Research Center from the original implementation
+by Edwin van der Weide (Stanford University) which was for a list of
+surface quads or triangles.
+
+Initially, the variants all used the same build_adt and search_adt names,
+and were maintained in separate subdirectories.
+
+The prospect of installing these and other utilities on a web site prompted
+merging of all of the variants into a single module, with generic interfaces
+for the build_adt and search_adt versions.  Different argument lists make
+this viable in Fortran 90, although the "build" routines for structured and
+unstructured volume grids did need an "unused" argument to be added to
+distinguish them from their surface grid analogues.
+
+The accompanying applications (around 20 of them) now use this
+adt_utilities.f90 module form of ADT searching and interpolation.
+
+The most recent addition to the ADT module is a 2-space multiblock curve
+analogue of the multiblock structured surface variant, as needed for the
+recent INTSEC2D curve-curve intersection utility and for SURFACE_INTERP_2D.
+
+Please note that the application should still allocate %z(ni,1,1) for each
+block or zone, because 3-space bounding boxes are still used internally by
+the 2-space curve utilities.
+
+Related Note:
+
+If searching for just the nearest data point (cell centroid?) is considered
+good enough, see also the extremely efficient package included here under
+the name KDTREE (distance-based searches for nearest neighbor(s) in k
+dimensions) for optional use by FLOW_INTERP.  (This is the kdtree2.f90 of
+Matthew B. Kennel, Institute for Nonlinear Science, available under the
+terms of the Academic Free Software License.)

@@ -1,0 +1,7 @@
+The obsolete library is the resting place for a handful of dated utilities
+that are now deprecated but nevertheless remain in use by contemporary
+applications, namely programs INTEGRATE, MAXMIN, PROFILE, and SMOOTH.
+
+curv1.f    Interpolating cubic spline under tension; try monotonic LCSFIT
+htdis.f    1-sided Vinokur-type stretching (tanh); EXPDIS2 is more precise
+xformx.f   Early linear transform utility; see GETXFORM, GETSCALE, USESCALE

@@ -1,0 +1,89 @@
+The progtools collection contains mostly character string manipulation
+utilities prompted by keyword-type input schemes.  Prompting utility
+READER also enables defaulting of scalar control variables by handling
+<CR> (carriage return) as a valid response, along with ^D (EOF = quit)
+and retries for bad inputs.
+
+FORTRAN 77 introduced user-friendly character string handling, so most
+of these early utilities remain relevant for modern applications.
+
+Note that list-directed reads often suffice.  However,
+                  read (lun, *, iostat=ios)
+ignores <CR> or EOR and waits for a non-null input (possibly from the
+keyboard, with no indication of what has happened).  Also, any '/'
+character behaves as end-of-information, so list-directed reads cannot be
+used for entering Unix-type file names with preceding paths (subdirectory
+names).  See NOQUOTES.
+
+Namelist reads can also be extremely convenient for easy addition of
+new control inputs and setting of defaults.  Namelist inputs were once
+restricted to starting at or beyond column 2, but this peculiarity no
+longer seems to be an issue.  Consider using namelist I/O before
+implementing more elaborate input schemes.
+
+A namelist-like scheme (internal subroutine read_constraints within fun.f90
+in the NPOPT_DRIVER directory) may also be of interest for reading such
+inputs as linear and nonlinear constraints by name.
+
+On the other hand, how would one handle entry of an indefinite list of
+integers at a prompt?  Not with a namelist read.  See RDLIST and RDLISTC
+for solutions, and also the DECODE_ILIST/DECODE_RLIST pair.
+
+alpha.f          Flag a string as alphanumeric if it appears not a number
+check_existence.f90     Check for a file by name + diagnostic if missing
+cleantext.f      Remove likely separators; separate tokens by one blank
+countr.f         Count # tokens in first significant line; see TOKEN_COUNT
+decode_ilist.f90 Decodes an indefinite list of integers in a string
+decode_number.f90       Extracts an integer|real|both|neither from a string
+decode_rlist.f90 Decodes an indefinite list of reals in a string
+echo.f           Copy input file to printable output & to a scratch copy
+extend_name.f90  Construct composite [HDF5 group?] name; see NUMBERED_NAME
+getargs.f90      Return command line command name & arguments as an array
+get_coordinates.f90  Extract ndim "coordinates" from a file name
+getline.f        Read 1 line (may be empty); suppress trailing comment|' 's
+index_or_not.f90 Distinguish a list of indices from a list of coordinates
+int_to_char.f90  Convert an integer to a left-justified character string
+locase.f         Converse of UPCASE; return input string as all lowercase
+lookup.f         Dictionary look-up with option for abbreviations|synonyms
+lookup2.f        Simpler variant of LOOKUP (exact matches only)
+lstfil.f         Variant of ECHO without the extra scratch file copy
+mpi_dummy.f      Used by CFD_IO_PACKAGE (which is now deprecated)
+ndigits.f90      Count the # digits in an integer; e.g., 1001 & -999 have 4
+noblanks.f90     Ensures single-token column headers: T (K) or T [K] -> T,K
+noquotes.f90     Left-justify given string in place; suppress any '|" chars
+number.f         Flag a string as a likely integer|real number, or not
+numbered_name.f90     Convert string & integer to numbered name: 'x3'|'x 3'
+numbered_name_2d.f90  Form of NUMBERED_NAME for pair of prefixes & integers
+opener.f         Prompt for & open a file; retry if necessary
+pairs.f          Parse a string into arrays of keyword/value string pairs
+parsenam.f       Isolate a file name and extension (if any); Unix or VMS
+qpldat.f         QPLFRM & QPLCRV entry points write QPLOTable data
+rdlist.f         Prompt for & read a [compact?] list of n integers; n >= 0
+rdlistc.f90      Variant of RDLIST for string tokens [on 1 line | 2+ lines]
+rdqpl.f          Early read-a-curve utility still used by program PROFILE
+rdreals.f        Read an indefinite number of real values; optional prompt
+rdtuples.f       [Prompt?]; read an indefinite list of real pairs | triples
+rdxyz.f          Read 1|2|3 columns from multiple columns of real data
+rdxyz2.f         Variant of rdxyz.f with added argument (comment character)
+readcols.f       Read 2 columns from many; indirection/keywords handled
+reader.f         Prompting utility: scalar of any type; handle <CR> & ^D
+read_to_line_feed.f90 Read ACCESS='stream' file one char. at a time to <LF>
+scan2.f          Look for the next token in a string; user-supplied delims.
+scan3.f          Backward-search variant of SCAN2: find the last token
+scan4.f          SCAN2 variant: parse '*'|"*"|(*)|[*]|{*}; * may have ' 's
+scan_column.f    As might be needed for dynamic alloc. of a character array
+scannr.f         Look for the next token in a string; fixed delimiter list
+second.f         Early CPU time utility; use intrinsic cpu_time now
+select.f         Prompt; optional menu; accept choice by name or number
+string_justify.f90  Module for left|right-justifying character data
+stripper.f       Scan a string for enclosing delims.; return left-shifted
+termin.f         Append a marker character to the end of a string
+toggle.f         Display and switch on/off options
+tokens.f         Parse a string into uppercase tokens; fixed delimiter list
+token2.f         Variant of TOKENS with user-supplied delimiter list
+token2l.f        Variant of TOKEN2 that does NOT convert to uppercase
+token4.f90       Variant of TOKEN2 for tokens of the type handled by SCAN4
+token_count.f90  Count # tokens in a string (no I/O, unlike COUNTR)
+upcase.f         Converse of LOCASE; return input string as all uppercase
+writer.f         Error-message analogue of READER, but its multiple entry
+                 points are now deprecated

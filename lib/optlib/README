@@ -1,0 +1,42 @@
+The optlib collection includes general purpose 1-D zero-finding and minim-
+ization utilities, the n-dimensional unconstrained optimizers QNMDIF[2]
+(quasi-Newton) and MNA (modified Newton algorithm), both originally by
+Gill, Murray, et al.  For constrained optimization at NASA Ames Research
+Center, the NPOPT variant of NPSOL has long been employed, but these
+packages require a license from Stanford University and thus cannot be
+offered here, although some such applications are included.
+
+Frameworks for new applications of [sequences of] unconstrained and
+constrained optimization may be found under QNMDRIVER2, QNMDRIVER3, and
+NPOPT_DRIVER.
+
+Reverse-communication forms of the early derivative-free FMIN and ZEROIN
+methods by Richard Brent are recommended for efficient 1-D minima and
+zero-finding.  Here, the utility returns for some action at each iteration
+(such as evaluating the [objective] function at the current x, or terminat-
+ing the iteration).  The function can thus be as simple or as complex as
+the application calls for, as opposed to being of the form FUN (X) with
+all other needed variables accessed inconveniently via a common block (or
+module, these days).
+
+For looking at maxima and minima in 1-D datasets, see the MAXMIN driver.
+
+Compilation warning:  qnm_solution.f90 & qnm_solution3.f90 both use
+the module in qnm_module.f90 and hence don't belong in f90optlib.a
+because they should all be compiled into the application program directory.
+
+cendif.f          3-pt. df/dxi, d2f/dxi2 estimates; option to improve "h"i
+cubic.f           Roots of a cubic equation with real coefficients
+fmin77.f          Robert Kennelly's initial refinement of FMIN; try FMINRC
+fminrc2.f         Same as FMINRC with a distinct name for nested minimizns.
+fminrc.f          1-D minimizn.; no-derivative method; reverse communicatn.
+hooke_jeeves.f90  N-D minimizn.; non-derivative; variable bounds (only)
+mna.f             Modified Newton Algorithm, 1st/2nd derivs., unconstrained
+objeps.f          Function precision estimation via difference tables
+qnmdif2.f         N-D quasi-Newton minimzn., 2/3-pt. grads., unconstrained
+qnmdif.f          Earlier Gill/Murray package, not fully argument-driven
+qnm_module.f90    Replaces common block originally employed by QNMDIF2
+qnm_solution.f90  Subroutine form of the essence of QNMDRIVER2 framework
+qnm_solution3.f90 Subr. form of QNMDRIVER3 framework (seq. of minimizns.)
+zerorc.f          1-D zero finder, no-derivative method, reverse communicn.
+zeros.f           (Crude) estimation of all zeros (if any) in a fn. array

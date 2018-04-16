@@ -1,0 +1,87 @@
+This gridlib collection has arisen from decades of application programming
+at NASA Ames Research Center involving (mostly) structured grids in 2- and
+3-space, including many utilities for generating grid point distributions
+along a line or curve.  Of these, curvature-based and (extremely precise)
+Vinokur-type distributions are most valuable.  See program DISTRIBUTE for
+driving such utilities.  Transfinite interpolation, elliptic smoothing, and
+grid perturbations are also supported here.
+
+   Compilation warning:  vertices_to_centers[_2d].f90 use the module in
+   grid_block_structure.f90, which can be found in subdirectory /xyzq_io.
+
+adjustn.f90        Variant of CHANGEN as needed for treating periodic data
+adjustn2.f90       Change # pts. and/or relative spacing on a 3-space curve
+arbdis.f           Make point spacing proportional to an arbitrary shape
+arcdis.f           Arc-length redistribution wrapped around DISTRIB utility
+average_increments.f90  Average off-face-1-6 spacings for one grid block
+blgrid.f           Boundary-layer-type distribn.: geometric and/or Vinokur
+catenary_grid.f90  Catenary curve (L|R|both halves) discretized as n points
+cellvol.f          Hex cell volume via 6 pyramids, from A. Jameson's FLO87
+changen1d.f        Change # pts. in a 1-D interval; same relative distrbn.
+changen2d.f        Change # pts. on a 2-sp. curve;  same relative distrbn.
+changen.f          Change # pts. on a 3-sp. curve;  same relative | uniform
+compass.f          Locates the intersection of a 2-space circle and a curve
+condis.f           Exponential distribn. constraining x(m) to be xm exactly
+copy_face.f90      Copy a volume block face to a surface patch; keep R-hand
+curvdis.f          Curvature-based redistribution along 2-space curve
+curvdis_l.f        CURVDIS variant using linear interpolation for x & y
+curvdis2.f90       Normalize (x,y) data, apply CURVDIS, then denormalize
+curvdis3d.f        3-space variant of CURVDIS; both employ ARBDIS
+delq3d.f           Stage 1 of grid perturbation common to WARP3D & WARPQ3D
+determine_grid_dim.f90   Determine whether a PLOT3D-type grid is 2-D or 3-D
+determine_grid_form.f90  Ascertain existence & form of a grid|function file
+distrib.f          High-level driver for the numerous 1-D point distribns.
+dstrib.f           Early sinusoidal or uniform point distributions
+ecompass.f         Ellipse variant of COMPASS circle/curve intersection
+ellip2d.f          Elliptic vol. grid smoothing in 2-sp.; edge float option
+ellip3d.f          3-space analogue of ELLIP2D (Sorenson/Thomas-Middlecoff)
+ellipq3d.f         3-space surface analogue of ELLIP2D
+expdis.f           1-sided Vinokur stretching (or sym. 2-sided), given beta
+expdis2.f          Inverse variant of EXPDIS; find/use beta for given dx1
+expdis4.f          Variant of EXPDIS2 without the mixed precision; use -r8
+expdis5.f          Recommended EXPDIS4 variant with geometric safeguard
+fixogrid.f         Portion of a hyperbolic OH grid generator; uses ECOMPASS
+flow_gradients.f90 Compute partial df/dx etc. at all structured block pts.
+flow_gradients_nf.f90   Multiple-function form of FLOW_GRADIENTS
+foilgrd.f          Airfoil-type distrib.: linear, quadratic, sine, & cosine
+foilgrid.f         Earlier variant with sine & quadratic + LE refinement
+geodis.f           Generalized geometric-type 1-sided distribution
+geodis2.f          2-sided variant of GEODIS; both include [non]zero powers
+graddis.f          Gradient-based redistribution along a 2-space curve
+graddis2.f90       Normalize (x,y) and f data; apply GRADDIS; denormalize
+graddis3d.f        3-space variant of GRADDIS; both employ ARBDIS
+graddis3d2.f90     Normalize (x,y,z) & f data; apply GRADDIS3D; denormalize
+grid_block_structure.f90    Derived data type module for a structured block
+gridspec.f         File-driven scheme for sequences of 1-D distributions
+htdis2.f           2-sided Vinokur-type stretching; mixed precision
+htdis4.f           Recommended variant of HTDIS2; use -r8 for all-64-bit
+lapgrid.f          Laplace solution for a 2-space volume grid (Sorenson)
+min_max_curv_edge_2d.f90  Prompted by a 2-D outflow grid bndry. requirement
+modgrid2.f         For airfoil shape optimization grid line perturbations
+modgrid3.f         B-spline airfoil variant of MODGRID2
+modgrid4.f         Wing shape optimization variant of MODGRID2
+morph_line_3d.f    Variant of NULINE3D controls end pts. AND end-pt. slopes
+nuline2d.f         Adjust interior pts. of a 2-sp. curve given new end pts.
+nuline3d.f         Adjust interior pts. of a 3-sp. curve given new end pts.
+permute_block.f90  Permute grid block indices so k = 1 at indicated face
+permute_block_2d.f90    2-space variant of PERMUTE_BLOCK
+shockgrid.f        Attempt to resolve a shock along a hypersonic grid line
+skew2d.f           2-space quad mesh quality checker
+smooth1d.f         Arc-length-based explicit smoothing of one function
+smoothx.f          Merge desired X(s) smoothly into an X distribution
+stretch.f90        Dinesh Prabhu's equiv. of EXPDIS2 using beta start guess
+tfi2d.f            Transfinite interpoln. (interior pts., 2-sp. structured)
+tfi3d.f            Transfinite interpoln. (interior pts., 3-sp. structured)
+tfint3d.f          3-sp. interpolation from faces to interior, 1 function
+tfint3f.f          3-fn. variant of TFINT3D; 3-stage Thompson/Warsi/Mastin
+tfiq3d.f           3-sp. variant of TFI2D for a k plane (only)
+tfiq3xyz.f         More general variant of TFIQ3D for any (sub)plane
+uniform_edge.f90   Convert an irregular 3-sp. edge distrib. to ~uniform
+vertices_to_centers.f90 Interp. x,y,z[,nf]: vertices to cell centers/1 blk.
+vertices_to_centers_2d.f90 Interp. x,y[,nf]: vertices to cell centers/1 blk.
+vinokur.f          2-sided Vinokur distrib. on some interval via HTDIS4
+warp2d.f           Perturb interior of a 2-sp. [sub]grid given new edges
+warp3d.f           3-stage 3-sp. analogue of WARP2D's 2-stage 2-sp. method
+warpq3d.f          3-sp. surface [sub]patch variant of WARP2D
+warpq3d2.f90       Fortran 90 variant of WARPQ3D (no work-space arguments)
+xgrid.f            Simple uniform or sinuisoidal grid pt. distributions

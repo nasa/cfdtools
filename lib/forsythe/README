@@ -1,0 +1,21 @@
+The FORSYTHE library is retained for historical reasons.
+It corresponds to the Forsythe, Malcolm and Moler textbook from the early
+1970s.  Most of the routines have been improved upon in other collections
+such as /linsys and /optlib and /interplib here.
+
+The version of DECOMP here differs from the /linsys version in that it
+estimates condition number cond (A), which is often not needed.
+
+   Original      Now recommended
+
+   decomp.f      Several Ax = b choices in /linsys
+   fmin77.f      fminrc.f in /optlib
+   fmin.f           "     "     "
+   quanc8.f      quanc8rc.f, lcsquad.f, or lcsareas.f in /integrate
+   rkf45.f       [system of ODEs; no upgrades]
+   seval.f       csfit.f + cseval.f or cspline.f90 in /interplib
+   solve.f       As for decomp.f; see /linsys
+   spline.f      csfit.f + cseval.f or cspline.f90 in /interplib
+   svd.f         [singular value decomposition; no upgrades]
+   urand.f       [uniform random number generator; no upgrades]
+   zeroin.f      zerorc.f in /optlib

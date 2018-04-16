@@ -1,0 +1,33 @@
+C***** DTDIS1 *****
+C   COMPUTE NEW POINT LOCATION AND DISTANCE FOR DTDIST
+C
+C   CALLED BY: DTDIST
+C   CALLS:
+C     DTERR
+C     DTNPVL
+C*****
+      SUBROUTINE DTDIS1 (C1, C2, MOV, P, XBASE, NDIM, WORK, NWORK, 
+     +    X, R, D, IER)
+      INTEGER MOV, NWORK, IER
+      DOUBLE PRECISION C1(*), C2(*), P(2), XBASE(3,2), WORK(NWORK),
+     +    X(3), R(3), D
+C
+      IER = 0
+      IF (MOV .EQ. 1) THEN
+        CALL DTNPVL (P, 1, C1, WORK, NWORK, X, IER)
+      ELSE
+        CALL DTNPVL (P, 1, C2, WORK, NWORK, X, IER)
+      END IF
+      IF (IER .NE. 0) GO TO 9099
+      D = 0.0D0
+      DO 10 I = 1,NDIM
+        R(I) = X(I) - XBASE(I,3-MOV)
+        D = D + R(I)**2
+  10  CONTINUE
+      RETURN
+C
+C   ERROR EXIT
+ 9099 CONTINUE
+      CALL DTERR (4, 'DTDIS1  ', IER, 0)
+      RETURN
+      END

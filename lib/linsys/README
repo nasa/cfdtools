@@ -1,0 +1,43 @@
+The linsys utilities deal with linear systems of equations (square or
+over- or underdetermined).  All except LSQR and SYMMLQ use direct (non-
+iterative) factorization methods. Only LSQR and SYMMLQ are suited to large
+sparse systems.
+
+For overdetermined linear least squares problems, Ax ~ b, the QR
+factorization method of HDESOL and its relatives is recommended over
+the commonly used normal equations method (A'Ax = A'b) as the orthogonal
+factorization does not square the condition number of the LHS matrix the
+way forming A'A does.
+
+For underdetermined linear least squares, the method of HDECOM + HSULVE
+provides the shortest-length solution.
+
+bloktr.f             Solve one block tridiagonal system, any block size
+btr4.f               Solve one block tridiagonal system, block size 4
+cholesky.f           Cholesky factorization A = GG' for symmetric A as rows
+cholesky_factorization.f  Cholesky factorization for symmetric A as A(n,n)
+cholesky_solution.f  Corresponding solution of Ax = b for given RHS b
+chsolve.f            CHOLESKY companion; triangle factor G stored as rows
+colslv.f             Block bidiagonal solver from collocation techniques
+decbt.f              Block tridiagonal decomposition for multiple RHS cases
+decbtc.f             Cyclic block tridiagonal decomposition; see SOLBTC
+decomp.f90           LU decomposition (Gaussian elimination + partial piv.)
+decslv.f             Combines DECOMP & SOLVE for one RHS; b(:) is A(:,n+1)
+dtdlsq.f             Diag. + TriDiag. system; Least SQuares soln.; QR fact.
+hdecom.f             QR factorization of A(m,n), m >= n for more than 1 RHS
+hdesol.f             QR factorizn. & solution of A x ~ b; one RHS; m >= n
+hdesolw.f            Weighted linear least squares variant of HDESOL
+hsolve.f             HDECOM companion for m >= n cases
+hsulve.f             HDECOM companion for m < n cases
+lsqr.f               [Damped] linear least squares or unsymmetric Ax = b
+lusolve.f90          May be more convenient than DECSLV: A(ndim,n) and b(n)
+qrdiag.f             QR factrzn. & soln. of non-diag-dominant tridiag. sys.
+solbt.f              DECBT compantion; completes block tridiagonal solution
+solbtc.f             DECBTC companion; completes cyclic bl. tridiag. soln.
+solve.f90            DECOMP companion for multiple RHS cases
+symmlq.f             Solves Ax = b for large sparse symmetric indefinite A
+trdiag.f             Solution of one diagonally dominant tridiagonal system
+tricps.f             Soln. of 1 cyclic +ve definite symmetric tridiag. sys.
+trid2r.f             TRDIAG variant for the two-RHS case
+trid3r.f             TRDIAG variant for the three-RHS case
+trip.f               Solves one scalar periodic tridiagonal system

@@ -1,0 +1,8 @@
+A handful of special function utilities are gathered here.  See the driving
+program GEN1D for evaluating these and other 1-D functions.  erf(x) is the
+sigmoid shape produced by integrating exp (-x**2) on [0, x], with a multi-
+plier of 2/sqrt(pi).
+
+error_function.f         Routines for evaluating erf(x), erfc(x) & erfcx(x)
+gaussian.f90             Gaussian distribution evaluation
+normal_distribution.f90  Applies gaussian.f90 to this special case

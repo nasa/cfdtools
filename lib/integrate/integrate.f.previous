@@ -1,0 +1,526 @@
+C+------------------------------------------------------------------------------
+C
+      PROGRAM INTEGRATE
+C
+C     PURPOSE:
+C
+C        INTEGRATE drives a choice of numerical integration routines.
+C     Selected methods are applied to one or more sets of data read
+C     from one file (stored by rows or by columns in free format). 
+C     Calculation of moment about a user-supplied abscissa is included
+C     as an option.  Results are written to the screen and to a printable
+C     file.
+C
+C     DATA FORMAT:
+C
+C        Rows:
+C           Title <up to 80 characters>
+C           NX
+C           X(1)  X(2)  X(3)  ...  X(?)     <May exceed 1 line>
+C           ...  X(NX)
+C           Y(1)  Y(2)  Y(3)  ...  Y(?)     <Starts on new line>
+C           ...  Y(NX)
+C           <Repeat from NX for more data sets>
+C
+C        Columns:
+C           Title <up to 80 characters>
+C           NX
+C           X(1)  Y(1)
+C           X(2)  Y(2)
+C           ...   ...
+C           X(NX)  Y(NX)
+C           <Repeat from NX for more data sets>
+C
+C     METHOD:
+C
+C        INITIALIZATION:
+C           Open the output file.
+C           Prompt for name of input data file, and open it.
+C           Read and echo the descriptive title.
+C           Determine whether datasets are by rows or columns
+C           (by counting number of values on the third line).
+C           Prompt for moment center abscissa location, if any.
+C
+C        SELECTION:
+C           Select an integration routine (else quit).
+C           Read NX, the number of data points in first dataset.
+C
+C           WHILE not EOF DO
+C              Read one dataset.
+C              Integrate the (X,Y) distribution with the chosen method.
+C              Output evaluated area to both screen and formatted file.
+C              Read NX for next case.
+C           END WHILE
+C
+C           Rewind data file.
+C           GO TO SELECTION.
+C
+C     PARAMETER CONSTANTS:
+C
+C        LENMENU    I    Maximum length of menu character strings.
+C        MXMENU     I       "     "  "  integration options (including help).
+C        MXPTS      I       "     "  "  data points per curve.
+C
+C     SIGNIFICANT LOCAL VARIABLES:
+C
+C        NAME       DIM     TYPE DESCRIPTION
+C        COEFS    MXPTS,3    R   Spline coefficients.
+C        X         MXPTS     R   One set of data abscissas (monotonic, but
+C                                not necessarily increasing).  (Routine AREAXY
+C                                is an exception - it expects a polygon.)
+C        Y         MXPTS     R   Corresponding ordinates.
+C        YMOM      MXPTS     R   Derived ordinates for moment calculation.
+C
+C     FILES USED:
+C
+C        LUNCRT     O     Terminal prompts and error messages.
+C        LUNDAT     I     Data to be integrated (one or more datasets).
+C        LUNKBD     I     Keyboard entries.
+C        LUNPRT     O     Printed output, including debug.
+C
+C     EXTERNAL REFERENCES:
+C
+C        AREAXY   INTEGRATE  Calculates area of irregular simple polygon.
+C        AVINT    INTEGRATE  Integrates by averaging quadratic functions.
+C        COUNTR    FORTLIB   Counts the number of values on a line.
+C        CSFIT    INTERPLIB  Fits conventional cubic spline.
+C        CSQUAD   INTEGRATE  Cubic spline quadrature (rather specialized).
+C        FSCOEF   INTERPLIB  Generates coefficients for FSQUAD.
+C        FSQUAD   INTEGRATE  Integrates given finite Fourier series on [X1,X2].
+C        LCSAREAS INTEGRATE  Variant of LCSQUAD for saving sub-areas.
+C        LCSQUAD  INTEGRATE  Storage-efficient local cubic spline quadrature.
+C        READER    FORTLIB   Prompting utility.
+C        RVERSE   NUMODULES  Reverses the order of array elements.
+C        SCTRPZ   INTEGRATE  Integrates by composite trapezoidal rule.
+C        XFORMX   NUMODULES  Transforms [a,b] to [p,q].
+C
+C     ENVIRONMENT:  Fortran 90
+C
+C     HISTORY:
+C        RGL   11/19/84   Initial design/code adapted from program SMOOTH.
+C        RGL   11/29/84   Added calculation of moment about chosen abscissa.
+C        RGL   05/21/85   Added a title for conformity to standard format.
+C        DAS   09/16/86   CSQUAD in place of DCSQDU for use with CSFIT (mainly
+C                         to test CSQUAD, extracted from FLO6QNM).  DCSQDU is
+C                         retained with IQHSCU.  Bug in calls to DCSQDU fixed.
+C                         Wrong values of IEND in calls to CSFIT fixed.
+C        DAS   03/04/87   Added AREAXY here (rather than a separate driver).
+C        DAS   03/13/87   Added FSCOEF + FSQUAD, to test FSQUAD.  (Pointless for
+C                         full-range integration - do we need anything else?)
+C        DAS   08/24/87   Installed MSFIT/CSQUAD option.
+C        DAS   08/25/87   Wrong!  MSQUAD was needed - CSQUAD is strictly for
+C                         conventional CSFIT-type splines.
+C        DAS   06/10/92   Substituted LCSFIT for MSFIT/MSQUAD.
+C        DAS   05/29/02   Eliminated IMSL references; some F90 upgrades;
+C                         needed 64-bit version to test C versions of LCSQUAD.
+C        DAS   06/13/02   Added LCSAREAS in order to test it; provided choice
+C                         of spline method for LCSQUAD as for LCSAREAS.
+C        DAS   01/10/16   Dinesh Prabhu needed tens of thousands of data points.
+C
+C     AUTHOR:  Ronald Langhi, Informatics General Corp., Palo Alto, CA
+C
+C-------------------------------------------------------------------------------
+
+      IMPLICIT NONE
+
+C     Constants:
+
+      INTEGER, PARAMETER ::
+     +   LENMENU = 60, LUNCRT = 6, LUNDAT = 1, LUNKBD = 5, LUNPRT = 7,
+     +   MXMENU  = 7,  MXPTS  = 100000
+
+      REAL, PARAMETER ::
+     +   ONE = 1., ZERO = 0.
+
+C     Variables:
+
+      INTEGER       DATASET, I, IEND, IER, ITYPE, NTOKS, N, NX
+
+      REAL          AREA, CENTER, MOMENT, TWOPI, XA, XB
+
+      REAL          A(0:MXPTS/2), B(0:MXPTS/2), AREAS(MXPTS),
+     +              COEFS(MXPTS,3), RANGE(0:3),
+     +              X(MXPTS+1), XNORM(MXPTS), Y(MXPTS+1), YMOM(MXPTS)
+
+      LOGICAL       BYCOLS, DEFAULT, EOF, FIRSTDATA, FOURIER, INCREASE,
+     +              OK, POLYGON, QUIT, SPLINE_TYPE, XRANGE, YESMOM
+
+      CHARACTER     DATAFILE*64, LINE*80, MENU(0:MXMENU)*(LENMENU),
+     +              METHOD*1, TITLE*80
+
+C     Procedures:
+
+      REAL          AVINT
+
+      EXTERNAL      AREAXY, AVINT, COUNTR, CSFIT, CSQUAD,
+     +              FSCOEF, FSQUAD, LCSAREAS, LCSQUAD, READS, READI,
+     +              READR, RVERSE, SCTRPZ, XFORMX
+
+C     Storage:
+
+      DATA          MENU
+     +  /'  0: Help',
+     +   '  1: Integration by composite trapezoidal rule (SCTRPZ)',
+     +   '  2: Integration of conventional spline (CSFIT/CSQUAD)',
+     +   '  3: Integration of local cubic spline (LCSQUAD, any [a, b])',
+     +   '  4: Integration of local cubic spline (LCSAREAS, sub-areas)',
+     +   '  5: Integration by averaging of quadratic functions (AVINT)',
+     +   '  6: Area of irregular simple polygon (AREAXY)',
+     +   '  7: Fourier series method (FSCOEF/FSQUAD)'/
+
+
+C     Execution:
+
+C  *  Prompt for and open the input data file:
+
+   70 CONTINUE
+         DATAFILE = 'integrate.dat'
+
+         CALL READS (LUNCRT,
+     +      'Enter data file name.  <CR> defaults to integrate.dat: ',
+     +      LUNKBD, DATAFILE, DEFAULT, QUIT)
+         IF (QUIT) GO TO 900
+
+         OPEN (UNIT=LUNDAT, FILE=DATAFILE, STATUS='OLD', ERR=90)
+         GO TO 100
+
+   90    WRITE (LUNCRT, 1010)
+     +      ' Unable to open this file.  Check spelling and try again.'
+      GO TO 70
+
+  100 CONTINUE
+
+C  *  Are the datasets stored by rows or columns?
+C     Read the title, and skip the next line to get to the data proper:
+
+      READ (LUNDAT, 1010, ERR=800) TITLE
+      READ (LUNDAT, 1010)
+
+C  *  Determine how many items are on the first line of data proper.
+C     If there are two, then whole file is assumed to be in columns.
+
+      CALL COUNTR (LUNDAT, LINE, NTOKS, OK, EOF)
+
+      IF (EOF .OR. .NOT. OK) GO TO 800
+      IF (NTOKS == 1) GO TO 805
+
+      BYCOLS = NTOKS == 2
+
+C  *  Prompt for abscissa location about which to calculate moment:
+
+      CALL READR (LUNCRT,
+     +   'Enter moment center abscissa; <CR> suppresses moments: ',
+     +   LUNKBD, CENTER, DEFAULT, QUIT)
+      YESMOM = .NOT. DEFAULT
+
+C  *  Open the printable output file:
+
+      OPEN (UNIT=LUNPRT, FILE='integrate.out', STATUS='UNKNOWN')
+
+      WRITE (LUNPRT, 1010) ' Results from Program INTEGRATE'
+      WRITE (LUNPRT, 1020) ' Data file:  ', DATAFILE
+      WRITE (LUNPRT, 1010) ' Title in data file:'
+      WRITE (LUNPRT, 1020) ' ', TITLE
+      WRITE (LUNCRT, 1020) ' ', TITLE
+
+  200 CONTINUE
+
+C  *     Prompt for choice of integration scheme:
+
+         WRITE (LUNCRT, 1010)
+         CALL READI (LUNCRT,
+     +      'Select integration method.  <CR> = done; 0 = help: ',
+     +      LUNKBD, ITYPE, DEFAULT, QUIT)
+         IF (DEFAULT .OR. QUIT) GO TO 900
+
+         IF (ITYPE < 1 .OR. ITYPE > MXMENU) THEN
+            WRITE (LUNCRT, 1010) MENU
+            GO TO 200
+         END IF
+
+         INCREASE    = ITYPE == 0 ! Originally an IMSL method
+         POLYGON     = ITYPE == 6
+         FOURIER     = ITYPE == 7
+         SPLINE_TYPE = ITYPE == 3 .OR. ITYPE == 4
+         XRANGE      = ITYPE == 3 .OR. ITYPE == 5
+         WRITE (LUNPRT, 1020) ' Method: ', MENU(ITYPE)(5:LENMENU)
+         WRITE (LUNCRT, 1020) ' Method: ', MENU(ITYPE)(5:LENMENU)
+
+C  *     Skip the title:
+
+         REWIND LUNDAT
+         READ (LUNDAT, 1010)
+
+C  *     Read number of data points NX in the first data set:
+
+         READ (LUNDAT, *, ERR=800) NX
+         FIRSTDATA = .TRUE.
+         DATASET   = 0
+         EOF       = .FALSE.
+
+         DO WHILE (.NOT. EOF)
+
+            IF (NX > MXPTS) GO TO 810
+
+C  *        Read one dataset:
+
+            DATASET = DATASET + 1
+
+            IF (BYCOLS) THEN
+               READ (LUNDAT, *, ERR=800) (X(I), Y(I), I = 1, NX)
+            ELSE
+               READ (LUNDAT, *, ERR=800) (X(I), I = 1, NX)
+               READ (LUNDAT, *, ERR=800) (Y(I), I = 1, NX)
+            END IF
+
+C  *        Some routines require monotonically increasing abscissas:
+
+            IF (.NOT. POLYGON) THEN
+
+               IF (INCREASE) THEN
+                  IF (X(1) > X(NX)) THEN
+                     CALL RVERSE (NX, X, X)
+                     CALL RVERSE (NX, Y, Y)
+                  END IF
+               END IF
+
+C  *           Compute ordinates for moment calculation?
+
+               IF (YESMOM .AND. .NOT. FOURIER) THEN
+                  DO I = 1, NX
+                     YMOM(I) = (CENTER - X(I)) * Y(I)
+                  END DO
+               END IF
+
+C              Allow an arbitrary range of integration:
+
+               IF (XRANGE) THEN
+                  XA = X (1)
+                  XB = X (NX)
+                  WRITE (LUNCRT, '(/, A, 1P, 2E14.6)')
+     +               ' Data range: ', XA, XB
+                  CALL READR (LUNCRT,
+     +               'Lower integration limit? <CR> = X(1):  ',
+     +               LUNKBD, XA, DEFAULT, QUIT)
+                  CALL READR (LUNCRT,
+     +               'Upper integration limit? <CR> = X(NX): ',
+     +               LUNKBD, XB, DEFAULT, QUIT)
+               END IF
+            END IF
+
+            IF (SPLINE_TYPE) THEN
+               METHOD = 'B'
+               CALL READC (LUNCRT,
+     +           'Type? (M=monotonic, B=loose fit, L=linear; <CR>=B): ',
+     +            LUNKBD, METHOD, DEFAULT, QUIT)
+            END IF
+
+C  *        Evaluate integral(s) by the selected method -- may require
+C           additional prompts, suppressed after the first dataset:
+
+            GO TO (410, 420, 430, 440, 450, 460, 470) ITYPE
+
+  410       CONTINUE ! *** Composite Trapezoidal Rule, SCTRPZ ***
+
+               CALL SCTRPZ (NX, X, Y, AREA)
+               IF (YESMOM) CALL SCTRPZ (NX, X, YMOM, MOMENT)
+
+               GO TO 600
+
+  420       CONTINUE ! *** Cubic Spline Quadrature, CSQUAD with CSFIT ***
+
+               IF (FIRSTDATA) THEN
+
+C  *              Prompt for the spline end conditions:
+
+                  WRITE (LUNCRT, 1015)
+     +            ' You must choose endpoint conditions as follows:',
+     +            '  1 = match cubic defined by first/last 4 points;',
+     +            '  2 = natural spline end conditions;',
+     +            '  3 = periodic end conditions.',
+     +            ' '
+
+  425             CALL READI (LUNCRT, 'Select 1, 2, or 3: ',
+     +                        LUNKBD, IEND, DEFAULT, QUIT)
+                  IF (DEFAULT .OR. IEND < 1 .OR. IEND > 3) GO TO 425
+
+                  IF (IEND == 1) THEN
+                     LINE = ' Matching cubic at ends'
+                     IEND = 0
+                  ELSE IF (IEND == 2) THEN
+                     LINE = ' Natural spline end conditions'
+                  ELSE IF (IEND == 3) THEN
+                     LINE = ' Periodic end conditions'
+                     IEND = 4
+                  END IF
+
+                  WRITE (LUNCRT, 1010) LINE
+                  WRITE (LUNPRT, 1010) LINE
+               END IF
+
+               CALL CSFIT (NX, X, Y, IEND, ZERO, IEND, ZERO,
+     +                     COEFS(1,1), COEFS(1,2), COEFS(1,3), IER)
+               IF (IER /= 0) GO TO 820
+
+               CALL CSQUAD (NX, X, Y, ZERO, COEFS(1,2), COEFS(1,2))
+               AREA = COEFS(NX,2)
+
+               IF (YESMOM) THEN
+
+                  CALL CSFIT (NX, X, YMOM, IEND, ZERO, IEND, ZERO,
+     +                        COEFS(1,1), COEFS(1,2), COEFS(1,3), IER)
+                  IF (IER /= 0) GO TO 820
+
+                  CALL CSQUAD (NX, X, YMOM, ZERO, COEFS(1,2),
+     +                         COEFS(1,2))
+                  MOMENT = COEFS(NX,2)
+
+               END IF
+
+               GO TO 600
+
+  430       CONTINUE ! *** Local Cubic Spline Quadrature (LCSQUAD) ***
+
+               CALL LCSQUAD (NX, X, Y, XA, XB, METHOD, AREA)
+
+               IF (YESMOM)
+     +            CALL LCSQUAD (NX, X, YMOM, XA, XB, METHOD, MOMENT)
+
+               GO TO 600
+
+  440       CONTINUE ! *** Sub-areas variang of LCSQUAD (LCSAREAS) ***
+
+               CALL LCSAREAS (NX, X, Y, METHOD, ZERO, AREAS)
+               AREA = AREAS(NX)
+
+               write (luncrt, '(1p, 3e16.7)')
+     >            (x(i), y(i), areas(i), i = 1, nx)
+
+               IF (YESMOM) THEN
+                  CALL LCSAREAS (NX, X, YMOM, METHOD, ZERO, AREAS)
+                  MOMENT = AREAS(NX)
+               END IF
+
+               GO TO 600
+
+  450       CONTINUE ! *** Averaging of Quadratic Functions, AVINT ***
+
+               AREA = AVINT (X, Y, NX, XA, XB)
+               IF (YESMOM) MOMENT = AVINT (X, YMOM, NX, XA, XB)
+               GO TO 600
+
+  460       CONTINUE ! *** Area of irregular, simple polygon, AREAXY ***
+
+               CALL AREAXY (NX, X, Y, AREA)
+               GO TO 600
+
+  470       CONTINUE ! *** Fourier series method (FSCOEF/FSQUAD) ***
+
+               N = (NX - 1) / 2
+               CALL READI (LUNCRT,
+     +            'Enter N to use Fourier coefficients (0:N): ',
+     +            LUNKBD, N, DEFAULT, QUIT)
+               IF (N < 0 .OR. N > (NX -1) / 2) GO TO 460
+
+               DO I = LUNCRT, LUNPRT, LUNPRT - LUNCRT
+                  WRITE (I, 1040)
+     +               ' Fourier coefs. (0:N) used with N = ', N
+               END DO
+
+               WRITE (LUNCRT, 1010, ADVANCE='NO')
+     +            ' Enter range of integration [X1:X2] (data units): '
+               READ (LUNKBD, *) RANGE(1), RANGE(2)
+               IF (RANGE(1) == X(1) .AND. RANGE(2) == X(NX))
+     +            WRITE (LUNCRT, 1020)
+     +            ' Warning: Full range integration requires just a(0)',
+     +            ' - no sums needed.'
+
+C  *           Generate a finite Fourier series for the given data:
+
+               DO I = 0, N
+                  CALL FSCOEF (3, NX-1, Y, I, A(I), B(I), IER)
+               END DO
+
+C  *           Transform the abscissas to [0, 2*pi] as FSCOEF assumes:
+
+               TWOPI = 4.E+0 * ASIN (ONE)
+
+               CALL XFORMX (NX, X, ZERO, TWOPI, XNORM)
+
+C  *           XFORMX uses first and last values to calc. transformation, so:
+
+               RANGE(0) = X(1)
+               RANGE(3) = X(NX)
+               CALL XFORMX (4, RANGE, ZERO, TWOPI, RANGE)
+
+C  *           Integrate the transformed data (COEFS for scratch):
+
+               CALL FSQUAD (3, N, A, B, RANGE(1), RANGE(2), COEFS,
+     +                      AREA)
+               AREA = AREA * (X(NX) - X(1)) / TWOPI
+               GO TO 600
+
+  600       CONTINUE
+
+C  *        Output results of integration:
+
+            IF (YESMOM .AND. .NOT. POLYGON .AND. .NOT. FOURIER) THEN
+               IF (DATASET == 1) THEN
+                  DO I = LUNCRT, LUNPRT, LUNPRT - LUNCRT
+                     WRITE (I, 1020)
+     +                  ' Dataset  # Pts.               Integral',
+     +                  '   Moment Center          Moment'
+                  END DO
+               END IF
+               DO I = LUNCRT, LUNPRT, LUNPRT - LUNCRT
+                  WRITE (I, 1030) DATASET, NX, AREA, CENTER, MOMENT
+               END DO
+            ELSE
+               IF (DATASET == 1) THEN
+                  DO I = LUNCRT, LUNPRT, LUNPRT - LUNCRT
+                     WRITE (I, 1010)
+     +                  ' Dataset  # Pts.               Integral'
+                  END DO
+               END IF
+               DO I = LUNCRT, LUNPRT, LUNPRT - LUNCRT
+                  WRITE (I, 1030) DATASET, NX, AREA
+               END DO
+            END IF
+
+C  *        Read NX for next case, if any:
+
+            READ (LUNDAT, *, END=650) NX
+            FIRSTDATA = .FALSE.
+            CYCLE
+
+  650       EOF = .TRUE.
+
+         END DO ! Next dataset
+
+C  *  Go back for another integration option:
+
+      GO TO 200
+
+C  *  Error handling:
+
+  800 WRITE (LUNCRT, 1010) ' Error reading input data file.'
+      STOP
+  805 WRITE (LUNCRT, 1010) ' Data file contains only one column.'
+      STOP
+  810 WRITE (LUNCRT, 1040) ' Too many data points found. NX = ', NX
+      STOP
+  820 WRITE (LUNCRT, 1010) ' Error in fitting or integrating spline.'
+      STOP
+
+  900 CONTINUE
+
+      WRITE (LUNCRT, 1015) ' ***  integrate.out  contains a  ***',
+     +                     ' ***  copy of the screen output  ***'
+
+ 1010 FORMAT (A)
+ 1015 FORMAT (/, (A))
+ 1020 FORMAT (/, 2A)
+ 1030 FORMAT (I5, I9, 1P, E25.15, 2E16.7)
+ 1040 FORMAT (/, A, I4)
+
+      END PROGRAM INTEGRATE

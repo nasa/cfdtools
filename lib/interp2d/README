@@ -1,0 +1,50 @@
+The interp2d collection offers a modest choice of methods for interpolating
+bivariate data, where smoothness in the data is likely to be assumed.  Some
+of the methods require structured data; a few handle irregular data.  These
+all precede the ADT-based (alternating digital tree) methods that are now
+likely to be preferable for structured, triangulated, or mixed-cell surface
+data.
+
+The handful of smoothing methods here are early and questionable, since
+their 1-D analogues would not be considered good approaches.  The Kriging-
+type method of the Optimal_Interpolation package (see also program ANCHOR)
+is likely to be preferable for dealing with noisy data in two or more
+dimensions.
+
+See program SMOOTH2D for driving many of the methods listed below.  Some
+of the now-deprecated methods are retained to avoid suppressing them in
+SMOOTH2D.
+
+Some intersection utiities are also included in this collection.
+For instance, INTSEC2D uses 2-space ADT searching and 1-variable uncon-
+strained no-derivative minimization to intersect a one-piece curve with
+a J boundary of a 2D structured multiblock volume grid.
+
+akima.f      Early interpolation of scattered 2-space data by triangulation
+bicubmat.f   Lower-level matrix set-up routine used by LCSFIT2D & PLBICUBE
+bilinear.f   Bilinear analogue of the bicubic LCSFIT2D for regular data
+bilint.f     Part of the RIPPLE2D approach to searching a structured grid
+bilintp.f    Variant of BILINT for an (x, y) grid stored as pairs
+bvlsq.f      Linear least sqrs. fit of user basis fns. to scattered data
+facets.f     Early bilinear interpolation of scattered data
+hardy.f      Interpoln. via linear combination of distance-type basis fns.
+inmesh.f     Early logical function for searching a 2-space structured mesh
+intsec2.f    Intersection of 2 discretized curves in 2-space
+intsec2d.f90 Intersection of a 2-space multiblock curve and one-piece curve
+intsec2t.f   Variant of INTSEC2: also returns intersection arc length Ts
+intsec3.f    Intersection of B-spline curve and discretized curve in 2-spc.
+lcsfit2d.f   Nonparametric bicubic local spline interpoln. on regular grid
+lcsint2d.f   Specialized 2-space interpoln. within data rows by 1-D LCSFIT
+lint2d.f     Bilinear interpolation within a rectangular table
+nearpt.f     Lower-level utility employed by FACETS
+pbilint.f    Parametric bilinear interp. within regular 3-sp. surface mesh
+pbvlsq.f     Bivariate polynomial linear least squares fit, scattered data
+plbicube.f   Parametric local bicubic interpolation of an (x,y,z) surface
+plincub.f    Var. of PBILINT: linear in one (u,v) dirn.; cubic in the other
+plsint2d.f   Variant of LCSINT2D suited to rounded airfoil leading edges
+plstangent.f Find arc length t for given dy/dx on a discretized (x,y) curve
+plxcut.f     Find arc length t for given   x   on a discretized (x,y) curve
+smooth2d.f   Iterative smoothing of f(u,v) on a structured (x,y,z) surface
+table2.f     Bilinear interpolation within a rectangular table, in fn. form
+tfif2d.f     Variant of TFI2D (gridlib) handles additional function data
+tpspln.f     Thin plate spline var. of HARDY method: log-based basis fns.

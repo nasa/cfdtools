@@ -1,0 +1,60 @@
+Utilities for reading and writing PLOT3D-type multiblock grids and optional
+function files (or portions of grids and flow files) are packaged as a
+module in xyzq_io.f90 (3-space, as shown below) and xyq_io.f90 (2-space).
+
+   public :: file_prompt    ! Prompt for a file name and open the file
+
+   public :: xyzq_read      ! Read a multiblock grid + optional flow soln.
+   public :: xyz_write      ! Write a multiblock grid
+   public :: q_write        ! Write a flow solution
+
+   public :: xyz_header_io  ! Read or write grid header records
+   public :: q_header_io    ! Read or write flow header records
+   public :: xyz_allocate   ! Allocate one grid block
+   public :: q_allocate     ! Allocate one flow block
+   public :: xyz_block_io   ! Read or write one grid block
+   public :: q_block_io     ! Read or write one flow block
+
+   public :: xyziq_read     ! "iblank" variants of the xyz utilities above
+   public :: xyzi_write
+   public :: xyzi_allocate
+   public :: xyzi_block_io
+
+Most recent addition to xyq_io:
+
+   public :: xyq_2d_to_3d   ! Convert xy(ni,nj) -> xyz(ni,1,nj); y -> 0.
+
+A derived data type is employed as follows, and is extensible.  For
+instance, the I/O packages do not reference the data range variables
+shown here.  Note that compilation with the -r8 flag or equivalent is
+intended.
+
+grid_block_structure.f90:
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   module grid_block_structure
+
+!  Module for a structured grid block with associated flow field variables
+!  and optional PLOT3D-type blanking of grid points.
+!  The %mi/mj/mk variables were inherited from NASA LaRC, but all applica-
+!  tions at NASA ARC have %mi = %ni, etc.
+
+   implicit none
+
+   type grid_type
+      real,    dimension(:,:,:),   pointer :: x,y,z  ! Grid coordinates
+      real,    dimension(:,:,:,:), pointer :: q      ! Fns. in (1:nf,:,:,:)
+      integer, dimension(:,:,:),   pointer :: iblank ! 0 => suppress the pt
+
+      real    :: xmin, xmax        ! Data range for the block in the x dir.
+      real    :: ymin, ymax        ! ... and the y direction ...
+      real    :: zmin, zmax        ! ... and the z direction
+
+      integer :: ni, nj, nk        ! # grid vertices in i, j, k directions
+      integer :: mi, mj, mk        ! # dependent variables in each dir.
+   end type grid_type
+
+   end module grid_block_structure
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

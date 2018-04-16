@@ -1,0 +1,107 @@
+      SUBROUTINE DTPLN3 (NDIM, P1, P2, P3, W, L, R, C, IER)
+C
+C     GENERATE A PLANE (RECTANGULAR), GIVEN THREE POINTS, WIDTH,
+C     LENGTH, AND ROTATION.
+C
+C
+C     USAGE
+C
+C     DOUBLE PRECISION P1(NDIM), P2(NDIM), P3(NDIM), W, L, R, C(MC)
+C     CALL DTPLN3 (NDIM, P1, P2, P3, W, L, R, C, IER)
+C
+C     WHERE MC >= 28
+C
+C
+C     INPUT
+C
+C     NDIM        THE DIMENSION OF THE POINTS.  NDIM = 2 OR 3.
+C
+C     P1,P2,P3    THREE DISTINCT, NONCOLINEAR POINTS WHICH LIE ON
+C                 THE DESIRED PLANE.  THE AVERAGE OF THE POINTS
+C                 WILL BE THE CENTER OF THE PLANE.
+C
+C     W           THE DESIRED WIDTH OF THE PLANE.
+C
+C     L           THE DESIRED LENGTH OF THE PLANE.
+C
+C     R           THE DESIRED X-Y ROTATION OF THE PLANE (COUNTER-
+C                 CLOCKWISE, IN DEGREES).
+C
+C
+C     OUTPUT
+C
+C     C           THE PLANE IN B-SPLINE FORM.
+C
+C     IER         SUCCESS/ERROR CODE.  IF IER < 0, THEN C(1) HAS BEEN
+C                 SET TO -1.
+C
+C                 = 0     NO ERRORS.  RESULTS COMPUTED.
+C
+C                 = -1    NDIM < 2 OR NDIM > 3.
+C
+C                 = -2    P1, P2, P3 NOT DISTINCT (OR ARE COLINEAR).
+C
+C
+C
+C     WRITTEN BY
+C         DEBORAH PARSONS
+C         AUGUST 25, 1989
+C
+      EXTERNAL DTERR, DTMCON, DTERPT
+C
+      DOUBLE PRECISION P1(*), P2(*), P3(*), NORM(3), W, L, R, C(*)
+      DOUBLE PRECISION V1(3), V2(3), PT(3), DTMCON, LN
+      INTEGER IER, I
+C
+      CHARACTER*8 SUBNAM
+      DATA SUBNAM /'DTPLN3  '/
+C
+C     ERROR CHECKING
+C
+      IF ((NDIM .LT. 2) .OR. (NDIM .GT. 3)) THEN
+          IER = -1
+          GOTO 9900
+      ENDIF
+C
+C     FIND THE CENTER OF THE PLANE
+C
+      PT(3) = 0.0D0
+      DO 100 I = 1, NDIM
+          PT(I) = (P1(I) + P2(I) + P3(I)) / 3.0D0
+  100 CONTINUE
+C
+C     FIND THE NORMAL TO THE PLANE
+C
+      V1(3) = 0.0D0
+      V2(3) = 0.0D0
+      DO 200 I = 1, NDIM
+          V1(I) = P2(I) - P1(I)
+          V2(I) = P3(I) - P1(I)
+  200 CONTINUE
+      NORM(1) = V1(2)*V2(3) - V1(3)*V2(2)
+      NORM(2) = V1(3)*V2(1) - V1(1)*V2(3)
+      NORM(3) = V1(1)*V2(2) - V1(2)*V2(1)
+C
+C     CHECK NON-LINEARITY OF THE POINTS
+C
+      LN = SQRT(NORM(1)**2+NORM(2)**2+NORM(3)**2)
+      IF (LN .EQ. 0.0D0) THEN
+          IER = -2
+          GOTO 9900
+      ENDIF
+      DO 300 I = 1, 3
+          NORM(I) = NORM(I)/LN
+  300 CONTINUE
+C
+C     CALL DTPLNE TO GENERATE THE PLANE
+C
+      CALL DTPLNE (PT, NORM, W, L, R, C, IER)
+C
+ 9900 IF (IER .NE. 0) THEN
+          CALL DTERR (1, SUBNAM, IER, 0)
+          C(1) = -1.0D0
+      ENDIF
+C
+ 545  FORMAT (1X,4F10.5)
+      RETURN
+      END

@@ -1,0 +1,189 @@
+      SUBROUTINE D1DEFX (CMEM, IMEM, DMEM, IHDR, MOREC, MOREI, MORED,
+     +    INITIZ, NEED, IER)
+
+C   Extend (or shrink) the data spaces allocated to an existing object.
+C   This action fails if any of the data spaces being changed is within
+C   the locked portion of its respective array.  This routine should be
+C   avoided unless the data entity is very recently allocated.
+C
+C   DYNAMIC MEMORY INPUT-OUTPUT:
+C     CMEM    Dynamically managed character data
+C     IMEM    Dynamically managed integer data
+C     DMEM    Dynamically managed double precision data
+C   INPUT:
+C     IHDR    Header Index of entity to be extended (or shrunk)
+C     MOREC   Additional characters (may be negative)
+C     MOREI   Additional integers (may be negative)
+C     MORED   Additional double precision values (may be negative)
+C     INITIZ  Logical variable indicating whether to initialize any added
+C             space to blanks or zeroes, as appropriate
+C   OUTPUT:
+C     NEED    Extra space needed
+C     IER     Returned error value.  Zero implies no errors.  Otherwise,
+C             -8 = Character data space is locked, cannot change it
+C             -9 = Integer data space is locked, cannot change it
+C            -10 = Double precision data space is locked, cannot
+C                  change it
+C            -11 = Insufficient character space available
+C            -12 = Insufficient integer space available
+C            -13 = Insufficient double precision space available
+C            -14 = Attempt to reduce character space by more than LENC
+C            -15 = Attempt to reduce integer space by more than LENI
+C            -16 = Attempt to reduce double precision space by more
+C                  than LEND
+C
+C   CALLS:    D0AHDR
+
+C   HISTORY:
+C     04Feb92 P Kraushar    Created.
+C     25Mar92 D. Parsons    Add error returns for over-shrinking
+C     02Jun93 D. Parsons    Extracted guts to D1DEFX
+C*****
+C
+
+      CHARACTER CMEM*(*)
+      INTEGER IMEM(*)
+      DOUBLE PRECISION DMEM(*)
+
+      INTEGER MOREC, MOREI, MORED, IER, LENC, LENI, LEND
+      LOGICAL INITIZ
+
+      INTEGER IHDR, IBEG, IEND, NEED, I
+
+C****
+      IER = 0
+
+      NEED = 0
+
+      LENC = ABS(IMEM(IHDR+4))
+      LENI = ABS(IMEM(IHDR+5))
+      LEND = ABS(IMEM(IHDR+6))
+
+      IF (MOREC .NE. 0 .AND. IMEM(IHDR+1) .LT. IMEM(7)) GO TO 9008
+      IF (MOREI .NE. 0 .AND. IMEM(IHDR+2) .LT. IMEM(8)) GO TO 9009
+      IF (MORED .NE. 0 .AND. IMEM(IHDR+3) .LT. IMEM(9)) GO TO 9010
+      IF (IMEM(4) + MOREC .GT. IMEM(1)) GO TO 9011
+      IF (IMEM(5) + MOREI .GT. IMEM(16)) GO TO 9012
+      IF (IMEM(6) + MORED .GT. IMEM(3)) GO TO 9013
+      IF (MOREC .LT. 0 .AND. ABS(MOREC) .GT. LENC) GO TO 9014
+      IF (MOREI .LT. 0 .AND. ABS(MOREI) .GT. LENI) GO TO 9015
+      IF (MORED .LT. 0 .AND. ABS(MORED) .GT. LEND) GO TO 9016
+
+C     Adjust character data space, if requested
+      IF (MOREC .NE. 0) THEN
+        IBEG = IMEM(IHDR+1) + IMEM(IHDR+4)
+        IEND = IMEM(4) - 1
+C        (loop to avoid overlapping strings)
+        IF (MOREC .LT. 0) THEN
+C         Shrink IHDR's character data space
+          DO 100 I=IBEG,IEND
+            CMEM(I+MOREC:I+MOREC) = CMEM(I:I)
+  100     CONTINUE
+        ELSE
+C         Expand IHDR's character data space
+          DO 110 I=IEND,IBEG,-1
+            CMEM(I+MOREC:I+MOREC) = CMEM(I:I)
+  110     CONTINUE
+          IF (INITIZ) THEN
+            DO 120 I=IBEG,IBEG+MOREC-1
+              CMEM(I:I) = ' '
+  120       CONTINUE
+          END IF
+        END IF
+      END IF
+C     Adjust integer data space, if requested
+      IF (MOREI .NE. 0) THEN
+        IBEG = IMEM(IHDR+2) + IMEM(IHDR+5)
+        IEND = IMEM(5) - 1
+        IF (MOREI .LT. 0) THEN
+C         Shrink IHDR's integer data space
+          DO 200 I=IBEG,IEND
+            IMEM(I+MOREI) = IMEM(I)
+  200     CONTINUE
+        ELSE
+C         Expand IHDR's integer data space
+          DO 210 I=IEND,IBEG,-1
+            IMEM(I+MOREI) = IMEM(I)
+  210     CONTINUE
+          IF (INITIZ) THEN
+            DO 220 I=IBEG,IBEG+MOREI-1
+              IMEM(I) = 0
+  220       CONTINUE
+          END IF
+        END IF
+      END IF
+C     Adjust double precision data space, if requested
+      IF (MORED .NE. 0) THEN
+        IBEG = IMEM(IHDR+3) + IMEM(IHDR+6)
+        IEND = IMEM(6) - 1
+        IF (MORED .LT. 0) THEN
+C         Shrink IHDR's double precision data space
+          DO 300 I=IBEG,IEND
+            DMEM(I+MORED) = DMEM(I)
+  300     CONTINUE
+        ELSE
+C         Expand IHDR's double precision data space
+          DO 310 I=IEND,IBEG,-1
+            DMEM(I+MORED) = DMEM(I)
+  310     CONTINUE
+          IF (INITIZ) THEN
+            DO 320 I=IBEG,IBEG+MORED-1
+              DMEM(I) = 0.0D0
+  320       CONTINUE
+          END IF
+        END IF
+      END IF
+
+C     Adjust all preceding headers in the active list to reflect the
+C     shifted data spaces
+      CALL D0AHDR (CMEM, IMEM, DMEM, IHDR, -MOREC, -MOREI, -MORED,
+     +    NEED)
+
+      IER = 0
+      RETURN
+
+C   Error reporting section
+C     IER values -1 through -6 are generated by D0PTR
+
+C     Character data space locked
+ 9008 IER = -8
+      GO TO 9900
+
+C     Integer data space locked
+ 9009 IER = -9
+      GO TO 9900
+
+C     Double precision data space locked
+ 9010 IER = -10
+      GO TO 9900
+
+C     Insufficient character space available
+ 9011 IER = -11
+      NEED = IMEM(4) + MOREC
+      GO TO 9900
+
+C     Insufficient integer space available
+ 9012 IER = -12
+      NEED = IMEM(5) + MOREI
+      GO TO 9900
+
+C     Insufficient double precision space available
+ 9013 IER = -13
+      NEED = IMEM(6) + MORED
+      GO TO 9900
+
+C     Attempt to reduce character space by more than LENC
+ 9014 IER = -14
+      GO TO 9900
+
+C     Attempt to reduce integer space by more than LENI
+ 9015 IER = -15
+      GO TO 9900
+
+C     Attempt to reduce character space by more than LEND
+ 9016 IER = -16
+      GO TO 9900
+
+ 9900 CONTINUE
+      RETURN
+      END

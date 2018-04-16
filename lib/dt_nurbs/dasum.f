@@ -1,0 +1,43 @@
+      DOUBLE PRECISION FUNCTION DASUM(N,DX,INCX)
+C
+C     TAKES THE SUM OF THE ABSOLUTE VALUES.
+C     JACK DONGARRA, LINPACK, 3/11/78.
+C
+      DOUBLE PRECISION DX(*),DTEMP
+      INTEGER I,INCX,INCXA,IX,M,MP1,N
+C
+      DASUM = 0.0D0
+      DTEMP = 0.0D0
+      IF(N.LE.0)RETURN
+      IF(INCX.EQ.1)GO TO 20
+C
+C        CODE FOR INCREMENT NOT EQUAL TO 1
+C
+      IX    = 1
+      INCXA = IABS(INCX)
+      DO 10 I = 1, N
+         DTEMP = DTEMP + DABS(DX(IX))
+         IX    = IX + INCXA
+   10 CONTINUE
+      DASUM = DTEMP
+      RETURN
+C
+C        CODE FOR INCREMENT EQUAL TO 1
+C
+C
+C        CLEAN-UP LOOP
+C
+   20 M = MOD(N,6)
+      IF( M .EQ. 0 ) GO TO 40
+      DO 30 I = 1,M
+        DTEMP = DTEMP + DABS(DX(I))
+   30 CONTINUE
+      IF( N .LT. 6 ) GO TO 60
+   40 MP1 = M + 1
+      DO 50 I = MP1,N,6
+        DTEMP = DTEMP + DABS(DX(I)) + DABS(DX(I + 1)) + DABS(DX(I + 2))
+     *  + DABS(DX(I + 3)) + DABS(DX(I + 4)) + DABS(DX(I + 5))
+   50 CONTINUE
+   60 DASUM = DTEMP
+      RETURN
+      END

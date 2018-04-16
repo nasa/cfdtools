@@ -1,0 +1,97 @@
+More than 50 1-dimensional interpolation and smoothing utilities are
+gathered in this collection.  Here, interpolation implies passing through
+data points precisely, while smoothing methods of course may not.  Many
+of the 1-D methods are driven by program SMOOTH, q.v., on one or more
+datasets, either to generate usable results or to compare the methods.
+
+Many methods require distinct, monotonic abscissas in the data; others
+do not.  Some utilities simply determine and evaluate a certain function
+(say a quartic) to fill some interval for given end-point conditions.
+
+Past confusion of (x/y[/z]) methods involving curves in 2- or 3-space
+mean some of what are really 1-D methods (single independent variable
+such as arc length) appear in the interp2d and interp3d collections,
+q.v., and remain there for historical reasons.
+
+The local cubic spline method of LCSFIT and its relatives has proven
+extremely valuable, particularly its monotonic option (meaning the
+interpolations cannot experience excursions beyond the data points).
+Local cubics involve the 4-point Hermite method (cubics defined by two
+points and corresponding slopes), with adjustments for monotonicity if
+desired. They ensure first derivative continuity at the data points,
+but second derivatives may not be continuous.  Nevertheless, even for
+geometric applications with smoothly varying data points, the lack of
+curvature continuity has proven to be a non-issue.  The curvature-based
+point redistribution in CAPSULE_GRID, for example, via the PLSCRV3D
+utility (sadly in the interp3d collection, although it belongs here)
+as well as LCSFIT, produces excellent surface grids from well-discretized
+analytic (or nonanalytic) generatrices.
+
+Note that finite difference derivatives are highly recommended for
+calculating curvature -- not splines.  Also, the normalizing and denorm-
+alizing done by LCSFIT2 around a call to LCSFIT is recommended unless
+the data units are known to be O(1).
+
+See also the aa_nurbs library for application of B-spline curves to
+airfoils.
+
+aebxplusc.f90      Nonlinear least squares fit of y = Ae^(B*x) + C, etc.
+axbecx.f90         Nonlinear least squares fit of y = Ax^Be^(C*x), etc.
+axbplusc.f90       Nonlinear least squares fit of y = Ax^B + C
+cfft.f             Multivariate complex fast Fourier transform
+cfft2.f            Bi-directional FFT of a complex sequence
+circular_arc.f90   Intended for rounding/filleting vertices in a generatrix
+csdval.f           Variant of CSEVAL for f'(x) and f"(x) as well as f(x)
+cseval.f           CSFIT companion for evaluating the fitted cubic spline
+csfit.f            Compute the coefficients of a conventional cubic spline
+cspline.f90        Streamlined interface to CSFIT & CSEVAL, in module form
+cubintrp.f         Determine/evaluate cubic defined by 2 points & 2 slopes
+fscalc.f           FSCOEF/FSEVAL combination for all-coefs./data pt. evals.
+fscoef.f           Fourier coefs. for uniform [0, 2pi] data via recurrence
+fsdval.f           FSEVAL variant; evaluates f'(x) & f"(x) as well as f(x)
+fseries.f          FSEVAl variant for nonuniform data, full or half period
+fseval.f           Evaluate a finite Fourier series, odd | even | neither
+fseval2.f          FSEVAL variant for arbitrary units, odd | even | neither
+fsfit.f            Fourier coefs. via linear least sqrs.; nonuniform data
+fssum.f            Evaluate a finite Fourier series; use w/ FSERIES/FSEVAL2
+hermite.f          Evaluate a Hermite cubic on [0, 1] and its derivatives
+inverse_parabola.f Variant of QINTRP for upper arm of parabola y^2 = ax + b
+lcsfit.f           Local cubic spline for (x,y) data; monotonic option
+lcsfit2.f90        Normalizes/denormalizes (x,y) data around an LCSFIT call
+lcsinverse.f90     Inverse form of monotonic LCSFIT (x for y in [y2, y3])
+line1d.f           TABLE1 in subroutine form; linear interpln. | extrapoln.
+lint1d.f           Multifunction variant of LINE1D
+lintrp.f           Variant suited to linear lofting between wing sections
+lsfit1.f           Hybrid local llsq. method; smoothed-data spline option
+lsfit2.f           F90 upgrade of 1st stage of LSFIT1 local lin. lst. sqrs.
+msfit.f            Early monotonic local cubic analogue of CSFIT
+nonlinear_interpolation.f LCSFIT + BESSEL/BRODLIE/BUTLAND/THREEPT fns. used
+peval2.f           W/ PFIT2, the conventional spline analog of PSFIT/PSEVAL
+pfit2.f            Spline coefs. for x = x(t) & y = y(t) on an (x,y) curve
+plsfit.f           Original parametric local cubic spline for (x,y) plotting
+plsintrp.f         Var. of parametric local cubic: x/y(t); y at xe, not te
+pndval.f           PNEVAL variant; evaluates f'(x) & f"(x) as well as f(x)
+pneval.f           Evaluation of nth-degree polynomial from PNFIT
+pnfit.f            Linear least sqrs. polynomial fit; avoids "normal" eqns.
+pnwfit.f           Weighted PNFIT variant; same orthogonal factorzn. method
+poly6.f            Deg. 6 polynomial fit for 2 pts. & corresp. y', y"
+pseval.f           PSFIT companion: y for given x, not t
+psfit.f            Early approach to fitting x, y vs. arc l. t for airfoils
+pstval.f           PSFIT companion: y for given t, not x
+qhsfit.f           Fit the quasi-Hermite cubic spline of H. Akima, 1970
+qinterp.f          Averaged quadratic intrpln. suited to aerodynamic coefs.
+qintrp.f           Determine/evaluate a quadratic defined by 2 pts./1 slope
+quartic.f          Coefs. of a quartic defined by (x,y,y') and (x,y,y',y")
+quartic2.f90       Determines & evaluates a quartic defined as for QUARTIC
+quintic.f          Compute coefs. of a quintic between a (x,y,y',y") pair
+quintic2.f         Compute quintic defined by (x,y,y') & (x,y,y',y",y"')
+rfft2n.f           Fast Fourier coefs. for a sequence of 2n values, n = 2^m
+smooth1d.f         Explicit in-place smoothing of a vector; end pts. fixed
+smooth1d_niters.f  Variant of SMOOTH1D with a variable number of iterations
+supereval.f90      Evaluate indicated superellipse at one or more abscissas
+superfit1.f90      Linear least squares portion of fitting a super-ellipse
+superfit2.f90      Nonlinear least squares part of fitting a super-ellipse
+table1.f           Early 1-D linear interpolation in function form
+vecfit.f           Linear least sqrs. fit/eval. of a combination of vectors
+wagfit.f           Linear least sqrs. fit of airfoil-like Wagner functions;
+                   see also subr. BEVAL used by programs SMOOTH & PROFILE

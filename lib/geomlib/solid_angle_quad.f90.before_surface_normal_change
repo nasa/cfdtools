@@ -1,0 +1,98 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   subroutine solid_angle_quad (ni, nj, x, y, z, i, j, px, py, pz, domega)
+!
+!  Description:
+!
+!     For the quadrilateral cell (i:i+1,j:j+1) of a structured surface patch,
+!     estimate the solid angle subtended at a given point P(px,py,pz).
+!     This was prompted by a need to integrate radiant intensity vs. solid
+!     angle in order to estimate radiative heat flux at a point more correctly
+!     than with the tangent-slab approximation.
+!
+!  Technique:
+!
+!     Wikipedia's Solid angle web page shows that the solid angle for an
+!     arbitrary oriented surface element S subtended at a point P is
+!
+!                    omega = integral over S of (r.n/r^3) ds
+!
+!     where r is the vector position of a point on S w.r.t. P and n is the
+!     local unit normal vector.  We simply average the four values of this
+!     integrate calculated at the four cell vertices and multiply by the quad.
+!     cell area, which is presumed to be small.  Existing utilities provide
+!     that cell area and the unit normals.
+!
+!  History:
+!
+!     Feb. 19, 2014  D.A.Saunders  Initial implementation.
+!
+!  Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   implicit none
+
+!  Arguments:
+
+   integer, intent (in)  :: ni, nj                 ! (Packed) patch array dims.
+   real, intent (in), dimension (ni,nj) :: x, y, z ! Patch coordinates
+   integer, intent (in)  :: i, j  ! i < ni, j < nj ! Indicated cell, lower left
+   real,    intent (in)  :: px, py, pz             ! Coordinates of P
+   real,    intent (out) :: domega                 ! Desired solid angle element
+
+!  Local constants:
+
+   real, parameter :: fourth = 0.25, one = 1.0, zero = 0.0
+
+!  Local variables;
+
+   integer :: ic, ii, jc, jj
+   real    :: p, q, rsq, sum, rvector(3), unormal(3)
+
+!  Procedures:
+
+   real     :: area4
+   external :: area4           ! Quad cell area
+   external :: surface_normal  ! Careful quad. cell unit normal at (p, q)
+
+!  Execution:
+
+!  Compute the integrand at each vertex of the given quad. cell.
+!  Usage of surface_normal is tricky: never give it a cell index of ni or nj
+
+   sum = zero
+   jc  = j
+
+   do jj = j, j + 1
+
+      q = zero
+      if (jj == nj) q = one  ! Leave jc at nj - 1;  must point to lower left
+
+      ic = i
+      do ii = i, i + 1
+         rvector(1) = x(ii,jj) - px
+         rvector(2) = y(ii,jj) - py
+         rvector(3) = z(ii,jj) - pz
+
+         p = zero
+         if (ii == ni) p = one  ! Leave ic at ni - 1
+         
+         call surface_normal (ni, nj, x, y, z, ic, jc, p, q, unormal)
+
+!!!      write (*, '(a, 2i4, 3f12.8, 2x, 3f12.8)') &
+!!!         'ic,jc,r,un:', ic,jc,rvector,unormal
+
+         rsq = dot_product (rvector, rvector)
+         sum = sum + dot_product (rvector, unormal) / (rsq * sqrt (rsq))
+      end do
+   end do
+
+!  Integrand average x cell area:
+
+   domega = fourth * sum * area4 (x(i,j), y(i,j), z(i,j),             &
+                                  x(i+1,j), y(i+1,j), z(i+1,j),       &
+                                  x(i+1,j+1), y(i+1,j+1), z(i+1,j+1), &
+                                  x(i,j+1), y(i,j+1), z(i,j+1))
+
+   end subroutine solid_angle_quad

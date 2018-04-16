@@ -1,0 +1,41 @@
+The interp3d utilities perform interpolations, intersections, or other
+calculations involving 3-space data (mostly curves and surfaces).  Some
+of the curve methods really belong in interplib (1-D) because they involve
+arc length as the single independent variable, but they remain here for
+historical reasons.
+
+Most of these precede the ADT (alternating digital tree) search packages
+that are now recommended for efficient interpolation within volume meshes,
+structured or not.
+
+Most of these routines arose from development of the rapid grid generators
+CH_GRID (the gridding portion of wing/body shape optimization code SYN87SB)
+and the surface paneling package AEROSURF (the geometry engine for the
+multiblock full-configuration shape optimization code SYN107MB).  Others
+arose from line-of-sight calculations applied to CFD solutions for hyper-
+sonic reentry vehicles.
+
+bilincut.f         Parametric bilinear analogue of PLBICUT (z given x, y)
+furthest_point.f90 3-space line pt. "most inside" a convex regular surface
+inside_outside.f90 Is a point "inside" or "outside" a structured surface?
+intsec4.f          Intersect a curve & regular surface in 3-spc. (PLBICUBE)
+intsec5.f          Bilinear form of INTSEC4 using PBILINT, not PLBICUBE
+intsec6.f90        Multipatch form of INTSEC5: ADT techniques/minimization
+intsec6.f90.two_point_lines  1st INTSEC6 form for 2 pt. straight line cases
+intsec8.f90        Variant of INTSEC6 for a triangulated surface
+lcsint3d.f         Variant of TABLE3 using LCSFIT, not linear interpolation
+line_surface.f90   Find up to two intersections of line with closed surface
+peval3.f           Evaluate curve x,y,z vs. t via spline coefs. from PFIT3
+pfit3.f            Conventional spline coefs., x,y,z vs. t on a 3-sp. curve
+plbicut.f          Find (u,v) & corresp. z matching x, y on a 3-sp. surface
+pleval.f           Companion to PLFIT for rectilinear curves, 2 or 3 space
+plfit.f            Poorly-named arc-length utility for 1|2||3-space curves
+plscrv3d.f         Parametric local spline interpolation on a 3-spc. curve
+plscurve.f         Used by MODGRID4 (gridlib); not as efficient as PLSCRV3D
+plsfit3d.f         Analogue of PLSFIT (interp2d); lacks PLSCRV3D's derivs.
+plsintyz.f         Interpolate y, z for given x(s) on an (x,y,z) curve
+smoothxyz.f        Gaussian kernel-based smoothing of noisy curve | surface
+table3.f           Trilinear interp. in rectangular table, in function form
+tri_line.f90       Intersect line thru (xt,zt) _|_ y = 0 w/ 3-spc. triangle
+trilint.f          Part of RIPPLE3D approach to searching a structured grid
+wbintr.f           Compute intersectn. betwn. "wing", "body" regular meshes

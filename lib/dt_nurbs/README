@@ -1,0 +1,9 @@
+DT_NURBS V2.1 software was obtained from the David Taylor Naval Research
+Center in 1992 for use in the Applied Aerodynamics Branch at NASA Ames
+Research Center on airfoil shape optimization.
+
+There are two machine-dependent routines, dtjcon and dtmcon, that a new
+user may need to adjust.
+
+See also the aa_nurbs library of supplemental utilities and the BSPROFILE
+application program.
