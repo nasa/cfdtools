@@ -38,6 +38,6 @@ add_library(numodules
   usescale.f
   utcopy.f
 )
-target_link_libraries(numodules global)
+target_link_libraries(numodules PRIVATE global)
 target_include_directories(numodules PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

@@ -18,6 +18,6 @@ add_library(aa_nurbs
   dtsepp.f
   lsknots.f
 )
-target_link_libraries(aa_nurbs global)
+target_link_libraries(aa_nurbs PRIVATE global)
 target_include_directories(aa_nurbs PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

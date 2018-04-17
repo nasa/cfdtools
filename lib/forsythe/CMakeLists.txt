@@ -11,6 +11,6 @@ add_library(forsythe
   urand.f
   zeroin.f
 )
-target_link_libraries(forsythe global)
+target_link_libraries(forsythe PRIVATE global)
 target_include_directories(forsythe PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

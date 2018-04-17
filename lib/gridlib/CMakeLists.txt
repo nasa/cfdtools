@@ -77,6 +77,12 @@ add_library(gridlib
   warpq3d2.f90
   xgrid.f
 )
-target_link_libraries(gridlib global grid_block_structure)
+target_link_libraries(gridlib
+  PRIVATE
+    global
+    intrinsics
+  PUBLIC
+    grid_block_structure
+)
 target_include_directories(gridlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

@@ -1,8 +1,8 @@
 add_library(tecplot_io
   tec360_dummy.f90
   tecplot_io.f90
-  tecplot_tri_io.f90
+  # tecplot_tri_io.f90
 )
-target_link_libraries(tecplot_io global)
+target_link_libraries(tecplot_io PRIVATE global)
 target_include_directories(tecplot_io PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

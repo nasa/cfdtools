@@ -23,6 +23,6 @@ add_library(interp3d
   trilint.f
   wbintr.f
 )
-target_link_libraries(interp3d global adt)
+target_link_libraries(interp3d PRIVATE global adt)
 target_include_directories(interp3d PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

@@ -57,6 +57,6 @@ add_library(progtools
   upcase.f
   writer.f
 )
-target_link_libraries(progtools global)
+target_link_libraries(progtools PRIVATE global)
 target_include_directories(progtools PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

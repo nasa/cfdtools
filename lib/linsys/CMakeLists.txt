@@ -29,6 +29,6 @@ add_library(linsys
   trid3r.f
   trip.f
 )
-target_link_libraries(linsys global)
+target_link_libraries(linsys PRIVATE global)
 target_include_directories(linsys PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)
