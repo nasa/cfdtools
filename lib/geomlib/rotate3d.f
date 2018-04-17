@@ -13,6 +13,8 @@ C     AUTHOR: David Saunders, ELORET/NASA Ames, Moffett Field, CA.
 C
 C-----------------------------------------------------------------------
 
+      USE TRIGD
+
 C     Arguments:
 
       INTEGER, INTENT (IN) ::
@@ -35,10 +37,6 @@ C     Local variables:
      >   I, J, K
       REAL
      >   CTH, STH, VTH, D, VEC (3), VECROT (3), ROT (3, 3)
-
-C     Intrinsics:
-
-      REAL       COSD, SIND
 
 C     Execution:
 

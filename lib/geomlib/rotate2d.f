@@ -24,6 +24,8 @@ C  AUTHOR: David Saunders, NASA Ames/Sterling Software, Palo Alto, CA.
 C
 C-----------------------------------------------------------------------
 
+      USE TRIGD
+
 C     Arguments:
 
       INTEGER
@@ -37,10 +39,6 @@ C     Local variables:
      >   I
       REAL
      >   CI, SI, XP, YP
-
-C     Intrinsics:
-
-      REAL       COSD, SIND
 
 C     Execution:
 

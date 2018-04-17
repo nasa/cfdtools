@@ -33,6 +33,8 @@ C  AUTHOR:  James Reuther, Ames Research Center, Mt. View, CA
 C
 C----------------------------------------------------------------------
 
+      USE TRIGD
+
 C     Arguments:
 
       INTEGER    N
@@ -51,10 +53,6 @@ C     Local variables:
       INTEGER    I, J, NPTS
       REAL       RANGE, RN, SNORM, WL, WQ, WS, WC, XNORM
       REAL       TOTAL
-
-C     Intrinsics:
-
-      REAL       COSD
 
 C     Execution.
 
