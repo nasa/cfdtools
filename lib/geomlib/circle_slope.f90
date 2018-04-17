@@ -17,6 +17,7 @@
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   use trigd
    implicit none
 
 !  Arguments:
@@ -29,7 +30,6 @@
                                   ! gradient matches the given slope
 !  Local constants:
 
-   real, parameter :: r2d = 180.0d0/acos(-1.0d0)
    real, parameter :: eps = 1.e-5, one = 1., zero = 0.
 
 !  Execution:
@@ -37,12 +37,12 @@
    if (abs (slope) < eps) then
       theta = 90.
    else
-      theta = -atan2 (one, slope) * r2d  ! In [0, 180] for the upper semicircle
+      theta = -atan2d (one, slope)  ! In [0, 180] for the upper semicircle
       if (theta < zero) theta = theta + 180.
    end if
 
-   xt = xc + rc * cos (theta/r2d)
-   yt = yc + rc * sin (theta/r2d)
+   xt = xc + rc * cosd (theta)
+   yt = yc + rc * sind (theta)
 
    end subroutine circle_slope
 

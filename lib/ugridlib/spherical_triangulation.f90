@@ -90,6 +90,7 @@
 !  Modules:
 
    use tri_zone_structure  ! See triangulation_io.f90
+   use trigd
 
    implicit none
 
@@ -107,7 +108,6 @@
 
    integer :: i, j, n2, n3, ne, nelements, nl, nn, nnodes, np
    real    :: dphi, dtheta, phi, theta, r, z
-   real, parameter :: r2d = 180.0d0 / acos(-1.0d0)
 
 !  Execution:
 
@@ -131,15 +131,15 @@
 
    do j = 2, n  ! Lines of latitude, starting nearest to the north pole
       phi = dphi * real (j-1)
-      z   = cos (phi/r2d)
-      r   = sin (phi/r2d)
+      z   = cosd (phi)
+      r   = sind (phi)
       dtheta = ninety / real (nl)
       nl  = nl + 1
       do i = 1, nl  ! Lines of longitude, starting at the x axis
          nn = nn + 1
          theta = dtheta * real (i-1)
-         tri_quadrant%xyz(1,nn) = r * cos (theta/r2d)
-         tri_quadrant%xyz(2,nn) = r * sin (theta/r2d)
+         tri_quadrant%xyz(1,nn) = r * cosd (theta)
+         tri_quadrant%xyz(2,nn) = r * sind (theta)
          tri_quadrant%xyz(3,nn) = z
       end do
    end do

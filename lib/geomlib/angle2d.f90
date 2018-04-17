@@ -13,6 +13,7 @@
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   use trigd
    implicit none
 
 !  Arguments:
@@ -22,9 +23,8 @@
    real,    intent (in)  :: x(n), y(n)  ! Data point coordinates
    real,    intent (out) :: angle       ! Desired angle in [0, 180] degrees
 
-   !  Local variables:
+!  Local variables:
 
-   real, parameter :: r2d = 180.0d0/acos(-1.0d0)
    real :: v1(2), v2(2)
 
 !  Execution:
@@ -34,8 +34,7 @@
    v1(2) = y(i-1) - y(i)
    v2(2) = y(i+1) - y(i)
 
-   angle = acos  (      dot_product (v1, v2) / &
+   angle = acosd (      dot_product (v1, v2) / &
                   sqrt (dot_product (v1, v1) * dot_product (v2, v2)))
-   angle = angle * r2d
 
    end subroutine angle2d
