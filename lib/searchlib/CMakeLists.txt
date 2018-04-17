@@ -22,4 +22,5 @@ add_library(searchlib
   xsort.f
 )
 target_link_libraries(searchlib global)
+target_include_directories(searchlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

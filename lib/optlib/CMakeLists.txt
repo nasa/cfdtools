@@ -5,7 +5,6 @@ add_library(optlib
   fminrc.f
   fminrc2.f
   hooke_jeeves.f90
-  hooke_jeeves.f90.unconstrained
   mna.f
   objeps.f
   qnm_module.f90
@@ -17,4 +16,5 @@ add_library(optlib
   zeros.f
 )
 target_link_libraries(optlib global)
+target_include_directories(optlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

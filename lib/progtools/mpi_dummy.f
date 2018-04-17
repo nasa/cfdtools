@@ -1,6 +1,6 @@
 c***********************************
 c   A dummy declaration of the MPI routines
-c   such that some libraries can be used in 
+c   such that some libraries can be used in
 c   a non MPI environment
 c
 c***********************************
@@ -64,7 +64,7 @@ c------------------------------------------------------------------------
 c+-----------------------------------------------------------------------
 
       subroutine mpi_isend (r_sbuff, lbuf, MPI_DOUBLE_PRECISION, i_dest,
-     .                i_sntag, MPI_COMM_WORLD, 
+     .                i_sntag, MPI_COMM_WORLD,
      .                i_request_s, ierr     )
 c
 c   Description:  Dummy MPI routine to facilitate execution in
@@ -117,8 +117,8 @@ c------------------------------------------------------------------------
      .  ierr
 
       ierr = 0
-      n_proc = 1 
-     
+      n_proc = 1
+
       end subroutine mpi_comm_size
 
 c+-----------------------------------------------------------------------
@@ -152,7 +152,7 @@ c------------------------------------------------------------------------
 
       ierr = 0
       end subroutine mpi_wait
-     
+
 c+-----------------------------------------------------------------------
 
       function mpi_wtime () result (time)
@@ -162,7 +162,7 @@ c   non-MPI environments
 c
 c------------------------------------------------------------------------
 
-      real :: time
+      real(kind=4) :: time
 
       call second (time)
 
@@ -179,7 +179,7 @@ c------------------------------------------------------------------------
 
       integer ::
      .  MPI_COMM_WORLD,
-     .  ierr 
+     .  ierr
 
       ierr = 0
       end subroutine mpi_barrier

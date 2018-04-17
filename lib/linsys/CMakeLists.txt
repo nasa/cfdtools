@@ -8,7 +8,6 @@ add_library(linsys
   colslv.f
   decbt.f
   decbtc.f
-  decomp.f.FORTRAN_66
   decomp.f90
   decslv.f
   dtdlsq.f
@@ -18,12 +17,10 @@ add_library(linsys
   hsolve.f
   hsulve.f
   lsqr.f
-  lusolve.f.FORTRAN_77
   lusolve.f90
   qrdiag.f
   solbt.f
   solbtc.f
-  solve.f.FORTRAN_66
   solve.f90
   symmlq.f
   trdiag.f
@@ -33,4 +30,5 @@ add_library(linsys
   trip.f
 )
 target_link_libraries(linsys global)
+target_include_directories(linsys PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

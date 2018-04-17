@@ -1,0 +1,1817 @@
+#LyX 1.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 221
+\textclass revtex4
+\begin_preamble
+\usepackage{setspace}
+\end_preamble
+\options aps,preprint
+\language english
+\inputencoding latin1
+\fontscheme default
+\graphics default
+\paperfontsize default
+\spacing single 
+\papersize Default
+\paperpackage a4
+\use_geometry 0
+\use_amsmath 0
+\use_natbib 0
+\use_numerical_citations 0
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+
+\layout Title
+
+KDTREE 2: Fortran 95 and C++ software to efficiently search for near neighbors
+ in a multi-dimensional Euclidean space
+\layout Author
+
+Matthew B.
+ Kennel
+\layout Author Email
+
+mkennel@ucsd.edu
+\layout Affiliation
+
+Institute for Nonlinear Science; University of California, San Diego
+\layout Abstract
+
+Many data-based statistical algorithms require that one find 
+\shape italic 
+near or nearest neighbors
+\shape default 
+ to a given vector among a set of points in that vector space, usually with
+ Euclidean topology.
+ The k-d data structure and search algorithms are the generalization of
+ classical binary search trees to higher dimensional spaces, so that one
+ may locate near neighbors to an example vector in 
+\begin_inset Formula $O(\log N)$
+\end_inset 
+
+ time instead of the brute-force 
+\begin_inset Formula $O(N)$
+\end_inset 
+
+ time, with 
+\begin_inset Formula $N$
+\end_inset 
+
+ being the size of the data base.
+ KDTREE2 is a Fortran 95 module, and a parallel set of C++ classes which
+ implement tree construction and search routines to find either a set of
+ 
+\begin_inset Formula $m$
+\end_inset 
+
+ nearest neighbors to an example, or all the neighbors within some Euclidean
+ distance 
+\begin_inset Formula $r.$
+\end_inset 
+
+ The two versions are independent and function fully on their own.
+ Considerable care has been taken in the implementation of the search methods,
+ resulting in substantially higher computational efficiency (up to an order
+ of magnitude faster) than the author's previous Internet-distributed version.
+ Architectural improvements include rearrangement for memory cache-friendly
+ performance, heap-based priority queues for large 
+\begin_inset Formula $m$
+\end_inset 
+
+searches, and more effective pruning of search paths by geometrical constraints
+ to avoid wasted effort.
+ The improvements are the most potent in the more difficult and slowest
+ cases: larger data base sizes, higher dimensionality manifolds containing
+ the data set, and larger numbers of neighbors to search for.
+ The C++ implementation requires the Standard Template Library as well as
+ the BOOST C++ library be installed.
+ 
+\layout Section
+
+introduction
+\layout Standard
+
+Given a fixed data base of points on the real line, how would one efficiently
+ find the closest point to some example 
+\begin_inset Formula $q$
+\end_inset 
+
+ (the query), assuming that the question will be asked for many different
+ arbitrary 
+\begin_inset Formula $x$
+\end_inset 
+
+ values? The solution here is classical and obvious: sort the original data
+ base, and perform a recursive binary bisection for each query, successively
+ narrowing the range of the original data points which are possible neighbors
+ to the query point, until the true nearest neighbors have been found.
+ On average it will take 
+\begin_inset Formula $O(\log N)$
+\end_inset 
+
+ bisections to locate the nearest neighbor, much less than the effort needed
+ to 
+\emph on 
+exhaustively
+\emph default 
+ search all 
+\begin_inset Formula $N$
+\end_inset 
+
+ points and remember the one with the closest distance to 
+\begin_inset Formula $q$
+\end_inset 
+
+.
+ Although for an algorithm this simple it is not usually implemented this
+ way, one may view the binary search as progressing down a tree of depth
+ 
+\begin_inset Formula $c\,\log N$
+\end_inset 
+
+, with each node in the tree specifying a interval, namely the support of
+ the points that it represents.
+ Descendents of any node partition the interval represented by their parent,
+ without overlap.
+ Searching for nearest neighbors involves descending the particular nodes
+ of the tree whose support intervals contain the query point.
+\layout Standard
+
+The k-d tree is the natural generalization to a 
+\begin_inset Formula $k$
+\end_inset 
+
+-dimensional Euclidean space, instead of the 1-d line.
+ Each node of the k-d tree now has an associated support hyper-rectangle
+ (outer product of 
+\begin_inset Formula $k$
+\end_inset 
+
+ intervals) instead of a simple 1-d interval.
+ As before each non-terminal node has two descendants, whose hyper-rectangles
+ partition the parent's support space in two, along a certain dimension
+ known as the 
+\shape italic 
+cut dimension,
+\shape default 
+ which is chosen in a data-dependent way by the tree building algorithm.
+ Similarly, each node is associated with a subset of the data base elements;
+ this subset is guaranteed to lie within each node's associated hyper-rectangle,
+ known as the 
+\shape italic 
+bounding box.
+
+\shape default 
+ The non-trivial algorithmic complication, compared to searches of a line,
+ is that one may need to search for near neighbor candidates contained not
+ only in those nodes whose bounding boxes contain the query (even though
+ one generally expects the best matches there), but through a number of
+ additional neighboring nodes.
+ The trick is to minimize the number of these 
+\begin_inset Quotes eld
+\end_inset 
+
+extra
+\begin_inset Quotes erd
+\end_inset 
+
+ searches which must be performed.
+\layout Standard
+
+K-d trees are clever, but not magic.
+ The infamous 
+\begin_inset Quotes eld
+\end_inset 
+
+curse of dimensionality
+\begin_inset Quotes erd
+\end_inset 
+
+ still reigns, and will effectively thwart even good k-d tree methods when
+ the underlying dimensionality of the point set (i.e.
+ the dimension of a manifold containing the database) is sufficiently high.
+ Why? In high-dimensional spaces, as opposed to our intuition trained in
+ 2 or 3 dimensional space, the distance to even near or nearest neighbors
+ is almost as large as the distance to a random point.
+ In practice this means that for sufficiently high dimension, the k-d tree
+ search methods end up having to search many 
+\begin_inset Quotes eld
+\end_inset 
+
+extra
+\begin_inset Quotes erd
+\end_inset 
+
+ nodes and offer little improvement over brute-force exhaustive searching.
+ K-d trees are excellent for 3 dimensional data, offer significant benefits
+ up to perhaps 10-15 dimensional data, but are useless for 100 dimensional
+ data.
+\layout Section
+
+Build and search algorithms
+\layout Standard
+
+K-d trees have been discussed a number of times before in the literature;
+ we refer the reader to 
+\begin_inset LatexCommand \cite{Moore91}
+
+\end_inset 
+
+ for a good tutorial and the references therein.
+ I will discuss the specific implementation choices in the KDTREE2 package.
+ Firstly, the KDTREE2 package implements ONLY the Euclidean metric, i.e.
+ finding near neighbors relative to the squared distance between points
+ 
+\begin_inset Formula $x$
+\end_inset 
+
+ and 
+\begin_inset Formula $y$
+\end_inset 
+
+, 
+\begin_inset Formula $d^{2}(x,y)=\sum_{i=1}^{d}(x_{i}-y_{i})^{2}$
+\end_inset 
+
+.
+ The usual alternative situation is for periodic topology in some coordinates.
+ That can be simulated easily by converting each periodic component 
+\begin_inset Formula $\theta$
+\end_inset 
+
+ of the original space into two components in Euclidean space, 
+\begin_inset Formula $(A\cos\theta,A\sin\theta)$
+\end_inset 
+
+ with some scaling factor 
+\begin_inset Formula $A$
+\end_inset 
+
+ as appropriate.
+\layout Subsection
+
+Building
+\layout Standard
+
+The software assumes a fixed, unchanging input data base of points, and
+ builds a tree structure for the entire data set.
+ Each tree node retains local data specifying the range of points (as viewed
+ through a separately maintained index) represented by the node, the identity
+ and value of which dimension the children (
+\begin_inset Quotes eld
+\end_inset 
+
+cut dimension
+\begin_inset Quotes erd
+\end_inset 
+
+ and 
+\begin_inset Quotes eld
+\end_inset 
+
+cut value
+\begin_inset Quotes erd
+\end_inset 
+
+) are split on, pointers to the left and right child nodes, and the bounding
+ box for all points in the node.
+ The root node is constructed corresponding to all points, and the bounding
+ box explicitly computed with exhaustive enumeration of the maximum and
+ minimum values for each coordinate.
+\layout Standard
+
+Given a bounding box, the build algorithm splits upon that dimension with
+ the maximum extent, i.e.
+ the largest difference between maximum and minimum values.
+ The split location is defined (initially) as the arithmetic average between
+ the maximum and minimum, and then using an efficient one-pass algorithm,
+ the indexes are moved appropriately for the two children, corresponding
+ to points with coordinate less than (left child) and greater than (right
+ child) the cut value.
+\layout Standard
+
+During the top-down build process, only an approximate bounding box is used
+ for efficiency.
+ Finding the max and min of points along each dimension, especially when
+ the database is large, can be time consuming, requiring 
+\begin_inset Formula $O(N\cdot d)$
+\end_inset 
+
+ work for each level of the tree.
+ The approximation is to recompute the bounding box only for that dimension
+ that the parent split upon, and otherwise copy the parent's bounding box
+ for all other dimensions.
+ This creates bounding boxes which are overestimates of the true bounding
+ box.
+ When the number of points in any node is less than or equal to a user-specified
+ constant known as the 
+\emph on 
+bucket size
+\emph default 
+, no children are attached, and this becomes a terminal node of the k-d
+ tree.
+\layout Standard
+
+Once the points have been identified with nodes, the exact bounding boxes
+ are then refined in an efficient process taking logarithmic time.
+ The true bounding boxes are computed explicitly for the terminal nodes.
+ Once these are created, the exact bounding boxes for any internal node
+ can be computed rapidly as unions of its children's bounding boxes.
+ As a result, using approximate bounding boxes in the tree creation has
+ little effect on search performance, but significantly reduces the time
+ necessary to build the tree.
+ Along the way, the cut value is refined to the arithmetic average between
+ the maximum of the box on the left node and the minimum of box on the right
+ node.
+\layout Standard
+
+Once the complete tree has been created, the build procedure optionally
+ can create a new internal copy of the data set, permuting its order so
+ that data for points in the terminal nodes lie contiguously in memory,
+ and near points for nodes close topologically.
+ This is recommended for performance when the database is too large for
+ the main CPU cache.
+ In that circumstance, the rearrangement approximately doubles performance.
+\layout Subsection
+
+Searching
+\layout Standard
+
+The search algorithm is simple, but implemented carefully for efficiency.
+ There are two search modes, fixed neighbor number search (find the closest
+ 
+\begin_inset Formula $m$
+\end_inset 
+
+ points to the query vector 
+\begin_inset Formula $q$
+\end_inset 
+
+), and the fixed radius search (find all points 
+\begin_inset Formula $x_{i}$
+\end_inset 
+
+ with 
+\begin_inset Formula $d^{2}(x_{i},q)\leq r^{2}$
+\end_inset 
+
+).
+ The fixed radius search is simplest to describe.
+ At each non-terminal node the query vector is compared to the cut plane's
+ value in the cut dimension, which chooses one child node as the 
+\begin_inset Quotes eld
+\end_inset 
+
+closer
+\begin_inset Quotes erd
+\end_inset 
+
+ and the other as 
+\begin_inset Quotes eld
+\end_inset 
+
+farther
+\begin_inset Quotes erd
+\end_inset 
+
+.
+ The tree is recursively descended depth-first, searching all closer nodes
+ unconditionally.
+ At the terminal nodes (buckets), the distances from the points of in terminal
+ node to the query vector are computed explicitly, and any point with distance
+ less than 
+\begin_inset Formula $r^{2}$
+\end_inset 
+
+ is added to the list of results.
+ As the terminal node search is a significant performance bottleneck it
+ was implemented carefully to avoid needless computation and cache misses,
+ and minimize memory bandwidth.
+\layout Standard
+
+The farther nodes are also searched, but only if the bounding box of the
+ farther node intersects the hypersphere of radius 
+\begin_inset Formula $r^{2}$
+\end_inset 
+
+ centered at the query vector.
+ Again for efficiency, this is implemented in two pieces.
+ First, the perpendicular distance from the query vector to the cut plane
+ value is computed (as this is available at the node itself).
+ If this is larger than 
+\begin_inset Formula $r^{2}$
+\end_inset 
+
+ then the farther node is excluded automatically.
+ If not, then the distance from the query vector to the closest point in
+ the bounding box of the farther node is computed.
+ If this distance is less than 
+\begin_inset Formula $r^{2}$
+\end_inset 
+
+ then the farther node is searched, otherwise it is excluded as well.
+ Theoretically, the perpendicular test is not necessary as if it rejects
+ searching the farther node, then so would have the bounding box test.
+ It takes more computation to test the bounding box, and it was empirically
+ worthwhile to obviate some of those computations with the simple perpendicular
+ test.
+ 
+\layout Standard
+
+Searching for 
+\begin_inset Formula $m$
+\end_inset 
+
+ nearest neighbors is similar, except that the 
+\begin_inset Formula $r^{2}$
+\end_inset 
+
+ value changes dynamically during the search.
+ A list of up to 
+\begin_inset Formula $m$
+\end_inset 
+
+ candidate neighbors is maintained during the above search procedure.
+ The distance to the 
+\begin_inset Formula $m$
+\end_inset 
+
+th neighbor (i.e.
+ the largest distance on the current list) is the search ball's size, 
+\begin_inset Formula $r^{2}$
+\end_inset 
+
+.
+ In the terminal node search any point with distance less than this value
+ must replace one on the working list, and the new 
+\begin_inset Formula $r^{2}$
+\end_inset 
+
+ recomputed as the maximum value on the list.
+ In the present implementation, this is done with a priority queue structure
+ based on binary heaps, allowing replacement of the maximum value and retrieval
+ of the new maximum in 
+\begin_inset Formula $O(\log m)$
+\end_inset 
+
+ time instead of the usual 
+\begin_inset Formula $O(m)$
+\end_inset 
+
+ time for maintaining an always sorted sorted list.
+ This efficiency gain is important for larger 
+\begin_inset Formula $m$
+\end_inset 
+
+ searches.
+ At the beginning of the search, 
+\begin_inset Formula $r^{2}$
+\end_inset 
+
+ is set to 
+\begin_inset Formula $+\infty$
+\end_inset 
+
+ and any point found is added until there are 
+\begin_inset Formula $m$
+\end_inset 
+
+ on the working list.
+\layout Standard
+
+By default, points are returned in arbitrary order for both searches, except
+ that for the fixed 
+\begin_inset Formula $m$
+\end_inset 
+
+ search the point with the 
+\emph on 
+largest
+\emph default 
+ distance will be first on the list because of the priority queue implementation.
+ There is a subroutine to sort results in ascending order of distance.
+ This can be called manually by the user, or, if specified at time of tree
+ creation, will be performed for all searches on that tree.
+\layout Standard
+
+For many geometrical time-series algorithms, for example, the False Nearest
+ Neighbor methods for testing embeddings, the points are ordered in time
+ corresponding to their index.
+ One often wants to find neighbors in the set close to other existing points
+ in the data set, but exclude the reference point (which provides the query
+ vector), and a window of points close in time often known as the 
+\begin_inset Quotes eld
+\end_inset 
+
+decorrelation window
+\begin_inset Quotes erd
+\end_inset 
+
+ 
+\begin_inset Formula $W$
+\end_inset 
+
+.
+ The software offers search routines for this task.
+ For these searches the query vector is set to the value of the reference
+ index 
+\begin_inset Formula $i$
+\end_inset 
+
+, and in the terminal node search, any candidate neighbor 
+\begin_inset Formula $x_{j}$
+\end_inset 
+
+ is excluded as a valid result if 
+\begin_inset Formula $|i-j|<W$
+\end_inset 
+
+.
+\layout Section
+
+Interface and examples
+\layout Standard
+
+The codes also offer the option of defining distances along fewer dimensions
+ than exist in the matrix of input data, i.e, projecting the input 
+\begin_inset Formula $d$
+\end_inset 
+
+-dimensional vectors to the first 
+\begin_inset Formula $d'<d$
+\end_inset 
+
+ coordinates.
+\layout Subsection
+
+Fortran 95
+\layout Standard
+\paragraph_spacing single 
+\noindent 
+The Fortran code is in 
+\family typewriter 
+kdtree2.f90
+\family default 
+, in module 
+\family typewriter 
+kdtree2_module
+\family default 
+.
+ The interfaces ought be self-explanatory: 
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+begin{verbatim}
+\newline 
+function kdtree2_create(input_data,dim,sort,rearrange) Result (mr)
+\newline 
+    ! create a tree from input_data(1:d,1:N)
+\newline 
+    ! if PRESENT(dim), use this as dimensionality. 
+\newline 
+    ! if (sort .eqv. .true.) then sort all search results by increasing distance.
+\newline 
+    real, target                  :: input_data(:,:)
+\newline 
+    integer, intent(in), optional :: dim
+\newline 
+    logical, intent(in), optional :: sort
+\newline 
+    logical, intent(in), optional :: rearrange
+\newline 
+    !
+\newline 
+    Type (kdtree2), Pointer :: mr  ! the master record for the tree.
+\newline 
+
+\newline 
+subroutine kdtree2_destroy(tp)
+\newline 
+    ! Deallocates all memory for the tree, except input data matrix
+\newline 
+    Type (kdtree2), Pointer :: tp
+\newline 
+
+\newline 
+subroutine kdtree2_n_nearest(tp,qv,nn,results)
+\newline 
+    ! Find the 'nn' vectors in the tree nearest to 'qv' in euclidean norm
+\newline 
+    ! returning their indexes and distances in 'indexes' and 'distances'
+\newline 
+    ! arrays already allocated passed to this subroutine.
+\newline 
+    type (kdtree2), pointer      :: tp
+\newline 
+    real, target, intent (In)    :: qv(:)
+\newline 
+    integer, intent (In)         :: nn
+\newline 
+    type(kdtree2_result), target :: results(:)
+\newline 
+
+\newline 
+subroutine kdtree2_n_nearest_around_point(tp,idxin,correltime,nn,results)
+\newline 
+    ! Find the 'nn' vectors in the tree nearest to point 'idxin',
+\newline 
+    ! with correlation window 'correltime', returing results in
+\newline 
+    ! results(:), which must be pre-allocated upon entry.
+\newline 
+    type (kdtree2), pointer        :: tp
+\newline 
+    integer, intent (In)           :: idxin, correltime, nn
+\newline 
+    type(kdtree2_result), target   :: results(:)
+\newline 
+
+\newline 
+subroutine kdtree2_r_nearest_around_point(tp,idxin,correltime,r2,nfound,nalloc,results)
+\newline 
+    type (kdtree2), pointer      :: tp
+\newline 
+    integer, intent (In)         :: idxin, correltime, nalloc
+\newline 
+    real, intent(in)             :: r2
+\newline 
+    integer, intent(out)         :: nfound
+\newline 
+    type(kdtree2_result), target :: results(:)
+\newline 
+
+\newline 
+function kdtree2_r_count(tp,qv,r2) result(nfound)
+\newline 
+    ! Count the number of neighbors within square distance 'r2'. 
+\newline 
+    type (kdtree2), pointer   :: tp
+\newline 
+    real, target, intent (In) :: qv(:)
+\newline 
+    real, intent(in)          :: r2
+\newline 
+    integer                   :: nfound
+\newline 
+
+\newline 
+function kdtree2_r_count_around_point(tp,idxin,correltime,r2)  result(nfound)
+\newline 
+    type (kdtree2), pointer :: tp
+\newline 
+    integer, intent (In)    :: correltime, idxin
+\newline 
+    real, intent(in)        :: r2
+\newline 
+    integer                 :: nfound
+\newline 
+
+\newline 
+subroutine kdtree2_n_nearest_brute_force(tp,qv,nn,results) 
+\newline 
+    ! find the 'n' nearest neighbors to 'qv' by exhaustive search.
+\newline 
+    ! only use this subroutine for testing, as it is SLOW!  The
+\newline 
+    ! whole point of a k-d tree is to avoid doing what this subroutine
+\newline 
+    ! does.
+\newline 
+    type (kdtree2), pointer :: tp
+\newline 
+    real, intent (In)       :: qv(:)
+\newline 
+    integer, intent (In)    :: nn
+\newline 
+    type(kdtree2_result)    :: results(:) 
+\newline 
+
+\newline 
+subroutine kdtree2_sort_results(nfound,results)
+\newline 
+    !  Use after search to sort results(1:nfound) in order of increasing 
+\newline 
+    !  distance.
+\newline 
+    integer, intent(in)          :: nfound
+\newline 
+    type(kdtree2_result), target :: results(:) 
+\newline 
+
+\backslash 
+end{verbatim}
+\end_inset 
+
+
+\layout Standard
+\paragraph_spacing single 
+\noindent 
+An example follows.
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+begin{verbatim}
+\newline 
+program kdtree2_example
+\newline 
+  use kdtree2_module
+\newline 
+  type(kdtree2), pointer            :: tree
+\newline 
+  integer                           :: N,d
+\newline 
+  real, allocatable                 :: mydata(:,:)
+\newline 
+  type(kdtree2_result), allocatable :: results(:)
+\newline 
+
+\newline 
+! user sets d, the dimensionality of the Euclidean space
+\newline 
+! and N, the number of points in the set. 
+\newline 
+
+\newline 
+allocate(mydata(d,N))   
+\newline 
+! note order, d is first, N second. 
+\newline 
+
+\newline 
+! read in vectors into mydata(j,i) for j=1..d, i=1..N
+\newline 
+
+\newline 
+tree => kdtree2_create(mydata,rearrange=.true.,sort=.true.)
+\newline 
+! Create the tree, ask for internally rearranged data for speed,
+\newline 
+! and for output sorted by increasing distance from the
+\newline 
+! query vector
+\newline 
+
+\newline 
+allocate(results(20))
+\newline 
+call kdtree2_n_nearest_around_point(tree,idxin=100,nn=20,correltime=50,results)
+\newline 
+
+\newline 
+! Now the 20 nearest neighbors to mydata(*,100) are in results(:) except
+\newline 
+! that points within 50 time units of idxin=50 are not considered as valid neighbors.
+\newline 
+!
+\newline 
+write (*,*) 'The first 10 near neighbor distances are: ', results(1:10)%dis
+\newline 
+write (*,*) 'The first 10 near neighbor indexes   are: ', results(1:10)%idx
+\newline 
+
+\backslash 
+end{verbatim}
+\end_inset 
+
+
+\layout Subsection
+
+C++
+\layout Standard
+\paragraph_spacing single 
+\noindent 
+The interface header is 
+\family typewriter 
+kdtree2.hpp
+\family default 
+ and main code in 
+\family typewriter 
+kdtree2.cpp
+\family default 
+.
+ The BOOST (
+\family typewriter 
+www.boost.org
+\family default 
+) library must be installed
+\begin_inset Foot
+collapsed false
+
+\layout Standard
+
+On the author's Fedora Core 2 Linux system, this can be done by installing
+ the 
+\family typewriter 
+boost
+\family default 
+ and 
+\family typewriter 
+boost-devel
+\family default 
+ RPM packages.
+\end_inset 
+
+ as should the Standard Template library.
+ Interfaces for important public routines follow.
+ Note that sorting of results in increasing distance can by done using STL
+ as 
+\family typewriter 
+sort(results.begin(),results.end())
+\family default 
+.
+\layout Standard
+\paragraph_spacing single 
+\noindent 
+
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+begin{verbatim}
+\newline 
+  //constructor
+\newline 
+  kdtree2(kdtree2_array& data_in,bool rearrange_in = true,int dim_in=-1);
+\newline 
+  // destructor
+\newline 
+  ~kdtree2();
+\newline 
+  // set to true to always sort
+\newline 
+  bool sort_results;
+\newline 
+
+\newline 
+  void n_nearest(vector<float>& qv, int nn, kdtree2_result_vector& result);
+\newline 
+  // search for n nearest to a given query vector 'qv'.
+\newline 
+  void n_nearest_around_point(int idxin, int correltime, int nn,
+\newline 
+      kdtree2_result_vector& result);
+\newline 
+  // search for 'nn' nearest to point [idxin] of the input data, excluding
+\newline 
+  // neighbors within correltime 
+\newline 
+  void r_nearest(vector<float>& qv, float r2,kdtree2_result_vector& result); 
+\newline 
+  // search for all neighbors in ball of size (square Euclidean distance)
+\newline 
+  // r2.   Return number of neighbors in 'result.size()', 
+\newline 
+  void r_nearest_around_point(int idxin, int correltime, float r2,
+\newline 
+      kdtree2_result_vector& result);
+\newline 
+  // like 'r_nearest', but around existing point, with decorrelation
+\newline 
+  // interval. 
+\newline 
+  int r_count(vector<float>& qv, float r2);
+\newline 
+  // count number of neighbors within square distance r2.
+\newline 
+  int r_count_around_point(int idxin, int correltime, float r2);
+\newline 
+  // like r_count, but around an extant point.
+\newline 
+
+\backslash 
+end{verbatim}
+\end_inset 
+
+
+\layout Standard
+\paragraph_spacing single 
+\noindent 
+An example:
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+begin{verbatim}
+\newline 
+
+\newline 
+#include <vector>
+\newline 
+#include <boost/multi_array.hpp>
+\newline 
+
+\newline 
+using namespace boost;   
+\newline 
+using namespace std;   
+\newline 
+
+\newline 
+#include "kdtree2.hpp"
+\newline 
+
+\newline 
+typedef multi_array<float,2> array2dfloat; 
+\newline 
+
+\newline 
+main() {
+\newline 
+  kdtree2               *tree;
+\newline 
+  int                   N,d
+\newline 
+  array2dfloat          mydata;
+\newline 
+  kdtree2_result_vector results;
+\newline 
+
+\newline 
+  // user sets d, dimensionality of Euclidean space and
+\newline 
+  // N, number of poitns in the set.
+\newline 
+  
+\newline 
+   mydata.resize(extents[N][dim]);   
+\newline 
+   // get space for a N x dim matrix. 
+\newline 
+
+\newline 
+   // read in vectors into mydata[i][j] for i=0..N-1, and j=0..d-1
+\newline 
+   // NOTE:  array is in opposite order from Fortran, and is 0-based
+\newline 
+   // not 1-based.   This is natural for C++ just as the other was
+\newline 
+   // natural for Fortran. In both cases, vectors are laid out
+\newline 
+   //  contiguously in memory.
+\newline 
+
+\newline 
+   // notice, no need to allocate size of results, as that will be
+\newline 
+   // handled automatically by the STL.  results has most properties
+\newline 
+   // of vector<kdtree2_result>.
+\newline 
+  
+\newline 
+   tree = new kdtree2(mydata,true); // create the tree, ask to rearrange
+\newline 
+   tree->sort_results = true;       // sort all results.
+\newline 
+
+\newline 
+   tree->n_nearest_around_point(100,50,20,results);
+\newline 
+   // ask for 20 nearest neighbors around point 100, with correlation window
+\newline 
+   // 50, push onto 'results'.
+\newline 
+}
+\newline 
+
+\newline 
+
+\backslash 
+end{verbatim}
+\end_inset 
+
+
+\layout Section
+
+performance
+\layout Standard
+
+We now compare the performance, in searches/s, between KDTREE2 and the author's
+ previous version in Fortran.
+\layout Standard
+
+First, a database of 10,000 points chosen randomly and uniformly in the
+ 3-d unit hypercube (in main CPU cache) query vector chosen likewise, searching
+ for nearest 
+\begin_inset Formula $m$
+\end_inset 
+
+ neighbors.
+\layout Standard
+\align center 
+
+\begin_inset  Tabular
+<lyxtabular version="3" rows="6" columns="3">
+<features>
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0">
+<column alignment="right" valignment="top" leftline="true" width="0">
+<column alignment="right" valignment="top" leftline="true" rightline="true" width="0">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+
+\begin_inset Formula $m$
+\end_inset 
+
+
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+KDTREE2
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+old KDTREE
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+1
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+415843
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+367530
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+5
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+190531
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+160281
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+10
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+127779
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+99919
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+25
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+65359
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+41485
+\end_inset 
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+500
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+4794
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+350
+\end_inset 
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset 
+
+ 
+\layout Standard
+
+For 200,000 points in 3-d unit hypercube (larger than CPU cache).
+\layout Standard
+\align center 
+
+\begin_inset  Tabular
+<lyxtabular version="3" rows="6" columns="3">
+<features>
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0">
+<column alignment="right" valignment="top" leftline="true" width="0">
+<column alignment="right" valignment="top" leftline="true" rightline="true" width="0">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+
+\begin_inset Formula $m$
+\end_inset 
+
+
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+KDTREE2
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+old KDTREE
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+1
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+162751
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+70712
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+5
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+82904
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+31782
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+10
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+57243
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+20508
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+25
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+33738
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+11075
+\end_inset 
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+500
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+3001
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+261
+\end_inset 
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset 
+
+ 
+\layout Standard
+
+For 5,000 points in 8-dimensional unit hypercube:
+\layout Standard
+\align center 
+
+\begin_inset  Tabular
+<lyxtabular version="3" rows="6" columns="3">
+<features>
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0">
+<column alignment="right" valignment="top" leftline="true" width="0">
+<column alignment="right" valignment="top" leftline="true" rightline="true" width="0">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+
+\begin_inset Formula $m$
+\end_inset 
+
+
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+KDTREE2
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+old KDTREE
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+1
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+36258
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+19657
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+5
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+16876
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+7608
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+10
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+11790
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+4930
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+25
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+7133
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+3259
+\end_inset 
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+500
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+1497
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+188
+\end_inset 
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset 
+
+ 
+\layout Standard
+
+For 50,000 points in 8-dimensional unit hypercube.
+ For the large data sets in higher dimensions, the new package shows the
+ largest performance gain.
+\layout Standard
+\align center 
+
+\begin_inset  Tabular
+<lyxtabular version="3" rows="6" columns="3">
+<features>
+<column alignment="center" valignment="top" leftline="true" rightline="true" width="0">
+<column alignment="right" valignment="top" leftline="true" width="0">
+<column alignment="right" valignment="top" leftline="true" rightline="true" width="0">
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+
+\begin_inset Formula $m$
+\end_inset 
+
+
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+KDTREE2
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+old KDTREE
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+1
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+8940
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+2050
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+5
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+4338
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+874
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+10
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+3144
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+601
+\end_inset 
+</cell>
+</row>
+<row topline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+25
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+2069
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+359
+\end_inset 
+</cell>
+</row>
+<row topline="true" bottomline="true">
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+500
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+396
+\end_inset 
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\layout Standard
+
+49
+\end_inset 
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset 
+
+
+\layout Section
+
+licensing
+\layout Standard
+
+The KDTREE2 software is licensed under the terms of the Academic Free Software
+ License, included in file 
+\family typewriter 
+LICENSE 
+\family default 
+included with the software.
+ In addition, users of this software must give appropriate citation in relevant
+ technical documentation or journal paper to the author, Matthew B.
+ Kennel, Institute For Nonlinear Science, preferably via a reference to
+ the www.arxiv.org repository of this document.
+ This requirement will be deemed to be advisory and not mandatory as is
+ necessary for the purpose of inclusion of the present software with any
+ software licensed under the GNU General Public License.
+\layout Standard
+
+This software is downloadable by anonymous FTP at 
+\family typewriter 
+ftp://lyapunov.ucsd.edu /pub/nonlinear/kd_tree/kdtree2.[zip|tar.gz].
+\layout Bibliography
+\bibitem {Moore91}
+
+A.
+ W.
+ Moore, 
+\begin_inset Quotes eld
+\end_inset 
+
+An introductory tutorial on Kd-Trees.
+ Extract from Efficient Memory-based Learning for Robot Control
+\begin_inset Quotes erd
+\end_inset 
+
+ (Technical Report 209).
+ Computer Laboratory, University of Cambridge (1991).
+ 
+\layout Bibliography
+\bibitem {Friedman77}
+
+J.
+ H.
+ Freidman, J.
+ L.
+ Bentley, R.
+ A.
+ Finkel, 
+\begin_inset Quotes eld
+\end_inset 
+
+An Algorithm for Finding Best Matches in Logarithmic Expected Time
+\begin_inset Quotes erd
+\end_inset 
+
+, ACM Trans.
+ Math.
+ Soft (TOMS), 3, 209--226, (1997)
+\layout Bibliography
+\bibitem {Talbert}
+
+D.
+ A.
+ Talbert, D.
+ Fisher, 
+\begin_inset Quotes eld
+\end_inset 
+
+An empirical analysis of techniques for constructing and searching k-dimensional
+ trees
+\begin_inset Quotes erd
+\end_inset 
+
+, Conference on Knowledge Discovery in Data, Proceedings of the sixth ACM
+ SIGKDD international conference on Knowledge discovery and data mining,
+ Boston, Massachusetts, United States, 26--33 (2000) 
+\layout Bibliography
+\bibitem {Sproul}
+
+R.
+ F.
+ Sproull, 
+\begin_inset Quotes eld
+\end_inset 
+
+Refinements to Nearest-Neighbor Searchingin k-Dimensional Trees
+\begin_inset Quotes erd
+\end_inset 
+
+, Algorithmica, 6, 579-589 (1991).
+ 
+\the_end

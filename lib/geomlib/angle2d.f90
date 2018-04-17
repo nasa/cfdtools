@@ -10,7 +10,7 @@
 !     06/26/2014  D.A.Saunders  Initial implementation, for FIAT_Opt.
 !
 !  Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
-!     
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    implicit none
@@ -22,8 +22,9 @@
    real,    intent (in)  :: x(n), y(n)  ! Data point coordinates
    real,    intent (out) :: angle       ! Desired angle in [0, 180] degrees
 
-!  Local variables:
+   !  Local variables:
 
+   real, parameter :: r2d = 180.0d0/acos(-1.0d0)
    real :: v1(2), v2(2)
 
 !  Execution:
@@ -33,7 +34,8 @@
    v1(2) = y(i-1) - y(i)
    v2(2) = y(i+1) - y(i)
 
-   angle = acosd (      dot_product (v1, v2) / &
+   angle = acos  (      dot_product (v1, v2) / &
                   sqrt (dot_product (v1, v1) * dot_product (v2, v2)))
+   angle = angle * r2d
 
    end subroutine angle2d

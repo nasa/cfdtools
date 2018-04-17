@@ -1,7 +1,6 @@
 add_library(interp2d
   akima.f
   bicubmat.f
-  bilin3pt.f.superseded-by-ADT
   bilinear.f
   bilint.f
   bilintp.f
@@ -9,7 +8,6 @@ add_library(interp2d
   facets.f
   hardy.f
   inmesh.f
-  intsec.f.deprecated
   intsec2.f
   intsec2d.f90
   intsec2t.f
@@ -30,5 +28,6 @@ add_library(interp2d
   tfif2d.f
   tpspln.f
 )
-target_link_libraries(interp2d global)
+target_link_libraries(interp2d global adt)
+target_include_directories(interp2d PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

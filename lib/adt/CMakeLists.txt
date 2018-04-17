@@ -1,7 +1,11 @@
 add_library(adt
   adt_utilities.f90
-  adt_utilities.f90.before-structured-curve-case
-  new_adt_utilities.f90.unnecessary-rotation
 )
-target_link_libraries(adt global)
+target_link_libraries(adt
+  PRIVATE
+    global
+  PUBLIC
+    grid_block_structure
+)
+target_include_directories(adt PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

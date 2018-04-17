@@ -29,7 +29,6 @@ add_library(interplib
   lsfit1.f
   lsfit2.f
   msfit.f
-  nonlinear_interpolation.f.not_for_library
   peval2.f
   pfit2.f
   plsfit.f
@@ -56,9 +55,9 @@ add_library(interplib
   superfit1.f90
   superfit2.f90
   table1.f
-  tilted_parabola.f90.incomplete
   vecfit.f
   wagfit.f
 )
 target_link_libraries(interplib global)
+target_include_directories(interplib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

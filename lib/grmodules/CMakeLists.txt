@@ -34,3 +34,4 @@ add_library(grmodules
   xdimtb.f
 )
 target_link_libraries(grmodules global)
+target_include_directories(grmodules PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

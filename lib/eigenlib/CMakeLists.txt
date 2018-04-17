@@ -7,4 +7,5 @@ add_library(eigenlib
   tred2.f
 )
 target_link_libraries(eigenlib global)
+target_include_directories(eigenlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

@@ -57,10 +57,10 @@ C     Local constants:
 
 C     Local variables:
 
+      REAL, PARAMETER :: R2D = 180.0d0 / acos(-1.0d0)
       INTEGER    I, NI
       REAL       D1, D2, RANGE, RN, SNORM, WQUAD, WSINE, XFUDGE, XNORM,
      >           TABLEN (NTABLE), TABLEX (NTABLE)
-
       DATA       TABLEN /   1.,  50.,  75., 100., 130., 150., 500. /,
      >           TABLEX /.030, .025, .010, .005, .003, .0025, .0024/
 
@@ -74,7 +74,7 @@ C     Heuristic determination of range of X to fudge:
       DO I = 1, NTABLE - 1
          IF (RN .LT. TABLEN (I + 1)) GO TO 20
       END DO
-      
+
   20  XFUDGE = (TABLEX (I + 1) - TABLEX (I)) * (RN - TABLEN (I)) /
      >         (TABLEN (I + 1) - TABLEN (I)) + TABLEX (I)
 
@@ -86,7 +86,7 @@ C     Heuristic determination of range of X to fudge:
 
       DO I = 2, N - 1
          XNORM = REAL (I - 1) * RN
-         SNORM = HALF * (ONE - COSD (XNORM * PI))
+         SNORM = HALF * (ONE - COS (XNORM * PI / R2D))
          XNORM = WSINE * SNORM + WQUAD * XNORM ** 2
          IF (XNORM .LT. XFUDGE) NI = I
          X (I) = XMIN + XNORM * RANGE

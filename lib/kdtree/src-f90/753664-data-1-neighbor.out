@@ -1,0 +1,26 @@
+
+/share/apps/cfdtools/KDTREE/kdtree2.31/src-f90:535 >./kdtree2_test
+
+Enter data dimension d and # data points N: 3 753664
+Enter # neighbors to use in brute force comparisons: 1
+
+  1262609.10 pts./second built as a non-rearranged tree.
+  1090851.72 pts./second built as a 1st rearranged tree.
+  1089276.68 pts./second built as a 2nd rearranged tree.
+
+Comparing search of  1 neighbors to brute force on 50 random targets.
+No diagnostics mean no discrepancies found.
+
+Performance on enough target points to take at least 1 second:
+
+Random  target pts.: NN =   1:   333776. searches/s in rearranged tree.
+Random  target pts.: NN =   5:   170085. searches/s in rearranged tree.
+Random  target pts.: NN =  10:   119934. searches/s in rearranged tree.
+Random  target pts.: NN =  25:    67622. searches/s in rearranged tree.
+Random  target pts.: NN = 500:     5767. searches/s in rearranged tree.
+ 
+In-data target pts.: NN =   1:   302974. searches/s in rearranged tree.
+In-data target pts.: NN =   5:   161107. searches/s in rearranged tree.
+In-data target pts.: NN =  10:   114992. searches/s in rearranged tree.
+In-data target pts.: NN =  25:    65744. searches/s in rearranged tree.
+In-data target pts.: NN = 500:     5714. searches/s in rearranged tree.

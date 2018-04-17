@@ -45,6 +45,7 @@
 !  Local constants:
 
    real, parameter :: half = 0.5, zero = 0.
+   real, parameter :: r2d = 180.0d0 / acos(-1.0d0)
 
 !  Local variables:
 
@@ -61,8 +62,8 @@
    if (radius_in_tangent_out) then  ! Use it rather than derive it
       v1(1) = x3 - x1;  v1(2) = y3 - y1;  l1 = sqrt (dot_product (v1, v1))
       v2(1) = x3 - x2;  v2(2) = y3 - y2;  l2 = sqrt (dot_product (v2, v2))
-      theta = 90. - half * acosd (dot_product (v1, v2) / (l1 * l2))
-      t     = r * tand (theta)
+      theta = 90. - half * acos (dot_product (v1, v2) / (l1 * l2)) * r2d
+      t     = r * tan (theta/r2d)
       ux = v1(1) / l1   ! Unit vector along the tangent
       uy = v1(2) / l1
       xl = x3 - t*ux    ! True tangent point
@@ -81,7 +82,7 @@
       t  = distance (xl, yl, x3, y3)       ! Tangent length, as for pts. 2-3
       r  = distance (xl, yl, xm, ym) * t / &
            distance (x3, y3, xm, ym)
-      theta  = atand (t/r)                 ! Half the sector angle
+      theta  = atan (t/r) * r2d            ! Half the sector angle
    end if
 
 !  The circle center along the radius through point 1 will be closer to

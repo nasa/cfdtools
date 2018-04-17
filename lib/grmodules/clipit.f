@@ -75,10 +75,10 @@ C         (ICLIP(J)= 1 or -1).
 C     ... TEST is set   .TRUE.  after at least one polygon is tested
 C
       LOGICAL CLIP1, TEST
-D     INTEGER*2 IRCARY(100)
+C     INTEGER*2 IRCARY(100)
 C
       COMMON /CLIPC/ IFLAG, GXMIN, GXMAX, GYMIN, GYMAX, PREFX, PREFY
-D     DATA LUNDE/3/
+C     DATA LUNDE/3/
 C
       IF (IFLAG.NE.0) GO TO 200
          IFLAG= 1		! No need to compute after this time
@@ -127,15 +127,15 @@ C        ... Loop back here to fudge the reference point if
 C            a strange intersection is found.
   490    CONTINUE
          NCROSS= 0
-D        IF (IMARK.NE.0) WRITE (LUNDE,6490) X3, Y3,
-D    1      (IRCARY(L), L=1,NPTS)
+C        IF (IMARK.NE.0) WRITE (LUNDE,6490) X3, Y3,
+C    1      (IRCARY(L), L=1,NPTS)
          IF (IMARK.EQ.1) X3= X3+ 0.928
          IF (IMARK.EQ.2) Y3= Y3+ 0.456
          IF (IMARK.EQ.3) CLIP1= .FALSE.
          IF (IMARK.EQ.3) GO TO 580	! Give up after three tries
-D        DO 495 I=1,NPTS
-D           IRCARY(I)= 9
-D 495    CONTINUE
+C        DO 495 I=1,NPTS
+C           IRCARY(I)= 9
+C 495    CONTINUE
 C
 C        ... For every segment on the polygon
 C            Determine if and how a segment from the reference point to
@@ -144,7 +144,7 @@ C            the test point intersects the polygon segment.
             I1= I+ 1
             IF (I.EQ.IPT+MPTS-1) I1= IPT! For last segment use first vertex
             CALL SEGINT (XG(I), YG(I), XG(I1), YG(I1), X3, Y3, X, Y,IRC)
-D           IRCARY(I)= IRC
+C           IRCARY(I)= IRC
             IF (IRC.EQ.2) NCROSS= NCROSS+ 1! IRC of 2 means another intersection
             IF (IRC.EQ.0 .OR. IRC.EQ.2) GO TO 500
             IF (IRC.EQ.1) GO TO 550	! IRC of 1 means point on segment
@@ -166,7 +166,7 @@ C        ... Point is on polygon
   550    CONTINUE
          CLIP1=  .TRUE.
   580    CONTINUE
-D        WRITE (LUNDE,6580) X, Y, CLIP1, (IRCARY(L),L=1,MPTS)
+C        WRITE (LUNDE,6580) X, Y, CLIP1, (IRCARY(L),L=1,MPTS)
          IF (CLIP1) CLIPIT= .TRUE.
          IF (.NOT.CLIP1.AND. IABS(ICLIP(J)).EQ.2) CLIPIT= .FALSE.
          IF (.NOT.CLIP1.AND. IABS(ICLIP(J)).EQ.2) GO TO 800
@@ -179,8 +179,8 @@ C
 C     ... CLIPIT is .TRUE. if no geometry was tested (all ICLIPs=0).
 C         ELSE based on results of OR clipping and AND clipping
       RETURN
-D6490 FORMAT (2F8.3,' ?',<NGEOM>I2)
-D6580 FORMAT (2F8.3,L2,<NGEOM>I2)
+C6490 FORMAT (2F8.3,' ?',<NGEOM>I2)
+C6580 FORMAT (2F8.3,L2,<NGEOM>I2)
       END
 C+----------------------------------------------------------------------
       SUBROUTINE SEGINT (X1, Y1, X2, Y2, X3, Y3, X4, Y4, IRC)

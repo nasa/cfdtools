@@ -13,7 +13,6 @@ add_library(progtools
   getline.f
   index_or_not.f90
   int_to_char.f90
-  leading0.string_justify.f90.mystery
   locase.f
   lookup.f
   lookup2.f
@@ -48,7 +47,6 @@ add_library(progtools
   select.f
   string_justify.f90
   stripper.f
-  system.f.SGI
   termin.f
   toggle.f
   token2.f
@@ -60,4 +58,5 @@ add_library(progtools
   writer.f
 )
 target_link_libraries(progtools global)
+target_include_directories(progtools PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

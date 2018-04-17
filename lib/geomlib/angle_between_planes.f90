@@ -35,6 +35,7 @@
 
 !  Local constants:
 
+   real,    parameter :: r2d = 180.0d0/acos(-1.0d0)
    integer, parameter :: nnode = 6  ! 3 vertices for 2 triangles
    integer, parameter :: ntri  = 2  ! 2 triangles
 
@@ -71,6 +72,7 @@
 
    call tri_normal_and_area (nnode, ntri, tri_xyz, conn, 2, areaq, uq)
 
-   angle = acosd (dot_product (up, uq) / sqrt (upsq * dot_product (uq, uq)))
+   angle = acos (dot_product (up, uq) / sqrt (upsq * dot_product (uq, uq)))
+   angle = angle * r2d
 
    end subroutine angle_between_planes

@@ -2,7 +2,6 @@ add_library(geomlib
   angle2d.f90
   angle_between_planes.f90
   arcs2d.f
-  arcs2d.f.reentered-but-replaced-by-Todd-copy
   arcs3d.f
   area3.f
   area4.f
@@ -52,9 +51,7 @@ add_library(geomlib
   rotate3d.f
   rotate_xyz.f90
   solid_angle_quad.f90
-  solid_angle_quad.f90.before_surface_normal_change
   surface_normal.f90
-  surface_normal.f90.original
   test_angle2d.f90
   tri_normal_and_area.f90
   unitnorm.f
@@ -63,4 +60,5 @@ add_library(geomlib
   xderivs.f
 )
 target_link_libraries(geomlib global)
+target_include_directories(geomlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

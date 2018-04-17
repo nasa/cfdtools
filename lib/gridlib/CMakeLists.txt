@@ -14,16 +14,8 @@ add_library(gridlib
   condis.f
   copy_face.f90
   curvdis.f
-  curvdis.f.before-flatness-option
-  curvdis.f.before-growth-rate-smoothing
-  curvdis.f.before-linear-option
-  curvdis.f.before-more-smoothing
-  curvdis.f.before-vertex-handling
-  curvdis.f.too_much_smoothing
   curvdis2.f90
-  curvdis2.f90.before-retry-loop
   curvdis3d.f
-  curvdis3d.f.before-refinements
   curvdis3d2.f90
   curvdis_behavior.f90
   curvdis_l.f
@@ -69,7 +61,6 @@ add_library(gridlib
   smooth1d.f
   smoothx.f
   stretch.f90
-  test.file
   tfi2d.f
   tfi3d.f
   tfint3d.f
@@ -86,5 +77,6 @@ add_library(gridlib
   warpq3d2.f90
   xgrid.f
 )
-target_link_libraries(gridlib global)
+target_link_libraries(gridlib global grid_block_structure)
+target_include_directories(gridlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

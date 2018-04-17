@@ -11,7 +11,7 @@
 !  10/07/2011  D.A.Saunders  Initial implementation, prompted by a need to
 !                            impose catenary-type deflections between the spokes
 !                            of a sphere-cone-type heat shield that opens out
-!                            like an umbrella from a folded configuration. 
+!                            like an umbrella from a folded configuration.
 !  10/08/2011    "     "     Note that the two new end points are not enough to
 !                            define a unique transformation except if the curve
 !                            is a straight line.  However, whatever result we
@@ -38,6 +38,7 @@
 
    integer :: i
    real    :: shift(3), theta, xa(3), v1(3), v2(3), v3(3)
+   real, parameter :: r2d = 180.0 / acos(-1.0)
 
 !  Execution:
 
@@ -57,7 +58,7 @@
 
 !  tan (angle between v1 and v2) = |v1 x v2| / v1.v2:
 
-   theta = atand (sqrt (dot_product (v3, v3)) / dot_product (v1, v2))
+   theta = atan (sqrt (dot_product (v3, v3)) / dot_product (v1, v2)) * r2d
 
 !  This angle is in [-p1/2, +p1/2]; it's not clear if that's an issue.
 

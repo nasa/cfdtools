@@ -1,5 +1,4 @@
 add_library(ugridlib
-  calcphi.f.unused
   cut_triangles.f
   cutorder.f
   cutorder_nf.f
@@ -7,13 +6,11 @@ add_library(ugridlib
   cutsurf_nf.f
   cutsurfi.f
   cutsurfi_nf.f
-  isintet.f.unused
   nonlinear_tri_interp.f90
   points_delaunay_naive_2d.f90
   search_tri_2d.f90
   solid_angle_quadrature_3.f90
   solid_angle_tri.f90
-  solid_angle_tri.f90.single_rbar
   spherical_triangulation.f90
   testtet.f
   tet_coefs.f
@@ -23,5 +20,6 @@ add_library(ugridlib
   tri_coefs.f
   triangulate_patches.f
 )
-target_link_libraries(ugridlib global)
+target_link_libraries(ugridlib global triangulation_io)
+target_include_directories(ugridlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

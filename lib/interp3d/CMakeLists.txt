@@ -1,16 +1,11 @@
 add_library(interp3d
   bilincut.f
   furthest_point.f90
-  furthest_point.f90.before-ADT-merge
   inside_outside.f90
   intsec4.f
   intsec5.f
   intsec6.f90
-  intsec6.f90.before-ADT-merge
-  intsec6.f90.two_point_lines
-  intsec7.f90.before-ADT-merge_use_intsec6_now
   intsec8.f90
-  intsec8.f90.before-ADT-merge
   lcsint3d.f
   line_surface.f90
   peval3.f
@@ -28,5 +23,6 @@ add_library(interp3d
   trilint.f
   wbintr.f
 )
-target_link_libraries(interp3d global)
+target_link_libraries(interp3d global adt)
+target_include_directories(interp3d PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

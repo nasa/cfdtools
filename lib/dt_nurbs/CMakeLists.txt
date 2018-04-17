@@ -366,4 +366,5 @@ add_library(dt_nurbs
   dtwrig.f
 )
 target_link_libraries(dt_nurbs global)
+target_include_directories(dt_nurbs PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc)

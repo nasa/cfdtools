@@ -1309,7 +1309,7 @@
 !      *                                                                *
 !      ******************************************************************
 
-       UNUSED = .true.  ! To avoid compiler warnings about unused arguments.
+       UNUSED = 0.0d0  ! To avoid compiler warnings about unused arguments.
 
 !      The commented-out code should be feasible, treating CONN(:,:) as a
 !      pointer instead of as allocatable (here and in the calling program),
@@ -2087,7 +2087,7 @@
 !      *                                                                *
 !      ******************************************************************
 
-       UNUSED = .true.  ! To avoid compiler warnings about unused arguments.
+       UNUSED = 0.0d0  ! To avoid compiler warnings about unused arguments.
 
        ! INITIALIZE NALLOC_BBOX, NALLOC_FRONT_LEAVES AND
        ! NALLOC_FRONT_LEAVES_NEW TO 100 AND ALLOCATE THE MEMORY FOR THE
