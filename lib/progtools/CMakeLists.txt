@@ -1,5 +1,6 @@
 add_library(progtools
   alpha.f
+  cfd_io_package.f
   check_existence.f90
   cleantext.f
   countr.f

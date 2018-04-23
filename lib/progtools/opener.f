@@ -47,14 +47,14 @@ C                              Unique abbreviations suffice, in upper or
 C                              lower case.  The more common possibilities
 C                              provided for appear below.
 C                              OUTPUT:  None, with one exception: if the
-C                              keyword 'IfPresent' is included in the input 
+C                              keyword 'IfPresent' is included in the input
 C                              FSTAT string, then FSTAT = 'MISSING' (upper
 C                              case) is returned as output if the file is
 C                              not found.  ('Old' is implied by 'IfPresent'
 C                              here.)  FSTAT must be a character VARIABLE
 C                              in this one case; a CONSTANT is fine in all
 C                              other cases.
-C                              
+C
 C  FSTAT examples:
 C
 C     'NEW, LIST, 160'      New formatted file with up to 160 characters per
@@ -85,7 +85,7 @@ C
 C     'WRITE'      Write (and read) access        READONLY           The default
 C                  is 'READONLY' if STATUS='OLD', else it is 'WRITE'=read/write.
 C
-C     'nnn'        Max. record length             RECL         <System default> 
+C     'nnn'        Max. record length             RECL         <System default>
 C
 C     'IfPresent'  See FSTAT description and examples.
 C
@@ -265,7 +265,7 @@ C     Procedures:
       LOGICAL
      >   NUMBER
       EXTERNAL
-     >   LOOKUP, NUMBER, SCANNR, READS, SYSTEM, UPCASE
+     >   LOOKUP, NUMBER, SCANNR, READS, UPCASE
 
 C     Storage:
 
@@ -279,7 +279,7 @@ C     The dictionary should be in upper case.  It need not be alphabetized.
 
 C     Execution:
 
-C     Save the default input filename in case of an erroneous response 
+C     Save the default input filename in case of an erroneous response
 C     to the prompt:
 
       FORIG = FNAME

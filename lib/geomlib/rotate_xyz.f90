@@ -16,6 +16,8 @@
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   use trigd
+
 !  Arguments:
 
    integer, intent (in) :: n          ! Number of points to rotate
@@ -31,10 +33,6 @@
 
    integer :: i, j, k
    real    :: cth, sth, vth, d, vec(3), vecrot(3), rot(3,3)
-
-!  Intrinsics:
-
-   real    :: cosd, sind
 
 !  Execution:
 
