@@ -1,0 +1,150 @@
+POLAR_INTERP Description:
+
+   From surface data representing "spokes" of a symmetric body ordered by
+   azimuthal angle, interpolate a single-patch surface grid (and optional
+   function data) with specified dimensions. The method can apply to a body
+   with off-center nose as well.  The interpolated grid has uniform spacing
+   (at least in the initial implementation).
+
+   The intent is to pad coarse input data via nonlinear interpolation in
+   the two surface directions using a 1-D spline method, by taking advantage
+   of the spoke structure, so that methods appropriate for high-resolution
+   data can then be applied.  The initial application is to (expensive)
+   radiation calculations on a coarse polar grid that need to be interp-
+   olated to a dense CFD mesh.  Direct use of SURFACE_INTERP produces
+   faceting because the data cells are so big and the method is a one-cell
+   method.
+
+   The azimuthal interpolations are performed versus clock angle, and the
+   angles of the data spokes are deduced from the given (x,y,z) coord-
+   inates.
+
+   Originally, only half the body was treated but this version has the
+   option to treat a full body. In the full body case, the first spoke is
+   replicated automatically, and periodic interpolations are employed in
+   the azimuthal direction.  In the half body case, the second and second-
+   last spokes are reflected automatically so that the interpolations match
+   what would be obtained if the missing half body were present (by
+   reflection) explicitly.  If the first and/or last spokes do not appear
+   to be on the center line, the dataset is still interpolated to a
+   structured surface mesh with no symmetry assumptions.
+
+   A few prompts control the run (or a short control file on standard
+   input).
+
+   This version provides for replicating the center point as makes sense
+   for expensive radiative heating data: one spoke may be indicated as
+   containing the center location as its first point; unless 0 is entered
+   to suppress this option, each other spoke then has that point inserted
+   by this program as its new first point.  Standard input entries:
+
+      xxx.dat             ! Input dataset name
+      ni nj               ! Output surface grid dimensions
+      yyy.dat             ! Output Tecplot ASCII dataset
+      1                   ! Spoke containing center point, or 0
+
+Coordinate System:
+
+   Ox is assumed to be parallel to the symmetry axis, and right handedness
+   is assumed.  Oz is "up".
+
+Input Data Format:
+
+   For historical NEQAIR reasons, the input format is PLOT3D-like (header
+   records at the top), but in "point" rather than "block" order, with at
+   least one spoke beginning with the center point that is assumed to be
+   common to all spokes (see above option to replicate this point).  The
+   first spoke should be at the 12 o'clock position (with the nose point
+   first).  The following spokes may proceed either clockwise or anticlock-
+   wise.
+
+   11 3                [Number of spokes and number of functions per spoke]
+   15                  [Number of points on spoke 1]
+   15                  [  "   "   "   "   "   "   2]
+   :
+   :
+   9                   [  "   "   "   "   "   "  11]
+   x y z f1 f2 f3      [Coordinates and functions for point 1 of spoke 1]
+   x y z f1 f2 f3
+   : : : : : : :
+   : : : : : : :
+   x y z f1 f2 f3      [  "   "   "   "   "   "   "   "   " 9  "   "  11]
+
+Output Data Format:
+
+   One-zone Tecplot ASCII dataset, BLOCK order, suited to SURFACE_INTERP.
+
+Option To Help Generate Target Spokes:
+
+   Constructing spokes on an "ellipsled" slender-body vehicle prompted this
+   option to read surface grid patch indices in the spoked form above, with
+   x and y replaced by i and j, and no z or function data.  The output is
+   then in the above spoked form (x, y, z only) as needed to define body
+   points for radiative heating calculations.  No interpolations are done.
+
+   Alternative Input Data Format (to help prepare the normal input data):
+
+      13  ! # spokes
+      18  ! # points on spoke 1:nspokes
+      17
+      17
+      :
+      :
+      8
+      1  1 ! (i,j) defining apex point 1 of spoke 1
+      8  1
+      16 1
+      :  :
+      :  :
+      8  3
+      16 3
+      :  :
+      :  :
+      8  65
+      17 65
+      :  :
+      :  :
+      137 65
+
+   If the first token on every line of the dataset prompted for initially
+   is an integer (no decimal point), this retrofitted option is assumed,
+   and a new prompt for the single-patch surface grid to which the indices
+   refer is issued so that indices can be converted to (x,y,z) coordinates.
+   This surface grid should be in PLOT3D form, ASCII or unformatted.
+
+History:
+
+   08/29/08  D.A.S.     Initial implementation as part of an alternative
+                        to giving NEQAIR a (coarse) surface triangulation.
+                        Preserving some structure and padding should allow
+                        fewer coarse surface points than the unstructured
+                        approach to putting points where they're needed.
+
+   10/06/08  "      "   Added the option to replicate the first (center)
+                        point of one spoke as the first point for all other
+                        spokes, as makes sense for radiative heating data.
+
+   05/19/09  "      "   Retrofitted an option to read indices defining the
+                        spoked data points needed to set up body point
+                        coordinates for radiative heating calculations.
+                        A PLOT3D-type surface grid must accompany the input
+                        data file if it apparently contains (i,j) indices
+                        that define the spokes rather than (x,y,z,f) data.
+                        Only a single-patch grid appears necessary, as
+                        produced by HEAT_SHIELD (but with y and z swapped
+                        to be compatible with DPLR).
+
+   06/15/12  "      "   Jeff Brown had wind tunnel data on both halves of
+                        an inflatable decelerator, prompting the option to
+                        handle more than just half-body datasets.  The
+                        spoke order may be clockwise or anticlockwise but
+                        spoke 1 should be at 12 o'clock for half and whole
+                        body cases.  (Parts of bodies may still be OK no
+                        matter where they start, with no symmetry assump-
+                        tions made.)
+
+   06/18/12  "      "   The full-body case can use LCSFIT's cyclic option,
+                        at least for the geometry.
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+                         now ERC, Inc. at NASA ARC.

@@ -1,0 +1,40 @@
+Description:
+
+      SCAN_GRID scans the specified block(s) of a grid to determine such
+   characteristics as the data range. This version can also read a function
+   file as might be needed to locate (for instance) maximum residuals in a
+   flow solution.
+
+Implementation Notes:
+
+      Simply scanning all blocks sequentially would allow storing of only
+   one block at a time.  However, providing an inner loop over index sub-
+   ranges of a specified block makes it awkward not to store the entire
+   grid.
+
+      If a function file is present, the program does indeed store just one
+   block at a time and allows just one of the functions to be scanned per
+   run.  Use something like Tecplot to scrutinize particular points of
+   particular blocks if function values are needed as well as coordinates.
+
+History:
+
+   01/11/00  D. Saunders  Initial implementation (PLOT3D grid data range),
+                          using Mark Rimlinger's CFD_IO_PACKAGE.
+   08/27/03   "      "    Provide data range for each block in addition to
+                          the data range over the block range.
+                          This can help identify (say) which surface
+                          patches are which in a surface paneling.
+   10/14/03   "      "    Tabulate block face corner (x,y,z)s as a visual
+                          aid to determining connectivity.
+   12/03/03   "      "    Tabulate the shortest cell edges for all blocks
+                          in all index directions.
+   10/20/04   "      "    Show the local normal if a single surface point
+                          is specified when a subblock is scanned.
+   12/17/10  D. Saunders  Switch from cfd_io_package to xyzq_io package,
+             ERC, Inc.    and add handling of function files as needed to
+             NASA ARC     locate maximum residuals.
+
+Author:
+
+   David Saunders, ELORET Corporation/NASA Ames Research Center, CA

@@ -1,0 +1,25 @@
+Description:
+
+   REFLECT_BLOCKS reflects the blocks of a multiblock grid in the plane
+specified.  An optional function file may also be reflected.  Either both
+halves or just the reflected half may be output.  An option to force
+exact zeros at the symmetry plane is provided.  If a function file is
+present, one or more quantities may have the sign changed as part of the
+reflection.  Normally this would be just one velocity component.
+
+   The function file may represent either a vertex- or cell-centered
+solution, with or without halo cells.  (Only the number of blocks is
+required to match that of the grid.)
+
+Procedures:
+
+   XYZQ_IO package  I/O utilities for PLOT3D grid and function files
+   RDLIST           Utility for reading an indefinite list of integers
+
+History:
+
+   08/30/05  D.A.Saunders  Initial adaptation of EXTRACT_BLOCKS.
+   02/23/06    "     "     Belated realization that reflecting changes the
+                           handedness.  Restore the original.
+
+Author:  David Saunders, ELORET/NASA Ames Research Cntr., Moffett Field, CA

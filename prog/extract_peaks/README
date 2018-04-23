@@ -1,0 +1,43 @@
+EXTRACT_PEAKS Description:
+
+For a list of files of column data, extract peak values and tabulate them.
+More precisely: if the first ndim columns are coordinates (time or spatial)
+followed by nfun columns of function data, write nfun peak values to one
+line per input file.  This could easily be extended to (say) writing the
+coordinate(s) along with the peak value to nfun output files if the peak
+locations are also of interest.  Initially, they're not.
+
+Some prompts handle the number of header lines to skip, and the names of
+the functions to include in the output files.
+
+Sample Input File of Files to Process:
+
+   DPLR-AoA=0-pqtau-laminar-MHR-t655.dat
+   DPLR-AoA=0-pqtau-laminar-MHR-t665.dat
+   DPLR-AoA=0-pqtau-laminar-MHR-t674.dat
+   DPLR-AoA=0-pqtau-laminar-MHR-t680.dat
+   DPLR-AoA=0-pqtau-laminar-MHR-t687.dat
+   DPLR-AoA=0-pqtau-laminar-MHR-t695.dat
+
+Representative Format of One Such File (1 Header Line, 2 Dims., 3 Fns.):
+
+   variables=x,y,p,qw,tau
+   0.000000000  0.000000000  1.55635363E+00  4.22335080E+01  9.34081158E-01
+   0.000122464  0.008980126  1.55635363E+00  4.22335322E+01  9.34081693E-01
+   0.000610847  0.026908363  1.55164269E+00  4.19596878E+01  2.79743491E+00
+   0.001584453  0.044774007  1.54491638E+00  4.15442151E+01  4.43967952E+00
+    :            :            :               :               :
+
+Corresponding Output (All Function Peaks/No Coordinates), Tab-delimited:
+
+   x   y   p   qdot   tau                     kPa      W/cm^2          Pa
+   DPLR-AoA=0-pqtau-laminar-MHR-t655   2.3456E+01  1.1234E+00  1.4142E+02
+   DPLR-AoA=0-pqtau-laminar-MHR-t665   2.5678E+01  1.5432E+00  2.1234E+02
+                                   :        :           :           :
+
+History:
+
+04/12/13  D.A.S.  Initial implementation, for analyzing centerline data
+                  from 48 flow solutions for the Mars InSight project.
+
+Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA.

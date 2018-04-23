@@ -1,0 +1,48 @@
+Program QPLOT and all of the subroutines it uses (other than those of the
+underlying graphics package) have been assembled with a sample input dataset
+and a "qplot.config" file which should be adapted and placed in a certain
+directory - see the PLOTDEV subroutine.
+
+QPLOT uses the CA-DISSPLA graphics library for its graphics.  All of the
+graphics are confined to the QUICK subroutine, apart from the main program's
+calls to PLOTDEV for selecting and initializing a preview device and metafile.
+
+The bulk of the modules are from general-purpose libraries.  The application-
+specific modules are just QPLOT, QUICK, MYSTYL, RANGER, RESCALE, and WRAPPER.
+A "dummies" modules was needed on the originating IRIS system to deal with two
+external references known to the original VAX implementation without changing
+the PLOTDEV utility common to both systems.
+
+Much of QPLOT is devoted to the elaborate interpretation and preprocessing
+of the input data that makes for an "easy-to-use" application.  Being in
+standard FORTRAN 77 (with minor extensions, notably ! comments, NAMELIST,
+and up-to-8-character names), most of it is portable.  But QUICK is also
+nontrivial, using many of the features of DISSPLA, and achieving a precise
+match with another graphics package may be difficult if not impossible.
+
+Note that QPLOT is not interactive.  Probably it would be if it had not
+been started long ago (1982).  However, it still serves very well for
+producing report-quality plots of numerical/engineering-type data from
+applications which save QPLOTable results rather than include their own
+graphics.  The previewing capability (e.g. Tektronix screen) can be valuable
+prior to metafile generation (e.g. PostScript).  [No effort has been made
+to preview on an X device, although DISSPLA evidently supports such capability
+now.]  [Later:  Tektronix is barely supported now, so generating PostScript
+directly (using the -ps switch on the command line) has to suffice.]
+
+Perhaps the worst limitation of the present DISSPLA implementation is that
+its "instruction alphabet" (formatting commands for superscripts, Greek
+letters, etc., embedded in text strings) causes the entire string to be
+produced with software characters, spoiling the report quality of PostScript
+output.
+
+The "examples.dat" file produces some of the illustrations in the QPLOT
+booklet.  A more elaborate example is included as well - it should be
+challenging to reproduce with its secondary Y axis used effectively.
+(This one arose from design studies for an Oblique All Wing supersonic
+transport.  Various ways of tapering the wing chord and thickness were
+examined in detail, and the tapering program produced the files included
+here, without any editing required.)
+
+For QPLOT questions, please call David Saunders at (650) 604-1480 or send
+e-mail to David.A.Saunders@nasa.gov at NASA Ames Research Center.

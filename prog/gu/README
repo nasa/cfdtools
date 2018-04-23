@@ -1,0 +1,33 @@
+GU Description:
+
+   Grid utility to manipulate multiblock PLOT3D grids or function files,
+   in one of many ways per run.
+
+History:
+
+   05/01/13  Ryan McDaniel   Original release (mostly FORTRAN 77).
+   May 2013  David Saunders  Fortran 90 version.  Swap x/y/z option added.
+   09/09/13    "      "      Ryan found mirrored block handedness was
+                             forgotten.  Also: the header record of
+                             unformatted blocks extracted as a chunk was
+                             wrong (not one record).
+Menu:
+
+   write (*, '(/, (3x, a))') &
+      'reorder blocks (r)',                      &
+      'extract blocks (e)',                      &
+      'combine grids (b)',                       &
+      'convert formatted <--> unformatted (c)',  &
+      'sequence (s)',                            &
+      'count points (n)',                        &
+      'unit conversion (u)',                     &
+      'add zeros (pad 2d for Gridgen) (a)',      &
+      'remove zeros (for dplr2d) (z)',           &
+      'extract surface k = 1 or kmax (x)',       &
+      'swap i/j/k (i)',                          &
+      'swap x/y/z (y)',                          &
+      'fix a surface file to have kmax = 1 (f)', &
+      'mirror grid (m)',                         &
+      'probe for max and min (p)',               &
+      'scale outer boundary (o)',                &
+      'extrude 2d plane to create 3d volume (v)'

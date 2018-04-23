@@ -1,0 +1,141 @@
+
+Original TEMPLATE Description:
+------------------------------
+
+   Make a FLO107MB connection file template from a PLOT3D grid file.
+   The name 'template' is used because most but not all of the block
+   face connectivity/boundary condition information can be deduced
+   from just the grid, although some educated guesses are applied to
+   the faces that seem not to match other block faces.
+
+   The grid file may be single or mgrid, real*4 or real*8, though it
+   only makes sense to process multiblock grids.
+
+   Use "template -v" for verbose template.con file (last column will
+   indicate what fraction of quads of discovered abutting faces match
+   within epsilon distance at all four corners.
+
+   (This version turns on "-v" explicitly.)
+
+   There are nb blocks, the nth block has dimensions nj(n),nk(n),nl(n).
+   Each block becomes a network of six patches, one for each side.  The
+   sides are numbered 1 to 6 as:  jmin, jmax, kmin, kmax, lmin, lmax.
+   Each quad face of each side of each block is stored as a four-tuple
+   of integers that point into xyz.  Component numbers are the sides
+   1-6 for the first block, then 7-12 for the second block, and so on
+   to 6*nb.  An index array iaf into ndf points to the nth component's
+   quads which range from iaf(n) to iaf(n+1)-1.  The xtrema array is
+   used to store the xyz minmax values for each component (for each
+   side of each block).  The component xyz extrema are used to match
+   sides within epsilon.  ihand(n) is the handedness of the nth block,
+   right=1, left=-1; it is found roughly by adding some tet volumes and
+   checking the sign of the result.
+
+   Scott D. Thomas, Sterling Software, Inc.
+   Contract NAS 2-13210/6/5, NASA Ames Research Center.
+   25-JUN-1998..30-JUN-1998.
+
+   Scott D. Thomas, Raytheon STX Corporation
+   Contract NAS 2-98080/53, NASA Ames Research Center.
+   1-JUL-1998..9-JUL-1998.
+
+Adaptation within the Space Technology Division at Ames:
+--------------------------------------------------------
+
+DPLR Input and Interface Files:
+
+   This version writes a GASP control file and two DPLR control files
+   as well, and handles formatted grids as well as the original real*4
+   or real*8 unformatted.
+
+Ancillary control file 'template.inp.2' usage:
+
+   No 'template.inp' control file is in the picture here, but the name
+   'template.inp.2' is used for this optional control file to be consistent
+   with other grid manipulation utilities.
+
+   The leading keyword on the first of each optional pair of input lines is
+   converted to upper case here, and only the first 4 characters are used.
+
+   Pairs of control lines are read until EOF, so the order of the pairs
+   does not matter.
+
+Optional usage (1) (obsolete with DPLR V4.03, since ntx/y/z are gone now):
+
+   Control the type of sequencing (grid coarsening) specified in the
+   'dplr.inputs.2' output.  Originally, 2 2 1 coarsening was hard-coded.
+   Now, a pair of lines as shown can produce whatever is really needed.
+   The default coarsening remains 2 2 1.  Example:
+
+   Sequencing controls
+   4 4 2              ! Coarsening factors in the i, j, k directions
+
+Optional usage (2):
+
+   Force boundary condition changes in the two DPLR control files as needed
+   for proper analysis of cavity or plug repair cases.
+
+   Cavity block(s)    ! Any BC 1 or 2 will be changed to BC 26 (wall)
+   6                  ! Any reasonable list of block numbers
+
+or
+
+   Plug blocks        ! BC 2 at jmin will be changed to BC 26 (wall)
+   10:13              ! Any reasonable list of block numbers
+
+History beyond Scott's original implementation:
+-----------------------------------------------
+
+  [Note that Scott uses a pre-Fortran 90 form of dynamic memory allocation
+   that appears more trouble than it is worth to replace with the modern
+   forms of allocate and deallocate.]
+
+13-MAY-2004  David Saunders  Command line arguments don't work with
+             ELORET Corp./   Intel's ifc compiler;
+             NASA Ames       the grid may be formatted now.
+14-MAY-2004    "             Added output of two DPLR-related files,
+                             derived from the saved FLO107MB data.
+17-MAY-2004    "             Added output of GASP format as well.
+23-OCT-2004    "             Dinesh asked for dplr.inputs.2 with the
+                             i and j block dimensions halved.
+23-DEC-2004    "             DPLR-related BCs for a grid with more
+                             than one layer of blocks were being
+                             affected by the one-layer case, but
+                             we shouldn't make assumptions about
+                             k = 1 or nk faces unless matching faces
+                             have not been found.
+13-JAN-2005    "             Changed "init1" to "initi" so that the
+                             Perl script for updating DPLR control
+                             files doesn't misbehave.
+26-MAY-2005    "             Option to output complete dplr.inputs:
+                             if 'sample.inputs' is present, its
+                             header and trailer are transcribed.
+14-NOV-2005    "             Distinguish the symmetry planes in the
+                             dplr.inputs files (not always y = 0).
+18-NOV-2005    "             With DPLR V3.04 or later now the usual
+                             choice, use BC 2 where BC 3 was used
+                             (specified inflow or supersonic outflow,
+                             rather than just supersonic outflow).
+03-JAN-2006    "             The symmetry plane test should not use
+                             too loose a tolerance. Make it <= 0.001.
+11-APR-2006    "             Introduced ancillary control file
+                             'template.inp.2' to allow automation of
+                             BC changes in 'dplr.inputs' for cavity
+                             or plug repair cases.
+13-APR-2006    "             Chun Tang asked for a way to control the
+                             type of grid sequencing in 'dplr.inputs.2',
+                             so that has been added to the options
+                             enabled by 'template.inp.2' (which still
+                             need not be present).
+10-MAY-2006    "             DPLR V3.05's new grid tailoring controls
+                             required changing how the header lines
+                             from 'sample.inputs' are transcribed.
+27-MAY-2009    "             DPLR V4 expects "ibadpt" on the end of the
+                             first line of BC info.  DPLR V3 will not be
+                             affected by its presence.
+27-MAR-2010    "             Long chemistry file names were being
+                             truncated beyond column 80.
+11-FEB-2014  DAS, ERC Inc./  The dplr.inputs output file now suits
+             NASA Ames       DPLR V4.03: the grid block dimensions of
+                             V4.02 and earlier are no longer present.
+                             dplr.inputs.2 is therefore redundant.

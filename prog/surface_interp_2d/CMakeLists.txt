@@ -1,0 +1,13 @@
+add_executable(surface_interp_2d
+  surface_interp_2d.f90
+)
+target_link_libraries(surface_interp_2d global)
+target_link_libraries(surface_interp_2d
+  progtools
+  adt
+  linsys
+  tecplot_io
+  geomlib
+)
+install(FILES README DESTINATION doc RENAME surface_interp_2d)
+install(TARGETS surface_interp_2d DESTINATION ${CMAKE_INSTALL_BINDIR})

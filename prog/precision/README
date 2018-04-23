@@ -1,0 +1,18 @@
+PRECISION Description:
+
+   This program drives the function-precision estimation routine
+OBJEPS for a given function with calling sequence of the form
+
+   CALL xxx (N, X, F)                    ! 'Q' for QNMDIF
+   CALL xxx (MODE, N, X, F, G, NSTATE)   ! 'N' for NPSOL/NZSOL
+
+Actually, the more recent forms, QNMDIF2 and NPOPT, now both expect
+
+   CALL xxx (N, X, F, NCALL, FAIL)
+
+and OBJEPS should be adjusted accordingly (no call for that yet at NASA).
+
+This version examines the function F8PT3 from Example 8.3 of the
+book PRACTICAL OPTIMIZATION.
+
+See the optlib collection for OBJEPS.

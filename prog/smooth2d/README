@@ -1,0 +1,137 @@
+PURPOSE:
+
+   SMOOTH2D is a driver for 2-D interpolation/smoothing routines. It
+   applies the selected methods to one or more datasets read from a
+   3-column-type file.  The dataset(s) may or may not be rectangular
+   but some of the methods assume rectangularity and are expected to
+   be used appropriately.  Some also just require pseudorectangularity.
+
+   SMOOTH2D evaluates the fit at points which may be generated or read
+   from a separate file (in a similar format except only two columns
+   are needed - any additional columns are ignored).
+
+   Results are written to a file in the same form as the original data.
+
+   If (X,Y)s are generated, one slice or more in each direction is
+   provided for, and the rectangular grid of interpolated data may be
+   ordered in the output file by either rows or columns to assist 1-D
+   plotting of slices.  This format is also suited to the 2-D graphics
+   utility FMAP.
+
+   Dataset format:           <Reads are list-directed>
+
+   Title                     <Up to 80 characters>
+   NX  NY   or   NPTS        <2 integers = (pseudo)rectangular; 1 = random>
+   X(1)     Y(1)     F(1)    <If (pseudo)rectangular, the table may be
+   X(2)     Y(2)     F(2)     entered either by columns or by rows.>
+     :        :        :
+     :        :        :
+   X(N)     Y(N)     F(N)    <where N is either NX * NY or NPTS>
+   NX  NY   or   NPTS        <repeat for further datasets in same file>
+     :        :        :
+
+   An optional format for binary, pseudorectangular datasets is indicated
+   by the following code segment (basically all Xs by rows or columns, then
+   all Ys the same way, and all in one unformatted record).  The
+   corresponding function values are read similarly from a separate file:
+
+   READ (LUNGRD, IOSTAT=IOS) NX, NY
+   NPTS = NX * NY
+   READ (LUNGRD, IOSTAT=IOS) (X(I), I=1,NPTS), (Y(I), I=1,NPTS)
+
+   READ (LUNFUN, IOSTAT=IOS) NX, NY
+   READ (LUNFUN, IOSTAT=IOS) (F(I), I=1,NPTS)
+
+METHOD:
+
+   Open file for normal evaluated results (smooth2d.out).
+   Prompt for and open the input data file; read its title.
+   Prompt for descriptive text to go to results file (default = title).
+   Prompt for generating (X,Y)s for evaluation, or reading them.
+   IF <read points> THEN
+      Prompt for the evaluation file.  ! Same for all datasets.
+      Open and read it.
+   END IF
+   Prompt for scaling the data so that distances between pts. are
+   meaningful.
+   PICK_METHOD:
+      Select a 2-D method.
+      IF <CR> or ^Z GO TO <DONE>
+      Rewind the input data file; skip its title.
+      GET_DATASET:
+         Try to read a dataset (formatted|unformatted; pseudorect. or not)
+         IF <EOF> GO TO PICK_METHOD.
+         Determine data range (partly for scaling, partly for grid gen.).
+
+         IF <generate points> THEN
+            IF <first dataset and first method> THEN
+               Display data range.
+               Prompt for low, high, and increment in X and in Y.
+            END IF
+            Generate rectangular evaluation mesh (possibly just a slice),
+            ordered by rows or columns according to a first-time prompt.
+         END IF
+
+         IF <first dataset> THEN
+            Prompt for smoothing parameters (if applicable).
+         END IF
+         Fit requested surface.                |  These two steps may be
+         Evaluate fit at requested points.     |  combined by some methods.
+         Write results to output file.
+      GO TO GET_DATASET.
+   <DONE>
+
+HISTORY:
+  DAS   02/12/86   Initial adaptation from SMOOTH (Akima, Hardy,
+                   and TPSPLN).
+  DAS   02/14/86   Developed FACETS and installed it, after above
+                   methods seemed to behave dismally.
+  DAS   02/19/86   Allowed for <multiple methods/one dataset> in one
+                   run; added DETAILS for self-descriptive output.
+  DAS   03/14/86   Provided for generating grid of evaluation points.
+  DAS   03/21/86   Provided for scaling the Xs to match the Ys so that
+                   the "distances" used in some methods are meaningful.
+  DAS   09/19/86   MXNSQR limits certain methods to fewer data points
+                   than others, since some involve solution of N*N dense
+                   systems.
+  DAS   01/20/88   Installed BIMOND3=PBHMD/PBHEV along with RDTABLE
+                   derived from part of BIMOND3).  Reading of regular
+                   or scattered data (NX and NY, or just NPTS resp. on
+                   line 2) is automated using ERR= keyword.  Also R1MACH
+                   (which came with BIMOND3 and is called by PBHMD) is
+                   now called by SMOOTH2D because it needs "BIG" for its
+                   own purposes (data range finding).
+  DAS   03/03/88   ERR= with list-directed reads isn't good enough:
+                   looking for NX and NY where just NPTS is present
+                   means NY is set to (the truncated value of) X(1).
+                   Switched to counting tokens instead.
+  DAS   06/12/89   Provided for multiple datasets in one input file.
+  DAS   03/09/90   MXNSQR raised reluctantly from 100 to 300 for one user.
+  DAS   03/20/90   The Akima method was not saving its results when
+                   some points (probably only a few) were not evaluated
+                   properly (IER=999; extrapolation bug in the method).
+                   Results are now saved anyway - bulk of them may be OK.
+  DAS   08/21/90   Added INMESH/AKIMA combination for case of pseudo-
+                   rectangular dataset.  Also provided unformatted option
+                   for both the data file and the file of target (X,Y)s.
+                   Output results may also be unformatted now, and have
+                   either NXE, NYE, or just NEVAL if regular or not,
+                   although the unformatted case assumes regularity.
+                   Had to eliminate RDTABLE (for truly rectangular data)
+                   in order to handle pseudorectangular datasets.  (Test
+                   in-line for true rectangularity now.)  Raised MXDPTS,
+                   MXIPTS to 201*101 for a wing surface application.
+  DAS   04/09/91   Added LCSINT2D method for data consisting of rows
+                   with constant Y along each row.
+   "    04/18/91   LCSINT2D had independent edge definition arguments added
+                   (but they are not made use of here).  It also needed
+                   first/last indices for the evaluation arrays, and
+                   different interpolation controls for "rows" & "columns"
+                   and "leading" & "trailing" edges.
+   "    11/28/93   Added LCSFIT2D.
+   "    11/29/93   Added PLBICUBE.  Parametric cases are different enough
+                   that some data options such as rescaling may not be
+                   valid.
+   "    05/23/94   Installed TOMS Algorithm 624 (REORDR, TRMESH, EVAL624).
+
+AUTHOR:  David Saunders, NASA Ames/Sterling Software, Palo Alto, CA

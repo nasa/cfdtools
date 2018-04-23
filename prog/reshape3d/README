@@ -1,0 +1,77 @@
+RESHAPE3D Description:
+
+PURPOSE:
+
+   Utility to transform XYZ data in one or more ways at a time.
+
+METHOD:
+
+   > Deal with just one dataset at a time.  The simple format chosen is
+     compatible with other utilities ("SMOOTH2D" format).  Actually, if
+     the first line is found to be strictly numeric, the title and point
+     count are assumed to be omitted.
+
+        [TITLE
+        N]                  <No. of pts - trailing text here is ignored>
+        X (1)  Y (1)  Z (1)
+         :     :            <Read list-directed, one triple at a time>
+         :     :            <Additional columns will be ignored/lost>
+        X (N)  Y (N)  Z (N)
+
+   > Transformations are done in-place.
+
+   > "Undo last" and "start over" operations are done with spare copies.
+
+HISTORY:
+
+   08/29/86   David Saunders   Initial implementation of RESHAPE for
+                               XY data.
+
+   01/17/88   Michael Wong     RESHAPE3D developed from RESHAPE.
+                               Added features are translation and
+                               reflection about the XY, YZ, or ZX planes,
+                               Z shifting and scaling, and YZ or ZX
+                               data switching.  Deleted feature is
+                               rotation about point (p,q).
+
+   12/24/97   DAS              Allowed for rotating Y and Z about (p,q),
+                               as needed for pylon or fin sections.
+
+   11/25/98   DAS              Allowed for up to 10,000 points.
+
+   05/19/99   DAS              Minor Fortran 90 revisions.
+
+   02/18/00   DAS              Added rotations about axes parallel to
+                               the Y and Z axes for completeness.
+
+   06/16/08   DAS              Added general rotation about an axis defined
+                               by two points.  Free formatting now, and
+                               dynamic allocation of work-space.  Guard
+                               against displaying excessive amounts of data
+                               for the "review" option.  Disallow starting
+                               over and undoing if the number of points is
+                               too large (as ~375000 seems to be).
+
+   07/24/08   DAS              Display the data range and center (prompted
+                               by dealing with clouds of laser-scanned data
+                               rather than 3-space curves).
+
+   08/13/08   DAS              Added splitting options.  Once a dataset is
+                               split, only the upper portion of the repacked
+                               coordinate arrays is operated on if further
+                               changes are specified.
+
+   10/07/11   DAS              Added the option to apply a rigid transform-
+                               ation defined by new curve end points (rigid
+                               if they're the same distance apart as the
+                               input end points, that is, otherwise some
+                               other result is obtained that may neverthe-
+                               less be of interest).
+
+   08/21/12   DAS              Added NULINE3D option for comparison with
+                               RIGID_TRANSFORM (which indeed gives useful
+                               results even if the transformation isn't
+                               really rigid because the size is changing).
+
+AUTHORS (Original): David Saunders, Michael Wong,   Sterling Software/ARC
+        (Current):  David Saunders, ELORET Corp/NASA Ames Research Center

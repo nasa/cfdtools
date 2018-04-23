@@ -1,0 +1,24 @@
+COLUMNEDIT is a simple tool for those not conversant with awk, perl, etc.
+
+Description:
+
+   COLUMNEDIT provides for replacing one column of a text file with any
+   column from another text file, or for inserting a new column, deleting
+   a column, or extracting a column.  Here, "column" is used in the sense
+   of tokens delimited by white space (blanks or tabs).
+
+Limitations:
+
+   > Original column spacing may be lost - recover it with an editor.
+
+History:
+
+   12/11/96  D.Saunders  Initial implementation to facilitate entering
+                         nonzero design variable values in the control
+                         file of a wing/body design code.
+   06/13/00      "       How come no "extract column" option?  (Added it.)
+   08/24/00      "       Gnuplot files can exceed 132 characters/line.
+   12/28/10      "       Free-format version; considered allowing more than
+                         one operation to a file in one run, but it's not
+                         worth the trouble (which would include storing the
+                         entire file as a 2-D array of tokens).

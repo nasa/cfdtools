@@ -1,0 +1,99 @@
+TRI_TO_QUAD Description:
+
+   Interpolate an unstructured surface flow solution to a structured mesh.
+   Initially, the input is a single-zone Tecplot surface triangulation with
+   a variable number of quantities defined at each vertex, and the target
+   mesh is a multiblock PLOT3D-type grid.  Output is in either Tecplot or
+   PLOT3D form.
+
+Input Tecplot data format (original, vertex-centered):
+
+   VARIABLES = "X", "Y", "Z", "TEMP", "PRESS", "CP", "MACHE", "ASOUNDE", ..
+   ZONE N=96000, E=32000, F=FEPOINT, ET=TRIANGLE
+   0.000000  0.000000 0.000000 2838.386719 51330.925781 1.552663 0.609412 .
+   0.000883 -0.007150 0.113643 2838.386719 51330.925781 1.552663 0.609412 .
+   0.000883  0.000000 0.113868 2838.386719 51330.925781 1.552663 0.609412 .
+   ::::::::::::::::
+   ::::::::::::::::
+   4.882953  0.000000 0.011285 950.867676 16.506409 -0.001166 5.062649 ...
+   1 2 3
+   4 5 6
+   7 8 9
+   10 11 12
+   ::::::::
+   ::::::::
+   95992 95993 95994
+   95995 95996 95997
+   95998 95999 96000
+
+Alternative cell-centered Tecplot input format (DPLR overset grid tools):
+
+   TITLE     = ""
+   VARIABLES = "x"
+   "y"
+   "z"
+   "p"
+   "Chm"
+   "h"
+   "qw"
+   "Re_c"
+   ZONE T="ZONE 001"
+    STRANDID=0, SOLUTIONTIME=0
+    Nodes=9367, Elements=18438, ZONETYPE=FETriangle
+    DATAPACKING=BLOCK
+    VARLOCATION=([4-8]=CELLCENTERED)
+    FACENEIGHBORCONNECTIONS=55014
+    FACENEIGHBORMODE=LOCALONETOONE
+    FEFACENEIGHBORSCOMPLETE=YES
+    DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )
+    3.756540120E-01 3.601163924E-01 3.451932967E-01 3.309260905E-01  ...
+   ::::::::::::::::
+
+Control file format (standard input):
+
+   TRI_TO_QUAD control file
+   xxxx.xxx      ! Surface triangulation and flow solution (Tecplot format)
+   1             ! 1 => vertex-centered/Tecplot; 2 => cell-centered/Tecplot
+   xxxx.xxx      ! Target grid (PLOT3D multiblock)
+   T             ! T|F = formatted|unformatted
+   xxxx.xxx      ! Output file 1 (grid file if PLOT3D format)
+   xxxx.xxx      ! Output file 2 (function file if PLOT3D, else 'none')
+   T             ! T|F = formatted|unformatted
+   0.0001        ! Distance tolerance for target pt. inside solution grid
+  [7.890     0.  ! Optional X & F; if x > X, set finterp(:) = F]
+
+Method:
+
+   >  The surface triangulation is read as one zone and converted to an
+      ADT (Alternating Digital Tree) for search purposes.  If the function
+      values are cell-centered, they are interpolated to the cell vertices
+      first.  No unique best interpolation method exists. The area-weighted
+      averaging used here suffices for typical triangulations.
+   >  Target blocks are processed in order (read and written as needed).
+   >  For each target point, the ADT search locates the nearest pt. on the
+      surface triangulation (never outside it).  The function values can
+      then be interpolated with the indicated trilinear coefficients.
+   >  Optionally, target points beyond the indicated X will be set to the
+      indicated F (probably zero, as for radiation on an aft body).
+
+Note:
+
+   This program still uses the original Tecplot I/O package.  It has not
+   been updated to use the I/O package version prompted by Tecplot 360.
+
+History:
+
+   03/04/05  DAS  Initial implementation for vertex-centered function data.
+   03/07/05   "   Changed name from SURFACE_FLOW_INTERP to TRI_TO_QUAD in
+                  anticipation of a QUAD_TO_TRI analog.
+   08/29/08   "   Added optional X and F to deal with radiative heating
+                  that goes to zero beyond some X for CEV.
+   03/15/10   "   Provided for DPLR/Overset-related triangulated input data
+                  (type 2, cell-centered Tecplot format).
+   08/08/13   "   All ADT variants are in one module now with generic
+                  build_adt and search_adt interfaces.
+   07/02/14   "   The tri_* modules come from triangulation_io.f90, not
+                  tecplot_io_module (comments were wrong).
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+                         Now with ERC Incorporated/NASA ARC.

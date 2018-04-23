@@ -225,4 +225,4 @@ add_subdirectory(prog/v2c)
 add_subdirectory(prog/wingsections)
 #add_subdirectory(prog/xdeck)  What is Q in format statement?
 add_subdirectory(prog/xline)
-add_subdirectory(prog/zb-fix)
+add_subdirectory(prog/zb_fix)

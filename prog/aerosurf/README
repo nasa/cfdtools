@@ -1,0 +1,17 @@
+   AEROSURF is the stand-alone driver of the geometry paneling modules
+used by the multiblock design code, SYN107-MB.  It is needed to provide
+the initial paneling used with an initial surface grid by program UV to
+parameterize that grid for efficient mesh perturbations during the design
+process.  It treats geometric entities such as wings, fuselages, pylons,
+nacelles, etc., by calculating various intersections and imposing regular
+panels on the intersected surfaces representing a complete or partial
+aerodynamic configuration.
+
+   Main routine SURFER and the routines it calls should be identical to
+the corresponding routines in the design software.
+
+   The geometry definitions are in the form of planar sections, to which
+perturbing shape function ("sine bumps") may be added.  Shape optimization
+procedures for full aerospace configurations have no doubt progressed
+since this work from the 1990s, but the stand-alone portion of it (this
+AEROSURF package) may yet find further uses.

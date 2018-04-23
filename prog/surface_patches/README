@@ -1,0 +1,42 @@
+SURFACE_PATCHES Description:
+
+   This is an adaptation of ADJUST_GRID for the case of surface datasets,
+   which lend themselves to further common requirements, such as extracting
+   subpatches.  PLOT3D multiblock grid files are treated, with automatic
+   detection of formatted/unformatted inputs.
+
+   SURFACE_PATCHES applies one or more of the ADJUST_GRID transformations
+   (shift, scale, rotate, ...) to all blocks of the indicated surface grid.
+   It has additional options applied to one patch at a time, employing the
+   utilities provided by the earlier surface_patch_utilities.f90 module.
+
+   Some of these options may make sense for just one operation per run.
+   In particular, extracting a portion of a patch and reversing the index-
+   ing is the requirement that first prompted a generalized driver for
+   these surface patch utilities.
+
+History:
+
+   02/18/00  D.A.Saunders  Initial SCALE_GRID adaptation of RESHAPE3D,
+                           which operates on 3-column formatted datasets.
+   01/20/08    "      "    ADJUST_GRID adapted from SCALE_GRID to reduce
+                           the number of prompts.
+   05/06/09    "      "    SURFACE_PATCHES adapted from ADJUST_GRID as a
+                           driver for surface_patch_utilities.f90 and
+                           other likely operations on structured surfaces.
+   02/12/15    "      "    Added a "fissure" option to simulate surface
+                           cracks for asteroid studies.  See option 25.
+   02/13/15    "      "    Added an option for (index) diagonal fissures.
+   02/15/15    "      "    Added an option to edit point coordinates.
+                           This allows correcting the result of normals
+                           off symmetry plane points that aren't truly
+                           in the symmetry plane.
+   05/08/15    "      "    Added an option to apply fissures along all
+                           patch boundaries.
+   06/23/15    "      "    The option to apply fissures along patch edges
+                           serves to test new utility SURFACE_VECTORS, which
+                           attempts to produce identical results at common
+                           edge points.
+   11/30/15    "      "    Added the option for match patch edges following
+                           drawn-out extensions to surface_patch_utilities.
+   12/01/15    "      "    1.e-5 seems too tight for edge/corner matching.

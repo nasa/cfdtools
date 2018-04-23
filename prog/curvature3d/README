@@ -1,0 +1,104 @@
+CURVATURE3D Description:
+
+Purpose:
+
+   CURVATURE3D serves two purposes:  The first purpose is to estimate
+the curvature, k(s), at each point along a given curve in 3-space
+using parametric methods, where s is the arc length along the curve.
+Four methods are provided for estimating the necessary derivatives:
+the finite-differencing method, the conventional cubic spline,
+the quasi-Hermite cubic spline, and the monotonic cubic spline.  Both
+the quasi-Hermite and monotonic splines prove poor as their lack of
+continuous 2nd derivatives would suggest, but they are retained for
+illustrative purposes.  The results are saved in QPLOTable form:
+
+             y vs. x,   z vs. x,   z vs. y,
+             s vs. x,   s vs. y,   s vs. z,   or
+             k vs. s,
+
+any of which may be suppressed.
+
+   The second purpose of CURVATURE3D is to serve as a driving program
+for the subroutine CURVDIS3D, which is presented as an alternative to
+estimating and plotting local curvatures.  This option redistributes
+the points of the input curve with local curve spacing more or less
+inversely proportional to the local curvature for any specified number
+of output points.  Three scaling options are provided since curvature
+magnitudes are sensitive to the units and CURVDIS3D expects data of
+order 1.
+
+   This program began as a pedagogical exercise practicing Sterling
+Software's programming style.  It has evolved into a convenient utility
+for displaying curvature or redistributing points for (say) airframe
+sections.
+
+Method:
+
+   The program reads in points from a file with a "SMOOTH2D" format:
+[title and number of points in records 1 and 2 now optional, followed by]
+columns of (x,y,z) data; any further columns are ignored.
+
+   As the first step in displaying curvature, "PLFIT" computes the
+cumulative chord lengths, which serve as the parametric variable, s.
+Derivatives with respect to s may be estimated in several ways.  For
+the conventional cubic spline option, "CSFIT" calculates the spline
+coefficients - first for x vs. s, second for y vs. s, and then z vs. s.
+After each "CSFIT" call, "CSDVAL" computes the 1st and 2nd derivatives
+(dx/ds, d2x/ds2, dy/ds, d2y/ds2, dz/ds, and d2z/ds2) at each point.
+The magnitude of the local curvature is then determined from:
+
+               |k(s)| = | X' *  X" | / | X'| ** 3
+
+where:       X' = (x', y', z') and X" = (x", y", z"),
+
+                x' = dx / ds,     x" = d2x / ds2
+                y' = dy / ds,     y" = d2y / ds2
+                z' = dz / ds,     z' = d2z / ds2
+
+
+For the quasi-Hermite spline fit, the same steps are taken with "QHSFIT"
+used instead of "CSFIT."  And for the monotonic cubic spline, "MSFIT" is
+used in place of "CSFIT."  For the finite differencing method, values of
+x vs. s, y vs. s and z vs. s are given to "FD12K", which generates the
+derivatives directly.  Then k(s) is evaluated as before.
+
+   To redistribute points according to the local curvature, the user
+may first normalize the input coordinates such that: 1) x, y and z are
+in the range [0,1],  2) the coordinates are around the range [0,1], but
+the geometric shape is retained, or 3) the coordinates are normalized
+in precisely the same way as data from another geometric curve.  Or, the
+user may elect not to rescale the data at all.   After the optional
+rescaling, "CURVDIS3D" distributes the specified number of points along
+the curve, with a fractional exponent provided to vary the clustering
+effects.  Results are scaled back to the original units if necessary and
+saved in plottable form.
+
+History:
+
+   08/16/88   BAN/DAS   Initial design & implementation of CURVATURE
+                        for XY data
+   09/14/88   BAN       Installed subroutine CURVDIS
+   11/02/88   DAS       A few refinements in readiness for an XYZ analog
+   12/02/88   MDW       Modularized curve normalization procedures
+   12/08/88   MDW       Adapted CURVATURE3D from 2D program CURVATURE
+   08/21/91   PJT       Increased MXPTS from 350 to 4000.  First
+                        tabulation of redistributed points now contains
+                        all three coordinates.
+   08/27/91   DAS       Installed CURV3D in place of in-line code.
+   10/30/91   DAS       CURV3D now has the loop over N inside it.
+                        The PLFIT call had NDIM=2 where it should be 3.
+                        Replaced IQHSCU with QHSFIT.
+   09/02/08   DAS       Carriage control is a thing of the past now.
+                        Make the header records optional.
+   03/06/13   DAS       8 (not 7) significant digits match CAPSULE_GRID.
+
+Authors:  Michael Wong, NASA Ames/Sterling Software, Palo Alto, CA.
+          Brian Nishida
+          David Saunders
+
+
+Final Note:
+
+   Finite difference derivatives are recommended for most purposes.  The
+local spline second derivatives are not guaranteed to be continuous across
+the data points, and are an option for illustrative purposes only.

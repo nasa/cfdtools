@@ -1,0 +1,19 @@
+Program DECONSTRUCT description:
+
+   Convert a multiblock structured surface or volume grid to a surface
+triangulation or tetrahedral volume mesh.  Quadrilaterals become pairs
+of triangles; hex cells become five tetrahedra each.
+
+Outputs are in Tecplot format, as a single zone.
+
+Procedures:
+
+   XYZQ_IO package  I/O utilities for PLOT3D grid and function files
+
+History:
+
+   08/16/04  D. Saunders  Initial adaptation of EXTRACT_BLOCKS, to
+                          provide data for testing the tetrahedral mesh
+                          variant of the ADT search package.
+
+Author:  David Saunders, ELORET/NASA Ames, Moffett Field, CA.

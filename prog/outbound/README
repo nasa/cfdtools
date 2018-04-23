@@ -1,0 +1,513 @@
+
+Program OUTBOUND Description:
+
+Introduction:
+
+   OUTBOUND applies a choice of methods for tailoring a hypersonic flow grid.
+   Tailoring refers mainly to aligning the outer boundary with the shock.
+   Techniques demonstrated here are expected to be incorporated in the DPLR
+   flow solver for periodic adaptation of the grid as the solution converges.
+   Adjusting the radial grid point distributions is an implied requirement.
+   Again, several options are provided.
+
+   SAGE performs these functions along with further solution adaptations, and
+   the LAURA flow solver is able to tailor the grid during the flow solution.
+   The intent here is to implement ideas from SAGE and LAURA and elsewhere in
+   a form that lends itself to installation in DPLR.
+
+One-Block-at-a-Time Strategy:
+
+   Initially, it is hoped that adaptations can be performed on grid blocks
+   in succession, independently of other grid blocks.  Even if grid blocks
+   are split at DPLR run time, DPLR possesses the mechanism needed to gather
+   each block, operate on it, and scatter the results back to the relevant
+   processors.
+
+   [LATER REALIZATION:  Actually, DPLR cannot afford to process more than
+   one split block on one processor (for memory reasons).  Thus, the only
+   parts of the tailoring scheme that must treat a whole block at a time are
+   the smoothing of the outer boundary changes in radial arc length, and the
+   smoothing of the cell-Reynolds-number-based wall increments.  Both of
+   these exceptions involve surface data only.
+
+   In this stand-alone driver for the tailoring scheme, block splitting is
+   not in the picture, so all steps operate on one whole block at a time.
+   The implementation in DPLR will perform everything in parallel on the
+   split blocks except for the smoothing of surface data.]
+
+   Thus, the grid block is considered the natural unit for processing here.
+   Common boundaries must therefore be treated exactly the same way.  This
+   is not possible if blocks don't necessarily have entire faces in common.
+   Therefore, it is highly recommended that OUTBOUND be applied only to grids
+   that are split anywhere a neighboring block has a corner (NO "SUBFACING").
+
+   Preserving smoothness in the outer boundary is one of the challenges.
+   The one-block-at-a-time strategy means block corner points must be omitted
+   from any smoothing:  interior edge points can be smoothed with edge data
+   (only), then interior surface points can be smoothed, but no guarantee of
+   smoothness across block boundaries is possible with this strategy.
+
+Smoothing Strategy:
+
+   Rather than smoothing (x,y,z) directly, the tailored outer boundary arc
+   lengths were initially smoothed as functions of two variables - the arc
+   lengths in the two surface index directions of the untailored boundary.
+   Use of normalized arc lengths loses information from outer patches that
+   are far from square.  Instead, the bidirectional smoothing uses real
+   space arc-length-based weighting of the contributions from the two
+   directions, combined with decay of those weights towards the edges.
+
+   Smoothing radial arc lengths, though, is always affected by geometric
+   features of the inner boundary.  Therefore:
+
+   Better idea:  smooth the distances of the adjusted boundary from the
+   original boundary.  With repeated tailoring, this smoothing should
+   approach a steady state, assuming the initial boundary is reasonably
+   smooth and stays that way.
+
+   Note that smoothing full arc lengths (a la SAGE) would not leave a
+   perfectly tailored grid as is, whereas smoothing CHANGES in arc length
+   (ideally all zero at convergence) would.
+
+   Nevertheless, for situations where the initial outer boundary is not
+   smooth, this version of OUTBOUND has an option to perform such smoothing.
+   Rather than attempting to interpolate the solution and proceed with
+   tailoring, the program terminates after such smoothing.  [DPLR can now
+   perform either or BOTH types of smoothing.  Most recently, DPLR can now
+   smooth surface data across block boundaries, thanks to Matt Bartkowicz's
+   work that has not been incorporated in OUTBOUND.  (It would conflict with
+   the straightforward processing of one block at a time.)  Matt's smoothing
+   is index-based rather than surface-arc-length based, but this appears to
+   be a non-issue.  Note that after several alignments, the initial estimate
+   of the shock location before any smoothing should be good, with little
+   noise, so fewer smoothing iterations are recommended - e.g., 10-15 for the
+   final pass, depending on grid resolution.]
+
+Other stipulations:
+
+   >  Adaptations are strictly along the radial grid lines of the original
+      grid except that any extrapolation via added_margin is strictly linear.
+   >  If the grid contains more than a single layer of blocks, only the outer
+      layer of blocks is normally adapted (i.e., the blocks with a freestream
+      boundary are tailored to the shock, or possibly left alone in places
+      determined to be in the wake).  However, the retrofitted option to fix
+      a block outer boundary and apply the basic tailoring method to k planes
+      1 : mk < nk does allow an outer block layer to remain untouched.  This
+      requires the retrofitted block-blanking option.
+   >  The DPLR boundary condition control data are employed to treat grids
+      with arbitrary indexing.  For instance, a face with a BC of 1 means it
+      is at the free-stream boundary, while its opposite face may or may not
+      be at a solid boundary.
+   >  All files are PLOT3D-type grid and functions files, multiblock, 3-D,
+      (or 2-D now), formatted or not.
+   >  The function file is vertex-centered with one or more functions.  The
+      function to be used for shock detection - say Mach number - may be in
+      any specified location, but if cell-Reynolds-number-based spacing is
+      specified, the first three functions should be DENSITY, SPEED OF SOUND,
+      and VISCOSITY in that order.
+   >  Output of an interpolated flow solution is not attempted here.  To be
+      of any use to DPLR, the function file would need to contain the state
+      variables at the cell centers, and these would not include the Mach
+      number.  [Michael Wright points out that an approximation to Mach
+      number could be made, but standard practice would not be to use an
+      interpolated solution.  Halo cell issues are best avoided for now.]
+   >  Initial coding employs conventional (i,j,k) indexing for compatibility
+      with the XYZQ_IO package.  DPLR works with (k,j,i) ordering.  This
+      conflict is handled by swapping conventions within OUTBOUND, not DPLR.
+   >  The argument-driven routine that tailors one grid block cannot change
+      the size of that block because it updates the block in-place for the
+      convenience of DPLR.  This does not preclude the stand-alone driver
+      from imposing new grid point counts in a routine that will not be used
+      by DPLR.
+
+Option to Compress an Initial Hyperbolic Volume Grid:
+
+   Shock edge method = -1 (along with a fudge factor at the bottom of the
+   control file that's not required for an optional free stream value) is
+   available in this version as an attempt to reduce the need for double
+   smoothing when DPLR is started on a hyperbolic volume grid commonly used
+   for capsule forebodies.  (Cases with aft bodies may also be compressed,
+   although the wake region may grow in length as a consequence of allowing
+   a margin for the shock, and there is no way at present to shorten wake
+   regions.)
+
+   Ancillary program COMPRESSION_DATA can determine the transformation from
+   an initial grid to an existing aligned grid.  The transformation consists
+   of scale factors applied to the radial grid line arc lengths, saved as a
+   multiblock 3-space (r, theta, z - zu) dataset, where r is the distance of
+   the initial outer boundary point U from the point furthest upstream (not
+   its perpendicular distance to the line through that point parallel to the
+   X axis, which would require a steady increase of the initial grid's outer
+   radius).  An input fudge factor is applied to the scale factors.
+
+   Running OUTBOUND with fudge factor = 1.0 and the initial grid used when
+   the compression dataset was generated would reconstruct the associated
+   compressed grid.  With fudge factor > 1.0, the radial lines of the output
+   grid will be longer than for the original compressed grid. The compression
+   can be varied this way - use trial and error.  Preserving convexity in the
+   resulting outer boundary is not guaranteed, but the hope is that some
+   compression will be preferable to none when a new geometry is tackled.
+   Compression data from a related geometry should be applicable initially.
+   The geometry dimensions can change, as can the surface grid topology,
+   because the compression dataset (compression_data.g and .f) is adjusted by
+   OUTBOUND for the maximum radius of the input grid, and it is searched
+   efficiently for scale factors in (r, theta, dz) space using the structured
+   surface form of an Alternating Digital Tree search package.  As with DPLR,
+   the effects of non-zero angle of attack need to be kept in mind.  Best
+   results should be obtained using compression data from a similar angle of
+   attack case, particularly the same Alpha for similar/related geometries.
+
+   The standard ds1 >= 0 options for radial distribution method 2 are
+   provided (existing wall spacing or specified spacing, one- or two-sided
+   stretching).
+
+Option to Scale the Volume Grid (SAGE-like, two variations):
+
+   Shock edge method = -2 (along with a scale factor at the bottom of the
+   control file that's not required for an optional free stream value) is
+   available for growing or shrinking the outer boundary in a way that
+   differs from all other methods:  it does not retain the existing radial
+   lines unless they happen to be perfectly straight.  Scale factors close
+   to 1 (smaller or larger) are recommended, although the added_margin
+   capability is likely to be a better choice.  Two variations are offered:
+
+   scale_factor > 0 (constant everywhere):
+
+           x(k) <-- x(1) + scale_factor * (x(k) - x(1))
+           y(k) <-- y(1) + scale_factor * (y(k) - y(1))
+           z(k) <-- z(1) + scale_factor * (z(k) - z(1))
+
+   scale_factor < 0 (adjusted scaling as follows):
+
+           dx        = x(k) - x(1)             [and likewise for dy, dz]
+           dstraight = sqrt (dx^2 + dy^2 + dz^2)
+           factor    = -scale_factor * (dstraight / sold(k))
+           xnew(k)   = x(1) + factor * dx      [and likewise for ynew, znew]
+
+   The second variation slightly improves the effect of curving radial lines,
+   but not enough to help much if |scale_factor| is large.
+
+OUTBOUND Outline:
+
+   >  Open and read the control file (standard input - format shown below)
+
+   >  Open and read the DPLR-type file of control data including BCs
+
+   >  For each block of the input grid:
+
+      >  Read the grid block and the corresponding function file block
+
+      >  Determine outer boundary face indices; do nothing if no BC = 1
+
+      >  For each outer boundary point:
+
+         >  Locate the preliminary new outer boundary (shock detection)
+
+      >  Smooth all 4 edges of the new locations (1-D method, corners fixed)
+
+      >  Smooth interior points of the new outer boundary (2-D surf. method)
+
+      >  If cell Reynolds number is being used to define radial increments
+         at the wall, generate them all for this block and smooth them.
+
+      >  For each radial line:
+
+         >  Redistribute the radial line along the original arc
+
+      >  Update the original block in-place.
+
+      >  If specified, adjust the point counts [not applicable to DPLR]
+
+      >  Output the tailored grid block
+
+Control File Format (Standard Input)
+
+   OUTBOUND controls for case xxx
+   ---------------------- INPUT VOLUME GRID ---------------------------------
+   baseline.g      Initial grid
+   T               Formatted? [T|F]
+   --------------------- INPUT FUNCTION FILE --------------------------------
+   baseline.f      Flow quantity(s), vertex-centered: [rho, a, mu,] M|p|rho
+   T               Formatted? [T|F]
+   1               Index of function to be used for tailoring
+   --------------- INPUT DPLR CONTROL FILE WITH BCS -------------------------
+   dplr.inputs     For ibc(6,nblocks)
+   --------------------- TAILORED VOLUME GRID -------------------------------
+   tailored.g      Output volume grid
+   T               Formatted? [T|F]
+
+   --------------- OUTER BOUNDARY TAILORING CONTROLS ------------------------
+   1               Shock edge method|0; 1|4: Mach; 2: p,rho,T; 3: flow grad.
+   0               # smoothing iters. applied to flow var. [method 3 only?]
+   0.95            Freestrm. multiplier or tolerance; depends on edge method
+   4               Multiple of local grid spacing for outer margin
+   1.50            Multiple of local spacing to limit smoothing changes
+   30              # smoothing iterations applied to outer boundary
+   2.              Additional margin (times outer spacing, possibly < 0)
+   0               nk_margin >= 0; plane nk - nk_margin is treated as for 0
+
+   --------------- RADIAL DISTRIBUTION CONTROLS -----------------------------
+   1               1: Re_cell; 2: given ds1; 3 (method_edge = 0): use |dT/ds|
+   0               nradial > 0 allows changing the no. of radial grid points
+
+   ............... Radial method 1 controls: Re-cell-based ds1 ..............
+   1.              Nominal cell Reynolds # to impose at the wall
+   0.000005        Minimum wall spacing (before smoothing); < 0 => % arc
+   0.000015        Maximum   "     "        "        "        "       "
+   10              ng where pts. 1:ng are geometric; ng <= 2 => pure Vinokur
+   1.05            Geometric growth rate if ng > 2
+   0.25            Factor applied to 1-sided ds2 to give 2-sided ds2
+
+   ............... Radial method 2 controls: ds1 specified ..................
+   0.              ds1 > 0 => const.; 0 => existing; < 0 => % arc; 999. => du
+   10              ng where pts. 1:ng are geometric; ng <= 2 => pure Vinokur
+   1.05            Geometric growth rate if ng > 2
+   0.25            Factor applied to 1-sided ds2 to give 2-sided ds2
+
+   ............... Radial method 3: recluster outer pts; use edge method = 0)
+   0.5  0.1  0.5   Outer and blend fractions of nk, and shape fn. exponent
+
+   --------------- PLOTTABLE PROFILE CONTROLS + OPTIONAL INPUTS -------------
+   8               Block number to extract radial profiles from
+   1 17 1 1        Indices defining surface patch row(s)|column(s) to extract
+   17.88           Optional free-stream; < 0 => local peak; absent => block 1
+                   (also used as a scale factor if shock edge method = -1|-2,
+                   or as a constant outer margin (+ve or -ve) if present,
+                   nonzero, and shock edge method = 0)
+
+
+Ancillary Control File ('outbound.inp.2'):
+
+   This optional file can be used to blank blocks (suppress all changes).
+   Enter any reasonable list of blocks on the first line.  E.g.,
+
+      11:16 or 11-16   would both expand to 11, 12, 13, 14, 15, 16
+      10 12 14:20      or any other such intelligible list, in any order
+
+   This first line can be empty, meaning no blocks are suppressed.
+   If the file is not present, no blocks are suppressed.
+
+
+Further Notes:
+
+   (1)  Shock edge detection methods (method_edge):
+
+          -2 => Scaling options - see description above
+          -1 => Compression option - see description above
+           0 => a: if method_radial /= 3:
+                   smooth radial arcs directly (no further tailoring):
+                   if a function file is present, it may still be used with
+                   method_radial = 1 (cell Re # option); otherwise, only the
+                   file header will be read; use file name 'none' if no such
+                   file is available.
+                b: if method_radial == 3:
+                   no edge detection -- only redistribution of the outer
+                   portion of each radial line so as to cluster towards the
+                   shock (and possibly other high-temperature-gradient flow
+                   features) without touching the boundary layer region;
+                   the function file is assumed to have translational T as
+                   the first (and probably only) function.
+           1 => Mach number: some fraction of freestream (or of local peak).
+           2 => LAURA-type significant increase in pressure, density or T.
+           3 => SAGE-type relative flow gradient change.
+           4 => As for 1 but search outwards, not inwards, & omit wake test.
+        Corresponding fs_scale:
+           1 => fraction < 1 such as 0.95 applied to the freestream value.
+           2 => multiplier applied to the freestream value as in LAURA.
+           3 => fraction applied to peak flow gradient as in SAGE.
+           4 => as for 1.
+
+   (2)  Safety margin (ds_local_multiple, added_margin, and constant_margin):
+
+           ds_local_multiple = multiple of local spacing at estimated edge;
+                               e.g., 4.*local_ds, added to edge location
+                               before smoothing.
+           smoothing_limiter * local_ds provides upper & lower bounds on how
+                               much smoothing of delta arcs can change them,
+                               given that the initial edge estimate should
+                               be in the right neighborhood.
+           smoothing_limiter * outer ds bounds direct smoothing of the
+                               outer boundary similarly.
+           added_margin      = multiple of outermost spacing (possibly < 0)
+           constant_margin   = constant absolute margin entered (with
+                               shock edge method = 0) in place of the
+                               optional input for free-stream Mach number
+                               used when shock edge method /= 0.
+
+   (3)  ds1 input (method_radial == 2):
+
+           > 0.   => apply this constant spacing at the wall everywhere.
+           = 0.   => retain the existing wall spacing everywhere.
+           < 0.   => apply this percentage of total arc length at the wall.
+           = 999. => apply uniform spacing along all radial lines.
+
+   (4)  Gradient-based clustering towards the shock (method_radial = 3):
+
+           Use method_edge = 0 for this option.  Some outer portion (say
+           half the number of radial points) is redistributed to resolve the
+           shock better as is desirable for uncoupled radiative heating
+           calculations.  The outer boundary location is not changed; nor
+           is the boundary layer portion (innermost ~half of the points).
+           Inputs outer_fraction and blend_fraction are applied to nk to
+           control what fraction of radial points are changed (leaving the
+           boundary-layer points undisturbed) and what fraction either side
+           of that split is used to blend the spacing (2-sided Vinokur).
+           0.5 and 0.1 should be reasonable inputs.
+
+           No other redistribution options are permitted at the same time.
+           The outer margin should be somewhat larger than normal so that
+           there will still be at least 2 points at free-stream conditions
+           after the redistribution.
+
+   (5)  nk_margin > 0 and method_radial /= 3:
+
+           Any unblanked block will have its outer boundary left intact,
+           presumably for compatibility with another block layer such as
+           the nozzle block(s) in an arc-jet simulation.  The normal align-
+           ment algorithm will be applied to k planes 1 : nk - nk_margin.
+           The points between mk = nk - nk_margin and nk will be blended at
+           k = mk and reuse the original spacing for k = nk - 1 : nk.
+
+Sponsor:
+
+   Reacting Flow Environments Branch, NASA Ames Research Center,
+   in particular, Michael Wright, main author of DPLR.
+
+History:
+
+   05/27/05  DAS/MJW/SSY  Initial design (one whole block at a time).
+   06/06/05  DAS/SSY      Initial testing (Mach number profiles; retaining
+                          relative radial distributions suffices for now).
+   06/10/05   "   "       Pressure and density-based shock detection seems
+                          too difficult, at least for the Shuttle, in spite
+                          of heuristics to try and cope with unpredictable
+                          flow profiles.
+   06/24/05   "   "       (After a hiatus:) higher fractions of Mach number
+                          look promising for Shuttle Mach 9 case (0.90+).
+   06/28/05   "   "       0.90 x Minf + 0.20 x arc margin still tends to
+                          underestimate the lee-side boundary and over-
+                          estimate most of the wind-side boundary.
+                          Try backing up a specified multiple of the local
+                          grid spacing rather than of total arc length.
+                          Use a fraction of total length as a cap.
+   07/10/05   "   "       Added Vinokur-type radial redistribution options.
+                          Smooth distances to the old outer boundary, not
+                          radial distances from the OML.
+   07/14/05   "   "       Handle more than one flow quantity in the function
+                          file, to allow for cell-Reynolds-number-based
+                          spacing at the wall.
+   08/09/05   "   "       Reorganization to drive a remodularized form of
+                          the original TAILOR_BLOCK in which the smoothing
+                          steps are separated for use by DPLR on surface
+                          data for a whole block while the remaining steps
+                          are suited to parallel operation on split blocks.
+   08/17/05   "   "       Accommodated DPLR's (k,j,i) indexing but left the
+                          (i,j,k) convention alone at the higher level for
+                          compatibility with the I/O utilities.
+   11/23/05   "   "       Added "added_margin" at Mike Wright's request;
+                          added an option to smooth a wiggly outer boundary
+                          (only - no other tailoring until the solution has
+                          been reconverged) - use method_edge = 0.
+   11/28/05   "   "       Disallowing the cell Re # option if method_edge = 0
+                          was misguided.  Allow for that and also for not
+                          having any relevant function file.
+   12/22/05   DAS         Ensure linear extrapolation if the outer boundary
+                          expands - parametric cubics can't be trusted.
+   01/31/06    "          10 smoothing iterations for cell-Reynolds # based
+                          increments may be too few.  It should be an input,
+                          but bump it up to 30 for now.
+   02/04/06    "          The added_margin input should be more useful if it
+                          is applied as a multiple of the outermost spacing.
+   04/24/06    "          Added option to change the number of radial points.
+                          This is not appropriate for the DPLR installation,
+                          and is appropriate here for standard grids only
+                          (where the k direction is off the wall for all
+                          blocks).
+   05/05/06    "          Added option to impose % arc length increments
+                          at the wall (possible alternative to cell Reynolds
+                          number for difficult cases).
+   05/06/06    "          The limits on the cell-Re-based wall increments
+                          may now be relative to arc length (-% inputs).
+                          Both inputs should have the same sign.  Smoothing
+                          occurs AFTER the limits are imposed.
+   12/17/06    "          Option to constrain the smoothing, which has been
+                          observed (in DPLR) to cause the shock to be hit
+                          by the boundary in front of the wing leading edge.
+   12/18/06    "          Refinement to ds_local in shock location routine.
+                          Long-time bug: method 2 radial controls were
+                          clobbering the values read for method 1!
+   01/13/07    "          Chun Tang had trouble with a Mach 2.5 case: the
+                          outflow boundary Mach number can exceed the free
+                          stream value.  Therefore, treat boundary points not
+                          at (essentially) free-stream as for those already
+                          considered in the wake, where Minf * 0.97 (or
+                          whatever) cannot be found: leave the boundary
+                          location alone.
+                          Optional final control input allows for overriding
+                          the free-stream value to use if the first point
+                          from block 1 is not in the free stream.
+   02/22/07    "          No-outer-boundary blocks were not being transcribed
+                          to the output file.  Safeguarded EXPDIS4 from an
+                          initial "smallest" increment that is on the wrong
+                          side of the uniform increment.
+   09/05/07  Todd White   Edge method 4 introduced to search from the wall
+                          and use local peaks instead of a single f.s. Mach.
+                          The test for being in the wake is also by-passed.
+   10/04/07  DAS/TRW      Made Todd's option permanent, with the added option
+                          to enter a negative free-stream value to invoke use
+                          of the local peak for either edge method 1 or 4.
+                          Method 4 now differs from 1 both in its search
+                          direction and in its lack of test for wake blocks
+                          where the outermost flow value is at the specified
+                          free stream. [Unplanned-for application of OUTBOUND
+                          to nozzle flows is what prompted Todd's experiment-
+                          ation.  It may be that no iso-surface behaves well
+                          everywhere in such flows, but use of local peak
+                          Mach numbers is now an option anyway. Note that the
+                          distinction from edge method 2 is a bit fuzzy now.]
+   10/05/07  DAS          Added the block-blanking and nk_margin options with
+                          an optional outbound.inp.2 file.
+   12/17/07   "           Allow nsmoothg < 0, which means entire edges are
+                          not touched during smoothing (not just corners).
+   10/15/09   "           Replaced EXPDIS4 with EXPDIS5 (which switches to
+                          geometric distributions if trouble arises).  The
+                          safeguarding of EXPDIS4 is no longer needed.
+   12/24/09   "           For method_radial = 2, ds1 = 999. means apply
+                          uniform distributions along all radial lines, as
+                          may be helpful for elliptic smoothing purposes.
+   03/24/11- D. Saunders  Compression option (shock edge method = -1 along
+   03/29/11  ERC, Inc./   with fudge factor on the existling last line of
+             NASA ARC     the control file) implemented as an attempt to
+                          improve widely used initial hyperbolic volume
+                          grids.  See description above.
+                          Also:  SAGE-like scaling option (shock edge method
+                          = -2, two variations) - see description above.
+   04/11/11   "    "      Fudge factor = 1.0 now corresponds to reproducing
+                          the compressed grid from the initial grid used to
+                          generate the compression data.  Fudge factor > 1.0
+                          => longer radial lines/less compression.
+   04/12/11   "    "      The compression transformation is now stored as a
+                          3-space (r, theta, dz) dataset, not the original
+                          2-space (r, theta) form, which suffered from rare
+                          aft-body anomalies because of extreme skewness.
+   08/06/13   "    "      All ADT variants are now in a single module with
+                          generic build_adt and search_adt interfaces.
+   12/12/13   "    "      2-D grids are now an option, in anticipation of
+                          a T-gradient redistribution option intended for
+                          better shock resolution, with uncoupled radiative
+                          heating calculations by NEQAIR in mind.
+   12/18/13   "    "      Installed GRADDIS[3D]2 for the shock-clustering
+                          option (method_edge = 0 + method_radial = 3) as
+                          described above.
+   03/13/15   "    "      A case where the shock was too close to the
+                          forebody prompted a way of growing the forebody
+                          outer boundary without also extending the wake
+                          too much (as gmargin applied to local outer ds
+                          tends to): use method_edge = 0 along with a
+                          constant/absolute margin in place of the optional
+                          input for Mach (free) used when method_edge /= 0.
+Authors:
+
+   David Saunders, ELORET Corp./NASA Ames Research Center, Moffett Field, CA
+                   Now ERC Inc./NASA ARC
+   Seokkwan Yoon,  Applications Branch, NAS Division, NASA ARC.

@@ -1,0 +1,105 @@
+CROSS_SECTIONS Description:
+
+   For a CFD surface dataset, structured or unstructured in three-space,
+perform slicing at the indicated stations and process the slice data in
+some way.  Common usage is expected to involve just one function, so no
+provision was made for more than one originally.  EXCEPTION:  Slicing at
+multiple azimuthal angles in a front view has been retrofitted, and there
+it makes sense to allow any number of surface functions, all output along
+slices in Tecplot form, as opposed to tabulating statistics for 1 function
+at many X stations.  (Later: This version can now read Tecplot datasets as
+well as PLOT3D datasets.  If the number of functions is greater than 1, the
+original tabulation of max/min/mean data is simply not an option: slices
+are output in Tecplot form only, at either X or angular stations.)
+
+   The initial application is to surface heating data, where maxima and
+minima and associated quantities are required at each of many stations.
+Means and standard deviations are calculated via arc-length-based monotonic
+spline quadrature.
+
+   The slicing is implemented for X stations only, with an option to rotate
+the surface coordinates as needed for such a simplifying approach.
+EXCEPTION:  Slicing at angular stations assumes the slices are parallel to
+the X axis with no rotation option to ensure this, at least initially.
+Program ADJUST_GRID is available if necessary to satisfy this assumption.
+The common origin of the angular slices need not be on the X axis.
+
+   Two-point line segments are determined from triangular elements met by a
+given slice plane, and all such segments from any one slice are organized
+into 1 or more contiguous curves with no duplicate points (except possibly
+the end points of a closed curve), as would be needed for line plotting
+purposes - especially if more than one geometry component is represented by
+the surface grid.
+
+   The option for slicing at angular stations can handle both half & whole
+bodies in a way appropriate to an axisymmetric blunt body.  E.g., "spokes"
+of a half body all start with arc-length s = 0 at the origin of the slices
+(if only one contiguous curve is present in each slice). Likewise, s starts
+at 0 in a consistent way for the angular slices of a whole body (at either
+one end or the other, depending on the ordering of the first slice, since
+each slice after the first is arranged to start at the end nearest to the
+start of the previous slice).
+
+Control File (Standard Input):
+
+   CROSS_SECTIONS Control File
+   1          ! Analysis type:    1|2 = max/min/mean table|Tecplotable cuts
+   1          ! Grid type:    1|2|3|4 = PLOT3D|PLOT3D/iblank|Tecplot|FUN3D
+   3          ! Dimensions:       2|3 = 2D/(x,z)(inactive)|3D/(x,y,z)
+   mygrid.gu  ! Grid file name | Tecplot or FUN3D dataset name
+   F          ! Formatted?        T|F = ASCII|unformatted
+   myflow.fu  ! Flow data file name if PLOT3D data
+   F          ! Formatted?        T|F = ASCII|unformatted
+   slices.dat ! Output file:      Tabulation|Tecplot slices
+   X          ! slice coordinate: x|y|z|t; t[heta] => angular stations
+   1000       ! Number of slices        (uniform for now)
+   0. 0. 0.   ! Origin for clocking angle calculations or angular slices
+   T          ! Merge subslices?  T|F = 1|1+ tabulation lines/slice
+
+Output Table Format (some digits suppressed, with merging turned off):
+
+# slice station      fmax    clock       fmin    clock       mean   st.dev.
+
+   2  -11.1657  3.580E+04  -19.450  3.142E+04  -90.000  3.345E+04  1.37E+03
+   2  -11.1657  4.072E+04   58.846  3.881E+04   17.308  4.035E+04  4.29E+02
+   3  -11.1257  2.603E+04 -167.549  1.402E+04  -90.000  1.962E+04  3.76E+03
+   3  -11.1257  3.228E+04   58.846  2.958E+04  164.087  3.182E+04  6.07E+02
+   4  -11.0858  3.088E+04  124.365  5.343E+03 -103.596  2.282E+04  9.23E+03
+   5  -11.0458  3.106E+04  136.212  3.523E+03  -90.000  2.571E+04  7.12E+03
+   :     :       :            :      :            :      :          :
+
+   [An extra arc length column is now included, with the option to merge
+    subslices or not.  Merging is performed by storing subtotals that can
+    be combined into single totals for the means and standard deviations.
+    Mins. and maxs. are determined across all subslices.]
+
+Output Tecplot Slices Format (analysis type 2, one zone per [sub]slice):
+
+   TITLE = ""
+   VARIABLES = "x"
+   "y"
+   "z"
+   "s"
+   "v1"
+    :
+   "vn"
+   ZONE T="Theta=  0.0000"
+   I=123, J=1, K=1, ZONETYPE=Ordered
+   DATAPACKING=POINT
+   1.234 0.000 0.000 0.000 5.678 9....
+    :     :     :     :     :     :
+   ZONE T="Theta=  1.0000"
+   I=...
+    :     :     :     :     :     :
+
+   Actually, if there is more than one contiguous curve in a slice, that
+   number of zones is output for that slice, all with the same zone title.
+
+Origins:
+
+      Todd White requested the initial capability to analyze a database of
+   Launch Abort Vehicle flow solutions with TPS thickness in mind.  David
+   Saunders had already written a couple of surface slicing applications
+   employing quadrilateral/triangle utilities originated by Scott Thomas.
+   The framework of the more recent SHADOWGRAPH program was considered
+   more flexible than the earlier MULTICUT and MULTIPLOT.

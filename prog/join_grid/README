@@ -1,0 +1,65 @@
+JOIN_GRID Description:
+
+   Utility for joining or rearranging multiblock grid blocks.
+
+   This version assumes block faces match neighboring faces exactly.
+   (Use the SPLIT_GRID program first if this is not true.)
+
+   Blocks are joined in one, two, or three directions at once,
+   first in the i direction, then j, then k (although the ijk
+   convention within each input block can be permuted, and each
+   direction can be reversed, via +/-1, 2, 3 input controls).
+
+   The first block entered for a given joined block corresponds
+   to the (1,1,1) element of a 3-D array of blocks being joined.
+   The relative positions of further blocks follow the Fortran
+   convention of varying the left-most index first, etc.
+
+   Multiple joined blocks may be produced in one run.
+
+   Reordering input blocks or simply transmitting them is achieved
+   by entering 1 1 1 for the i/j/kjoin counts.
+
+Sample control file (join.inp):
+
+   Block joining control inputs:
+   Number of blocks after joining
+      2
+   -----------------------------------------------
+   Joined block ID
+      1
+   ijoin jjoin kjoin (# joins)
+      3     2     2
+   nblock(1:ijoin,1:jjoin,1:kjoin) & permuting indices
+      37          1  2  3  ! Base block
+      38          3 -2 -1  ! 1st block joined in i direction
+      30          1  2  3  ! Block (3,1,1)
+      40          1  2  3  ! (1,2,1)
+      41          1  2  3  ! (2,2,1)
+      50          1  2  3  ! (3,2,1)
+      51          1  2  3  ! (1,1,2)
+      60          1  2  3  ! (2,1,2)
+      :           :  :  :
+      99          1  2  3  ! (3,2,2)
+   -----------------------------------------------
+   Joined block ID
+      2
+   ijoin jjoin kjoin (# joins)
+      1     1     1
+   Input block
+     101          1  2  3  ! Transcribe this block
+   -----------------------------------------------
+
+History:
+
+   ??/??/??  James Reuther   Original split_xyz.
+   11/12/99  David Saunders  Overhauled for use by mere mortals;
+                             no attempt to handle other than PLOT3D
+                             unformatted files; x(1:3,i,j,k) ordering
+                             in memory is inefficient.
+   11/16/99    "      "      Abandoned obscure original control scheme.
+                             Functionality (probably different from the
+                             original, however that worked) is spelled
+                             out above.  Avoid unnecessary rewinds.
+
+Origin:  NASA Ames Research Center, Moffett Field, CA

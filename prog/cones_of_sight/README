@@ -1,0 +1,81 @@
+CONES_OF_SIGHT Description:
+
+   CONES_OF_SIGHT is an adaptation of LINES_OF_SIGHT, q.v.  It retains the
+   functionality of its predecessor if the indicated cone angle is zero.
+   At the time of writing, a third variation working with lines defined by
+   points on a hemisphere is planned - see HEMISPHERES_OF SIGHT.
+
+   Most of the following is carried over from LINES_OF_SIGHT.
+
+Outline:
+
+   For a list of surface pts. (grid indices or (x,y,z) coordinates) and the
+   associated volume grid, generate lines of sight - i.e., straight lines
+   normal to the surface and extending to the outer boundary with pt. dis-
+   tributions close to those of the local radial grid lines.  The results
+   are saved in PLOT3D multiblock form (one line of sight per block)
+   compatible with the earlier FLOW_INTERP, which can perform the flow
+   interpolations and tabulations that are normally what are really desired
+   for application to hypersonic flows.
+
+   (Later:) If a cone angle > 0 is specified, the output blocks contain the
+   9 lines defined by the 9-pt. O(h^6) formula for integration on a circle
+   of radius h on pp. 891-892 of Abramowitz and Stegun.  The lines are in
+   clockwise order from the center out, so the corresponding quadrature
+   coefficients are 1/6, 1/24, 1/24, 1/24, 1/24, 1/6, 1/6, 1/6, 1/6.
+
+   This version can also read a structured surface grid for the target pts.
+   to simplify using a thinned form of the relevant volume grid's surface.
+
+Initial assumptions (probably generalizable, but they may not need to be):
+
+   o  The structured volume grid contains one layer of blocks, with k = 1
+      at the wall.  This simplifies determination of the inner and outer
+      boundary patches.  (To overcome these restrictions, one could use the
+      boundary condition data employed by the relevant flow solver.)
+
+Strategy:
+
+   o  Read the entire volume grid and extract the inner & outer boundaries
+      as multiblock surface grids.
+
+   o  For all points defining lines of sight, search the inner boundary and
+      save the relevant patch number and cell indices.
+
+   o  Build a new search tree from the outer boundary.
+
+   o  For each inner surface point defining a line or lines of sight:
+
+      > Construct a two-point line normal to the wall with length that of a
+        local radial line.  This should be at least as long as the straight
+        line distance to the outer boundary.
+
+      > Intersect the line with the outer boundary and transform the point
+        distribution of the radial line to the relevant line portion.
+
+      > If the specified cone angle is not zero, derive 8 more lines of
+        sight from the first and impose the same relative distributions.
+
+Input surface point format (read to EOF):
+
+   Either                                      or
+
+   n   i   j                                   x   y   z
+   n   i   j                                   x   y   z
+   n   i   j                                   x   y   z
+   :   :   :                                   :   :   :
+
+   where n = block number and k = 1 is implied.
+
+History:
+
+   10/07/05  D.A.Saunders  Initial design of LINES_OF_SIGHT.
+   11/14/05    "     "     Fixed a bug in allocating radial_lines(ib).
+   11/22/05    "     "     Expanded the range of t for INTSEC6 to 2, not
+                           1.1; added the option to read a structured
+                           surface grid rather than a list of indices or
+                           coordinates.
+   03/06/06    "     "     Added the cone angle option.
+   03/07/06    "     "     Renamed it as CONES_OF_SIGHT.
+
+Author:  David Saunders, ELORET/NASA Ames Research Center, CA

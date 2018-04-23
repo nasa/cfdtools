@@ -1,0 +1,23 @@
+This COMBINE_BLOCKS variant is a work-around for local damage/repair flow
+calculations involving turbulent solutions.  Actually, by dealing instead
+with a variable number of species, it does not matter if the solutions are
+laminar or turbulent.  [In the case of laminar solutions in air, disting-
+uishing 1- and 2-temperature cases was feasible for cavity cases without
+adding a prompt, but here a prompt is unavoidable.  (Jay Hyatt first added
+a prompt for the number of turbulent flow variables in the function file,
+but prompting for the number of species avoids the 5-species assumption.
+Higher-level automated procedures are affected by the number of prompts.)
+Note that only cavity cases (or protrusions that can mostly be treated as
+for cavities) require the extra prompt in order to initialize flow within
+the cavity.] 
+
+For DPLR applications, turbulent flow variables should be the last ones in
+the function file:
+
+   turbulent eddy viscosity (mu_t) for algebraic turbulence models;
+   mu_t, turbulent kinetic energy (TKE), turbulent omega (omega_t) for SST
+
+Velocity components are assumed to follow the species densities for cavity
+cases.
+
+See combine_blocks_turb.f90 for further details.

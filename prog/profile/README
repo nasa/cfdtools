@@ -1,0 +1,676 @@
+PURPOSE:
+         PROFILE is a utility for manipulating and/or displaying the
+         coordinates and other properties of airfoils.  It processes
+         one or more profiles at a time in various ways (one way per
+         run).   The input and output profiles may be in one of four
+         formats described below (basically as separate surfaces, as
+         a wrap-around surface, or in three-column form).
+
+         If plotting of the airfoil geometry is  requested,  all  of
+         the profiles  in  the input  dataset will be plotted on the
+         same pair of axes unless the  "THREED"  option is selected.
+         The plots  can  be  of  the  original input data,  or  data
+         derived by PROFILE,  or both.   Curvature distributions may
+         also be plotted as may the optional pressure distributions.
+
+         Plotting of the airfoil geometries, curvature distributions
+         or pressure distributions is handled by a separate program,
+         QPLOT, which should accompany PROFILE.    Users' guides are
+         available for PROFILE and QPLOT.
+
+         The  four  main choices for manipulating input profiles are
+         to REDISTRIBUTE the abscissas using conventional splines or
+         parametric splines depending on whether leading or trailing
+         edges are rounded;  to MODIFY or perturb the  ordinates  in
+         some way according to shape functions added  interactively;
+         to REFINE the ordinates by manipulating the curvature (act-
+         ually 2nd derivative) distribution while seeking or retain-
+         ing some maximum thickness value; and to OPTIMIZE one surf-
+         ace of one airfoil automatically, using a predetermined set
+         of shape functions with some of their parameters  variable,
+         and a target curvature distribution to  be  matched  in the
+         least squares sense.
+
+         Lesser options permit the user to RECTIFY profiles which do
+         not have the point common to the two surfaces in the  usual
+         place, and to NORMALIZE or DENORMALIZE profiles. TRANSFORM-
+         ing between upper/lower surface representation and  camber/
+         thickness representation (either way) is provided for, with
+         decambering as an option.  Applying twist is available from
+         the ROTATE option.
+
+         Two options involve a "secondary" profile  (prompted for at
+         a lower level): an option to COMBINE profiles (one of which
+         may be boundary layer displacement thickness);  and  an op-
+         tion to LOFT linearly between two profiles.
+
+         A  "nose-job"  option permits ROUNDing or SHARPENing of the
+         leading edge region  -  operations which have been made  as
+         reversible as possible.   More generally, the SMOOTH option
+         smooths the entire airfoil (or just one surface) by fitting
+         combinations of "Wagner" functions, which are also employed
+         by the OPTIMIZE and MODIFY options,  or  by implicit and/or
+         explicit smoothing (possibly weighted nonuniformly).
+
+         Tabulation of coordinates along with derivatives and curva-
+         ture is provided, as well as saving the manipulated profile
+         as a new output file.
+
+         Saving of y" distributions is also an option,  for possible
+         editing and reuse in REFINE mode.
+
+         Spreadsheet-compatible output of all likely tabular quanti-
+         ties is also provided for the simpler operating modes. This
+         requires the two surfaces to have common abscissas.
+
+NOTES:
+         PROFILE  has evolved considerably since its inception as  a
+         basic redistribute-and/or-plot program. Provision for arbi-
+         trary perturbations to the input geometry,  with tabulation
+         of the resultant coordinates and derivatives, required some
+         reorganization, but the structure should now serve for most
+         likely purposes. Some implementation considerations follow.
+
+      *  The case of a 2-element airfoil forced the decision to plot
+         all input profiles on the same page  (although the "THREED"
+         option has since been introduced).    Normalization of such
+         combinations proved an awkward option to provide.  The user
+         should  use  the normalization option carefully.  Normaliz-
+         ation of 3-D wings is not available.
+
+      *  The multiple-profile case also prevented plotting  of  more
+         than one frame type (such as curvature distributions in ad-
+         dition  to  the  airfoils)  -  hence the saving of separate
+         files for later plotting.
+
+      *  Large-scale plots are feasible  (with optional  windowing),
+         but exact scaling cannot be guaranteed because of the vari-
+         ability  of  the  output devices  available.  (Plots of the
+         same data on the same device can vary slightly from plot to
+         plot.)
+
+      *  Derivatives and curvature values are normally estimated  by
+         finite differences for consistency with REFINE and OPTIMIZE
+         modes.    It is well known that these approximations can be
+         poor in the presence of very small X increments and limited
+         precision in the Ys.
+
+      *  An option to plot the full wrap-around curvature  distribu-
+         tion using parametric spline derivatives has been  provided
+         for a proper look at the leading edge region.  But the .ypp
+         file of 2nd derivatives is suppressed in this case to avoid
+         inappropriate use with the REFINE mode.
+
+      *  For simplicity, each of the MODIFY,  REFINE,  and  OPTIMIZE
+         options assumes that the coordinates have been normalized.
+
+METHOD:
+
+         The basic steps are as follows:
+
+      *  Prompt for mode of operation and the input profile file name.
+
+      *  Set defaults for user inputs and use an input control file
+         to override some of them if necessary.
+
+      *  Scan all of the input profiles, for scaling and normalizing
+         purposes. Use EOF to handle the unknown number of profiles.
+
+      *  Rewind the file and process the (now known number of) profiles
+         one at a time, according to the selected mode.
+
+      *  Write the following output files as requested:
+
+            Revised profile coordinates in one of 4 formats
+
+            Original and/or revised airfoil geometry for plotting
+            (a QPLOT file)
+
+            Tabulated coordinates with derivatives and curvatures
+
+            A more complete, spreadsheet-compatible file
+
+            Second derivatives for possible reuse by REFINE mode
+
+            Original and revised curvature data, including target
+            curvature data for OPTIMIZE mode (another QPLOT file)
+
+            Cps estimated for original and revised airfoil (QPLOT
+            format)
+
+
+MODES OF OPERATION:
+
+         MODE 0:  "Display" mode - no modifications involved.   Gen-
+                  erate requested output files,  which could include
+                  saving the coordinates in a different format. MODE
+                  <=3 is required for spreadsheet-compatible output.
+
+         MODE 1:  Rearrange or rectify the geometry data so that the
+                  common leading-edge point is indeed the  one  with
+                  minimum abscissa and shift ordinates by  an  input
+                  input amount if required.   Only  the revised pro-
+                  file may be tabulated/plotted in this case. A ver-
+                  tical shift option is also provided.
+
+         MODE 2:  Normalize profile(s) according to the total  range
+                  of x or by input chord & leading edge coordinates.
+                  A negative chord value will denormalize.  The same
+                  input values are used for each element of a multi-
+                  element airfoil.
+
+         MODE 3:  Redistribute the abscissas  and derive correspond-
+                  ing ordinates.   Conventional or parametric spline
+                  techniques are used depending on whether the lead-
+                  ing edge is sharp or rounded.  Distributions along
+                  the arc (in T rather than X) are an option.  Menu:
+
+                  -1 = Read new Xs (or Ts) from a file in standard
+                       PROFILE format (though y coordinates may be
+                       omitted if desired).
+                   0 = Distribute points uniformly.
+                   1 = Distribute points sinusoidally bunched near
+                       the leading edge.
+                   2 = Distribute  points  sinusoidally, near both
+                       the leading and trailing edges.
+                   3 = Sinusoidal bunching around an internal pt.
+                   4 = Vinokur distribution (first, last increments
+                       increments specirfied.
+
+                  A prompt  will  also  be  issued for the number of
+                  points to be generated on each surface.
+
+         MODE 4:  Perturb geometry data  according  to user-selected
+                  shape functions (interactive).
+
+         MODE 5:  Refine the airfoil,  typically modifying  (or  re-
+                  taining) its thickness while retaining (or modify-
+                  ing) its curvature distribution(s).  Numerous user
+                  inputs are prompted for in this case,  since there
+                  are several likely ways provided for  manipulating
+                  the curvature distributions. Defaults are provided
+                  where possible.  The 4 main choices:
+
+                  (1) Leave a surface unchanged  (while presumably
+                      refining the other);
+                  (2) Change the thickness with minimal changes to
+                      the existing curvature  (none of the follow-
+                      ing constraints on the  original y" values);
+                  (3) Impose a constant-2nd-derivative  constraint
+                      in some single region (to remove a bump or a
+                      spike in the curvature distribution, or per-
+                      haps  to  modify regions of flatness by con-
+                      straining second derivatives - and hence the
+                      curvature - away from zero);
+                  (4) Constrain the curvature via an input file of
+                      2nd derivative values (possibly derived from
+                      an earlier run  of  PROFILE,  or prepared by
+                      hand).  The table does not have to cover the
+                      whole abscissa range; linearly interpolating
+                      table look-ups are used.
+
+                  Brief descriptions of the inputs prompted  for  in
+                  "refine" mode follow:
+
+           *  Desired % thickness:  <CR>  retains present thickness.
+
+           *  Width param. for y:  Affects  the  nonuniform  scaling
+                                   applied  to  the ordinates  (both
+                  surfaces).   The default is 2.0.  Larger (3.0-4.0)
+                  tends to retain leading/trailing  edge  shape more
+                  while 1.0 would constrain fore and aft less.
+
+           *  Input y" table:      <CR>  means there is  none,  else
+                                   the file name is  entered.   This
+                  file should be in the standard  "PROFILE"  format.
+                  It can  cover  any  range  of  abscissas.  (Linear
+                  interpolation  is  used.)   It  may  be an  edited
+                  version  of  the  file  from  a  previous  run  of
+                  PROFILE, or it may be much cruder.  The 2nd deriv-
+                  ative values  entered  act  as constraints on  the
+                  curvature since curvature and y" are related if y'
+                  is not large.
+
+           *  Constant y" value:   <CR>  means no such constraint  -
+                                   retain existing curvature  values
+                  as much as possible.   Otherwise,  a  value  of y"
+                  entered will be sought in the  abscissa range that
+                  is prompted for next.
+
+           *  Corresp. x range:     Enter low and high  x  values on
+                                    the same line.   Allow  for  the
+                  fact that strict inequalities are  used  when  the
+                  program tests for being within this range.   E.g.:
+                  Enter  .39 .61  or  .39,.61  if you intend for the
+                  constraint to apply in [0.4,0.6].
+
+           *  Width param. for y":  Default is  3.0.   Affects  non-
+                                    uniform weighting  of  the equa-
+                  tions representing 2nd derivative  constraints  in
+                  the overdetermined system being solved.  Since the
+                  actual values of the  2nd derivatives being sought
+                  also act in  a weighting sense,  effects  of  this
+                  variable are not easy to predict. Values of 2.0 or
+                  1.0 should tend to let y" change more.
+
+           *  x for peak y" weight: The absolute values  of  Y"  are
+                                    so much bigger than those  of  Y
+                  that they all need to be scaled down in the system
+                  being solved.   If you are trying  to  flatten the
+                  curvature plot in some region,  pick the center of
+                  the region for this input. Otherwise, use the mid-
+                  chord value.
+
+           *  y" weights, x/c=0,1:  Default is 0.004. See next item.
+
+           *  peak y" weight:       Default is 0.04.  These  provide
+                                    for the fact that  the  absolute
+                  values of y" are  typically  smaller in  the  mid-
+                  section than near the  leading/trailing  edges, so
+                  they should be weighted more,  especially  in view
+                  of the fact that any  y"  constraints applied  are
+                  typically in the mid-section.  See above.
+
+         MODE 6:  Optimize one surface of one profile  using  a pre-
+                  determined set of shape functions, some parameters
+                  of which are automatically varied so as to achieve
+                  a curvature distribution matching some target cur-
+                  vatures in the least squares sense.
+
+         MODE 7:  Transform  representation  of  profile(s)  between
+                  upper/lower surface  and  camber/thickness (either
+                  way - the user is prompted for the direction).  An
+                  option to decamber a section is also provided.
+
+         MODE 8:  Rotate a profile about some point to apply twist.
+
+         MODE 9:  Combine primary profile with a  secondary  profile
+                  (read from a separate file).  This was prompted by
+                  a need to add or remove a boundary layer displace-
+                  ment thickness  (positive by definition)  but  has
+                  been arranged to handle true  addition/subtraction
+                  of distinct profiles as well.
+
+         MODE 10: Loft between primary and secondary profiles.
+
+         MODE 11: Nose-job option: Round or sharpen the leading edge
+                  region via splines.
+
+         MODE 12: Smooth either surface or both surfaces using least
+                  squares techniques (linear combination of n Wagner
+                  functions plus a "ramp" for thick trailing edges),
+                  or by implicit and/or explicit methods involving a
+                  (possibly nonuniform) weighting of y".
+
+
+GEOMETRY INPUT:
+
+         Standard PROFILE format is shown below. The lower surface
+         is optional, but a zero must be read for NL if no lower
+         surface is included unless this is the last airfoil in the
+         file (meaning EOF can be used to indicate NL=0).  In this
+         case, a symmetrical airfoil is assumed.
+
+             TITLE                   <CHARACTER*80>
+             NU   Upper surface      <Integer # pts., first token>
+             X         Y             <Reals, first two tokens>
+             X         Y                 :
+             :         :                 :     (May be X/C, Y/C;
+             :         :                 :      Xs are increasing)
+             :         :                 :
+             NL   Lower surface      <Integer, first token> <may be 0>
+             X         Y             <Reals, first two tokens>
+             X         Y                 :
+             X         Y  ! Trailing comments are permitted
+             :         :                 :
+             :         :                 :     (Xs are increasing)
+             :         :                 :
+             ! X         Y           <Pt. suppressed; NL must be adjusted>
+             :         :                 :
+             :         :                 :
+
+  NOTE:  For standard format, if both surfaces are present, PROFILE
+         expects them to have the same leading edge point.  The trailing
+         edge points may differ.
+
+         The next two formats are wrap-around clockwise and wrap-around
+         counterclockwise, where the coordinates begin at the trailing
+         edge, wrap around the leading edge, and end at the trailing edge.
+         The clockwise case begins with the lower surface, and the counter-
+         clockwise case begins with the upper surface.  The format shown
+         below is essentially the same for both cases.  NPTS is the total
+         number of points on the airfoil.
+
+             TITLE                   <CHARACTER*80>
+             NPTS                    <Integer, first token>
+             X         Y             <Reals, first two tokens>
+             X         Y                 :
+             :         :                 :     (May be X/C, Y/C;
+             :         :                 :      Xs are decreasing
+             :         :                 :      until the leading
+             :         :                 :      edge, then increasing)
+
+  NOTE:  Wrap-around formats do NOT have duplicate leading edge points.
+
+         The fourth format is three-column format.  The airfoil has
+         the same abscissas for both surfaces in the 1st column and
+         ordinates for the upper and lower surfaces in the 2nd and 3rd
+         columns respectively.  Abscissas are increasing as with standard
+         format.  Here NPTS is the number of points on either surface.
+
+             TITLE                           <CHARACTER*80>
+             NPTS                            <Integer, first token>
+             X         YU        YL          <Reals, first 3 tokens>
+             X         YU        YL              :
+             :         :         :               :   (May be X/C, Y/C;
+             :         :         :               :    Xs are increasing)
+             :         :         :               :
+             :         :         :               :
+
+
+CONTROL INPUTS:
+
+         A file containing keyword inputs and values may be used to
+         override default options.  In general, the keywords refer to
+         the airfoil plot file and other output options, and apply
+         to all modes.   Prompts are issued for inputs needed by a
+         particular mode.
+
+KEYWORD GUIDELINES AND DEFINITIONS:
+
+         Keyword/value pairs may appear with more than one pair on a
+         line.  However, the multivalued keywords PLTLINE, CPSLINE,
+         CRVLINE, and NOFILE must not appear with other keywords on
+         the same line.
+
+         The default value in each case appears in square brackets.
+
+KEYWORD  VALUES and synonyms     DESCRIPTION
+-------  -------------------     -----------
+
+FORMAT   [SAME]                  One of four formats for output profile.
+         PROFILE or STANDARD     May be in standard PROFILE format (ab-
+         CLOCKWISE or WRAPAROUND scissas increasing), clockwise wrap-around
+         COUNTERCLOCKWISE        format, counterclockwise wrap-around for-
+         THREE-COLUMN or         mat, or 3-column format.  SAME means the
+         THREE_COLUMN or         same format as the input profile.  NOTE:
+         THREECOLUMN  or         To allow easily for several synonyms for
+         TABLE                   for the THREE-COLUMN value, only the first
+                                 5 characters of the value are checked.
+
+PLTLINE  [DEFAULT]               Controls line types of curves on profile
+         LINE                    plots.  One value may be included for
+         DASH                    each curve on the plot.  The default is
+         DOT                     symbols connected by a solid line, with
+         CHAINDASH               a different symbol type for each succes-
+         CHAINDOT                sive curve.  The first curve typically
+         THICK                   represents the original profile; the
+         SYMBOLS                 second curve represents the revised one.
+                                 Overriding the default might be desirable
+                                 when plotting multi-element airfoils or
+                                 when lines without symbols are required.
+                                 At most 20 curves are provided for.  Note:
+                                 All the line types in QPLOT are available.
+                                 SYMBOLS refers to symbols with no line
+                                 connecting them.
+
+CPSLINE  [see PLTLINE above]     Controls line types on Cps plots in the
+                                 same manner as PLTLINE above.  One value
+                                 per curve may be included, chosen from
+                                 the same list of values as those shown
+                                 for PLTLINE.
+
+CRVLINE  [see PLTLINE above]     Controls line types on curvature plots
+                                 in the same way as PLTLINE and CPSLINE.
+
+CURVATURE or [NONPARAMETRIC] or  CURVATURE and DERIVATIVES are synonymous
+DERIVATIVES  [FINITE_DIFFERENCE] controls for the type of calculations
+             SPLINE     or       used for derivatives and hence curvature.
+             PARAMETRIC or       The default is separate-surface treatment
+             WRAPAROUND          using finite differences, as needed for
+                                 consistency with PROFILE's REFINE and
+                                 OPTIMIZE options.  The two surfaces appear
+                                 as separate frames in the curvature plot.
+                                 Otherwise, the full wrap-around curvature
+                                 distribution is calculated using a para-
+                                 metric spline and plotted on one frame.
+
+                                 The default normally suffices unless the
+                                 region of interest is very near a rounded
+                                 leading edge.  Note that not all of the
+                                 possibilities are provided for, such as
+                                 parametric finite differences.
+
+MINCURVATURE   [-5.]             Cutoff values for plotted curvatures.
+MAXCURVATURE   [+5.]             Practice shows that +/-5. give useful
+                                 plot scaling by ignoring the high curv-
+                                 ature values near the leading edge.  On
+                                 the other hand, it may well be desired
+                                 to focus on the leading edge region.  Set
+                                 both to 999. to obtain the full range.
+                                 See the CURVATURE/DERIVATIVES control.
+
+NOFILE   [NONE]                  Used to suppress any combination of the
+         DAT                     seven output files generated by PROFILE.
+         PLT                     The values correspond to the extensions
+         TAB                     of the file names.  See elsewhere for a
+         CRV                     complete description of file contents.
+         YPP                     NONE serves only to assist leaving the
+         CPS                     NOFILE control word in the input file
+         SPREAD                  even if all outputs are desired.
+
+PLOT     [BOTH]                  Controls plotting of original OR revised
+         ORIGINAL                profile.  The default is to plot both
+         REVISED                 original and revised (if one exists).
+
+PRECISION   [FULL]               Controls number of digits in output
+         ENGINEERING             airfoil coordinates.  FULL gives F11.8
+                                 if possible, or E15.8 if any X >=10.
+                                 ENGINEERING gives the traditional F10.6
+                                 common to many flow solvers.
+
+THREED   [FALSE] or [NO]         For plotting of multiple stations from
+         TRUE or YES             a 3-D wing. The default is the 2-D case.
+
+XAXIS    [6.4]                   Length of x-axis in inches.  The default
+                                 is normally appropriate for an 8.5 x 11
+                                 page in portrait mode.
+
+         The following four keywords apply to windowing.  Any or none
+         of them may be used.
+
+XMIN     [minima and             Minimum abscissa for desired window
+XMAX     maxima of               Maximum abscissa for desired window
+YMIN     the input               Minimum ordinate for desired window
+YMAX     coordinates]            Maximum ordinate for desired window
+
+
+SAMPLE CONTROL FILE:
+
+         A sample input file follows.  Note that keywords and values
+         may be separated with blanks, commas, colons, equals signs,
+         pr tabs. Remember, keywords with more than one value should
+         appear on separate lines.  Any keyword or text value may be
+         truncated to unambiguous leading characters.   Blank  lines
+         and trailing ! comments are ignored.
+
+
+         FORMAT = STANDARD   PRECISION = FULL
+         PLOT BOTH  THREED:NO
+         PLTLINE = SOLID, SOLID
+         CPSLINE = DOT, SYMBOLS
+         CRVLINE = SOLID, DASH, CHAINDOT
+         XAXIS = 20.
+         XMIN = 0.  XMAX 0.1
+         MAXCURVATURE = 999.   ! Both 999. means plot the full
+         MINCURVATURE = 999.   ! curvature range
+         DERIVATIVES = PARAMETRIC
+         NOFILE: YPP SPREAD
+
+
+OUTPUT FILES:
+
+         The following seven output files are generated by  PROFILE.
+         Any  of  the  files  may  be  suppressed  using the keyword
+         NOFILE.  The user is prompted for an identifier, which will
+         become  the first part of each file name.   File extensions
+         are fixed.
+
+<identifier>.DAT   Contains airfoil coordinates  that  have been re-
+                   vised in some way. May be in one of four formats;
+                   default is the same format as input coordinates.
+
+<identifier>.PLT   Contains airfoil geometry coordinates  and  other
+                   information necessary for later QPLOTing.  May be
+                   a plot of original profile,  revised profile,  or
+                   both.  (Default is both, superimposed.)
+
+<identifier>.TAB   Contains tabulated coordinates,  first and second
+                   derivatives and curvatures for the  original  and
+                   revised profile  (if  a  revised profile exists).
+                   Other diagnostics may be written here,  including
+                   a record of selected  shape  functions  from  the
+                   MODIFY option.
+
+<identifier>.CRV   Contains curvatures of the  original  and revised
+                   profiles (if a revised profile exists)  for later
+                   QPLOTing.  Also to be used as the basis of target
+                   curvature data when OPTIMIZE option is used.  The
+                   MAXCURVATURE and MINCURVATURE keywords  determine
+                   the plot axis range, but the full surfaces appear
+                   in the file (except for the first and last pts.).
+                   See the description of these keywords for how  to
+                   obtain a full wrap-around curvature distribution.
+
+<identifier>.YPP   Contains second derivatives  in  standard PROFILE
+                   format,  for  possible  reuse  in  "refine" mode.
+                   When a profile has been  revised,  the  file will
+                   contain  only  the  second  derivatives  of   the
+                   revised profile.   Otherwise,  the file will con-
+                   tain only the second derivatives of the  original
+                   profile.
+
+<identifier>.CPS   Contains QPLOTable estimates of Cps for user-sup-
+                   plied alpha and free stream Mach number  (revised
+                   and/or original).
+
+<ident>.SPREAD     Contains  spreadsheet-compatible  (tab-delimited)
+                   tabular data.   Available only if MODE <= 3,  and
+                   only if both surfaces have common abscissas.
+
+ENVIRONMENT:
+  DEC VMS; SGI IRIX; Fortran 90
+
+HISTORY:
+
+Dec. '82  DAS/RAK  Original design.
+12/09/82    LJC    Original coding (plot/redistribute data points).
+04/29/83    LJC    Added option to "rectify" input data points.
+July '83    LJC    Added a 3-D capability and an option for reading
+                   a file of new abscissas in "redistribute"  mode.
+09/27/83    LJC    Interactive MODIFY routine incorporated.
+Oct. '83    DAS    Integrated alternative version of MODIFY  as the
+                   REFINE option; provided for saving curvature and
+                   y" values; removed REDISTRIB function from main.
+11/09/83    LJC    Added de-normalizing to normalizing option;  in-
+                   cluded these as a separate MODE; reordered MODEs
+                   in order of complexity.
+01/20/84    DAS    Incorporated OPTIMIZE mode.
+04/12/84    DAS    Took advantage of QPLOT's new legend capability.
+July '84    LJC    Added reading and writing of wraparound formats.
+07/24/84    LJC    Added calculation of thickness for all modes.
+Aug. '84    LJC    Changed from namelist to keyword inputs.
+09/14/84    LJC    Changed legend entry to be read from dataset and
+                   added prompt for title.  Formerly, the title was
+                   read from dataset and the legend was hard-coded.
+Oct. '84    LJC    Arranged for all plotting to be done  outside of
+                   PROFILE  using  QPLOT.  Formerly,  much  of  the
+                   program  was  devoted  to  plotting  the airfoil
+                   geometry with DISSPLA.
+Dec. '84    DAS    Incorporated cheap estimates of Cp distributions
+                   using algorithm supplied by Ilan Kroo of the RAC
+                   Branch at NASA Ames.  Added Cl, Cm calculation.
+01/24/85    LJC    Allowed for original and revised plots with MODE
+                   = 3.  Also modified to take advantage of QPLOT's
+                   new equal axis scaling option.
+02/12/84    DAS    Added TRANSFORM option.
+02/13/85    LJC    Added shifting of ordinates to RECTIFY mode.
+02/19/85    DAS    Fixed REDISTRIB to handle rounded trailing edges
+                   properly; took out "BLUNT" input parameter.
+02/28/85    LJC    Added 3-column format to PRREAD and PRWRIT.
+03/22/85    LJC    Allowed for absent  input control file  (meaning
+                   an empty file is not needed). Also added two new
+                   keywords to RDKEYS for controlling line types on
+                   Cps and curvature plots.
+06/17/85    DAS    Provided generalized distributions in REDISTRIB,
+                   via GETDIS/DSTRIB in place of XGRID.
+09/05/85    DAS    Fixed minor error in QPLOTable airfoil data file.
+09/30/85    DAS    Added COMBINE option.
+10/09/85    DAS    Suppressed plot windowing control values from
+                   QPLOTable file if they are not in use.
+10/21/85    DAS    Introduced LSTFIL to echo the input control file
+                   to the .TAB file for future reference.
+11/04/85    DAS    Mixup with END CURVE/END FRAME for OPTIMIZE mode
+                   target curvatures crept in (how? used to be OK).
+12/30/85    DAS    Added ROUND option (tentatively).
+04/24/86    DAS    Cp at leading edge was wrong.
+08/11/86    DAS    Added SMOOTH option (fitting of Wagner functions
+                   in linear least squares sense).
+09/24/86    DAS    AFGEOM in place of CALCTHICK in main program;
+                   menu options by name now, as well as by number.
+10/20/86    RAK    AFGEOM returns CAMBER and THICK as fractions; must
+                   convert to % chord at calling level.
+02/11/87    DAS    Functionality of BOUNDS changed somewhat.
+03/11/87    DAS    Made use of PROTECT utility (prompted by duplicate
+                   point case that dies ungracefully otherwise).
+04/24/87    DAS    Menu items clarified and made more unique (because
+                   of SELECT's option for choosing by name or number).
+                   Greater precision in output coordinates now by default.
+                   Also: traps bad IDENT now (more than one token is
+                   presumed to be a goof).
+04/27/87    DAS    Introduced PRECISION argument in PRWRIT.
+08/31/87    DAS    Trailing edge angle added as AFGEOM output.
+09/23/87    DAS    If MODE=0 but PRECISION is not the default, assume
+                   that a revised airfoil dataset is required.
+04/29/88    DAS    Added spreadsheet-compatible output file.
+12/01/88    DAS    Turned on spreadsheet file for MODE <= 3 now.
+11/29/89  DAS/RGL  Plots for multi-section 3D cases w/ blank subtitle from
+                   the initial prompt now use the case titles as subtitles.
+                   'Original' suppressed from headers if 'Revised' does not
+                   apply.
+02/14/90    DAS    Installed OPENER in 9 places.  File names are now in
+                   lower case to indulge the Unix community.
+03/13/90     "     Raised MXPTS from 201 to 300.
+06/28/90     "     Added the LOFT option.
+06/29/90     "     Added the ROTATE option.
+04/22/91     "     Indicated "current axes" for thickness/camber printout.
+10/22/91     "     Replaced the ROUND option with the "nose-job" option
+                   (round or sharpen).  Providing for reversing the
+                   operation can mean letting through a non-rectified
+                   airfoil.
+10/24/91     "     Provided for full wrap-around curvature plot (parametric
+                   derivatives).  Adjusted the tabulations accordingly.
+                   Added the control scheme description above (adapted from
+                   RDKEYS) and the geometry data description (adapted from
+                   PRREAD).
+01/07/95     "     Original chord and leading edge are now tabulated;
+                   "normalize" mode *.crv file had mismatched X min/max.
+06/13/95     "     Output of the *.ypp file is now as advertised above.
+11/21/95     "     TRANSFORM mode now has an option to decamber a section.
+12/19/96     "     Added SINF and four "COS" shape functions.
+12/20/96     "     Extended SMOOTH option to allow y"-based implicit and/or
+                   explicit smoothing as an alternative to Wagner fitting.
+10/20/99     "     Fortran 90 upgrade, mainly to eliminate use of '0' for
+                   carriage control.
+
+AUTHORS:
+  Leslie Collins, David Saunders, Sterling Software/NASA Ames, Mt. View, CA
+
+ACKNOWLEDGMENTS:
+  Robert Kennelly (ex-Sterling, now NASA Ames) provided the inspiration and
+  many key ideas.
+
+  The Aerodynamics Division at NASA Ames funded this software under contract
+  to Sterling Software (previously known as Informatics, Inc.).
+
+-----------------------------------------------------------------------------

@@ -1,0 +1,39 @@
+XDECK can remove trailing and/or leading columns & trailing spaces.
+It shows its age, but proved handy during preparation of the README
+files for this web site from the application program headers.
+
+XDECK is a program originally intended to remove the deck-names or
+sequence numbers in columns 73-80 of files derived from card decks
+or from the UPDATE facility on the CDC 7600,  and to eliminate any
+trailing blanks.  (This halves the size of typical files.)   XDECK
+has since been generalized to operate beyond any specified column.
+
+The user is prompted for the file name and the column beyond which
+truncation is desired.  (The default is column 72.)  A next higher
+version of the file is produced,  in which all trailing blanks  as
+well as the requested columns are suppressed.   The original  file
+is left intact.   [Under Linux: no version number means the output
+file name is the input name with '.xdeck' appended.]
+
+Also,  XDECK  will  now  handle  the  removal  of  leading columns
+(designed for use with files disposed from the CRAY via the  CYBER
+front-end).
+
+Logical units:      1  for input  file
+                    2  for output file
+                    5  for terminal input
+                    6  for terminal output
+
+History: Original code on PDP-11:  David Saunders/Dan McCoy, 1/78.
+         Added leading column removal option:    Greg Howe, 11/82.
+         Patched "leading > length of short line" case: DAS 01/85.
+         Patched to handle long records gracefully:     DAS 08/85.
+         Added warning before first prompt:             RGL  1/86.
+
+         Under Linux, version number treatment was not  DAS 10/13.
+         appropriate.  Add .xdeck to the file name now.
+
+         The style encountered here is no longer recommended!
+         Carriage control in particular no longer uses '$'.
+
+Author:  Dan McKernan, Informatics, 1/82

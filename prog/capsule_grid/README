@@ -1,0 +1,35 @@
+CAPSULE_GRID performs automated discretization of analytically-defined
+generatrices for typical (and not-so-typical) axisymmetric capsules such
+as 70-degree sphere/cones with optional aft bodies.  For zero angle of
+attack cases, related procedures produce the associated initial volume
+grid needed for flow field calculations.  Non-analytic input generatrices
+are also handled.  For angle of attack cases, a surface grid is also
+produced, with the singular point region at the nose (and aft body if
+present) replaced by morphed quadrant patches.  Volume grids may likewise
+be produced with related procedures.
+
+Please see Capsule_Grid.pdf and the header of capsule_grid.f90 for further
+details.
+
+06/30/2016    "    "      A new option in CURVDIS to work with adjusted
+                          curvatures that are artificially broadened onto
+                          flat/low-curvature segments appears to be good
+                          for analytic geometries but unreliable for input
+                          generatrices of unknown quality/precision.
+                          New controls flat_blend_fore & flat_blend_aft
+                          allow this option to be suppressed.  It was
+                          prompted by a clear need to resolve heat flux
+                          spikes at the shoulder better by spreading the
+                          tight shoulder grid spacing forward onto the
+                          conical flank.  This should work for Apollo-
+                          type spherical sections too (large radius/low
+                          curvature) given that we work with normalized
+                          geometry during curvature-based redistribution.
+                          Namelist controls are now printed to standard
+                          output.
+10/27/2016    "    "      Aft-end stretching towards the symmetry axis in
+                          the generatrix is undesirable.  3D surfaces
+                          replace this region with uniform quadrants.
+                          Therefore, do similar to the generatrix, using
+                          ni_regrid_aft_body and a heuristic number of
+                          uniform points at the end.

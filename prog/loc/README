@@ -1,0 +1,60 @@
+   LOC Description and Usage:
+
+         A quick-and-dirty filter for counting lines of FORTRAN code
+      in an ASCII file.  We count everything EXCEPT blanks and lines
+      which begin with 'C' in column 1.  [Other comment characters are
+      now handled -- see the history.]  Total lines and lines of code
+      are reported to the terminal, and the user is prompted for another
+      source file.
+
+
+   Input format:
+
+         Any ASCII file.  Only the first 72 columns are examined.
+
+
+   External files:
+
+      Unit    I/O/S  Description
+       4      I      Source code file to be filtered.
+       5      I      User keyboard.
+       6        O    User terminal screen.
+
+
+   Environment:  Digital VAX-11/780 VMS/V4.1 FORTRAN.
+
+
+   Notes:
+
+      (1)  IMPLICIT NONE is non-standard, and some of the variable
+           names are longer than six characters.
+
+      (2)  We don't trace INCLUDE files.
+
+      (3)  VT100 escape codes are ANSI standard (I hope).
+
+      (4)  Use of CHAR function in PARAMETER statement is non-standard.
+
+
+   Author:  Robert Kennelly, Informatics General Corporation.
+
+
+   Development history:
+
+       1 Oct. 1985    RAK    Initial design and coding.
+       5 Mar. 1986    RAK    Added READONLY keyword in the OPEN to
+                             facilitate snooping in other people's
+                             directories.  "Clarity coefficient"
+                             displayed.  Playing with VT100 emphasis
+                             features for main results and errors.
+                             Added explicit CLOSE (was previously
+                             unable to look at same file twice).
+                             Use OPENER to prompt for and open the
+                             input file.
+      30 May  1986    DAS    Took advantage of revised OPENER (which
+                             now returns if filename is left blank).
+      20 May  1988    DAS    Introduced GETLINE to deal with trailing
+                             '!'-type comments properly; allowed '*'
+                             as well as 'C', 'c' for column 1 comments.
+      28 Jan. 2000    DAS    I5 format didn't allow for really large
+                             line counts.

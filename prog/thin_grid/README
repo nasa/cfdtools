@@ -1,0 +1,44 @@
+
+Program THIN_GRID Description:
+
+   THIN_GRID extracts a subset of points from all blocks of a multiblock
+   grid.  This version has the option to do different things to different
+   blocks, as might be needed to make a grid point-to-point matched.
+
+   In order to avoid affecting existing scripts, the more general option is
+   implemented via an optional 'thin_grid.inp.2' control.  (There is no
+   'thin_grid.inp' but the '.2' is consistent with ancillary control files
+   for other grid utilities.)
+
+Optional 'thin_grid.inp.2' Control File Format:
+
+   1 2 2 1    ! Halve the i & j density for block 1; leave nk alone
+   2 2 2 1    ! ..................................2................
+   3 1 1 1    ! Leave block 3 alone
+   .......    ! One line per block
+
+   (Later:)  In order to avoid duplicate points along surface patch
+   edges when setting up body points for radiation calculations, another
+   generalized capability has been implemented via thin_grid.inp.3 that
+   allows the initial index to be something other than 1 (same for all
+   blocks, since it's probably a surface grid where avoiding common edge
+   points makes some sense for body point purposes, as in the case of
+   a calculation on an asteroid-like shape).
+
+Optional 'thin_grid.inp.3' Control File Format (cell-centered surface):
+
+   i1, inc  j1, jnc  k1, knc
+    3   4    3   4    1   1
+
+Procedures:
+
+   XYZQ_IO package  I/O utilities for PLOT3D grid and function files
+
+History:
+
+   04/29/04  D. Saunders  Initial adaptation of EXTRACT_BLOCKS.
+   01/29/11   "      "    More general functionality via thin_grid.inp.2.
+   06/03/15   "      "    Provided for avoiding duplicate edge points via
+                          thin_grid.inp.3.
+
+Author:  David Saunders, ELORET Corp./NASA Ames, Moffett Field, CA.

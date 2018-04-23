@@ -1,0 +1,64 @@
+RADIAL_INTERP_2D Description:
+
+The original RADIAL_INTERP reads a single-layer 3-space volume grid and a
+related surface grid to produce a new volume grid with that exact surface.
+It takes advantage of a situation common to CFD for reentry vehicles where
+all blocks have k = 1:nk from the wall to the outer boundary. For each new
+surface pt., it performs a surface interpolation giving fractional coord-
+ates (p,q) within some cell (i,j) of some surface patch n. Then it applies
+the same surface interpolation at every k plane for k = 2:nk at that (i,j)
+of block n.  Along the way, any discrepancy between the new target surface
+point and the best interpolated surface point is either decayed towards
+zero at the outer boundary or retained at every k plane.
+
+All of these interpolations are necessarily bilinear because of the rapid
+structured surface search technique used.  This is not as bad as it sounds,
+because RADIAL_INTERP always substitutes the desired new target surface
+point for each interpolated surface point, and decays any mismatch (or not,
+as already explained).
+
+Note that the number of k planes remains unchanged in the output 3D grid.
+
+2D Analogue:
+
+RADIAL_INTERP_2D performs a similar, simpler function for the 2D case using
+linear interpolations with the same sort of correction if needed at the
+surface and decay options away from the surface.  It also includes part of
+the functionality of REFINE_GRID by allowing the radial distributtion type
+and/or the number of points in the off-wall direction (j) to be changed.
+
+Expected DPLR2D-related Usage:
+
+If a coarsened 2D grid needs reclustering in the off-wall direction during
+the flow calculation, the result no longer matches every nth point of the
+original fine grid.  Therefore, the requirement that prompted this utility
+is to recluster that fine grid in the equivalent manner, which has typical-
+ly involved cell-Reynolds-number-based spacing at the wall.  Preserving the
+same relative spacing in the radial direction while (normally) doubling the
+number of cells is the right choice, along with recovering the original
+surface grid exactly, which simpler use of REFINE_GRID would not guarantee.
+
+For convenience, the desired surface grid may be the j = 1 line of a 2D
+volume grid (1 or more blocks), or it may be a simple generatrix (one curve
+in (x,y)-space, with any third coordinate ignored).
+
+XYZ Conventions:
+
+Since the DPLR postprocessor extracts only x and y for a 2D grid, the input
+volume grid to be interpolated may be either 2D/xy or 3D/xyz with z all 0.
+The DPLR preprocessor ignores any z coordinates if they are present for 2D
+input grids, so the output grid here includes z = 0 for compatibility with
+other utilities.  Thus y is "up" for input and output files here.
+
+Control:
+
+A handful of prompts suffice.
+
+History:
+
+Feb. 2-5, 2012  D.A.Saunders  Initial design and implementation.
+Nov. 6,   2015    "     "     Introduced determine_grid_form and -dim.
+                              Writing 3D output is inconsistent with
+                              FLOW_INTERP_2D, so make it an option.
+
+Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA

@@ -1,0 +1,36 @@
+FILTER_LINES description:
+
+   Transcribe any initial non-numeric header lines from a multi-column file
+   (if specified, else ignore them) then filter out any further non-numeric
+   lines.  Optionally, comment the header line(s) and/or append the same
+   line(s) as a trailer.
+
+Controls (namelist on standard input; sample shown):
+
+   $filter
+   infile = 'freestream.dat'
+   outfile = 'freestream-clean.dat'
+   keep_top_header = T
+   add_bottom_header = F
+   header_comment = '#'
+   $end
+
+Notes:
+
+   o  This is for people who don't know awk or similar languages.
+   o  Namelist control allows for future extensions without affecting
+      existing control files or scripts.
+   o  If header_comment = ' ', any header lines are left untouched.
+   o  Transcribed numeric lines are copied exactly as is (no reformatting).
+
+History:
+   08/21/2014  D.A.Saunders  Initial design, prompted by the need to produce
+                             trajectory time histories of high-fidelity flow
+                             data, starting with output from NASA ARC's Traj
+                             program and selected CFD point results.
+                             (Traj repeats its headers every 20 lines, which
+                             is inconvenient when pasting a trajectory into
+                             a spreadsheet.)
+   08/23/2014    "     "     Initial implementation.
+
+Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA

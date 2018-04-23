@@ -1,0 +1,74 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   program sort_rows
+!
+!  Description:
+!
+!     This is a slightly specialized sorting utility that should still prove
+!     handy in a variety of situations.  The prompting application is to a list
+!     of files produced by searching with "grep" for a certain string in related
+!     files (possibly in related directories).  If those files are effectively
+!     numbered in a manner that does not include leading 0s for the shorter
+!     numbers, then grep will not list them in true numerical order.  E.g.:
+!
+!        Case2/LINE-1/neqair.out:Total radiative heating =     0.381727 W/cm2
+!        Case2/LINE-10/neqair.out:Total radiative heating =     0.456789 W/cm2
+!        Case2/LINE-11/neqair.out:Total radiative heating =     0.123456 W/cm2
+!        Case2/LINE-12/neqair.out:Total radiative heating =     0.234567 W/cm2
+!             :       :      :      :
+!        Case2/LINE-19/neqair.out:Total radiative heating =     0.345678 W/cm2
+!        Case2/LINE-2/neqair.out:Total radiative heating =     0.765432 W/cm2
+!        Case2/LINE-20/neqair.out:Total radiative heating =     0.654321 W/cm2
+!             :       :      :      :
+!
+!     This list can be treated as a table of 6 columns.
+!
+!     The desired order is most likely to be:
+!
+!        Case2/LINE-1/neqair.out:Total radiative heating =     0.381727 W/cm2
+!        Case2/LINE-2/neqair.out:Total radiative heating =     0.765432 W/cm2
+!             :       :      :      :
+!        Case2/LINE-9/neqair.out:Total radiative heating =     0.345678 W/cm2
+!        Case2/LINE-10/neqair.out:Total radiative heating =     0.456789 W/cm2
+!        Case2/LINE-12/neqair.out:Total radiative heating =     0.234567 W/cm2
+!             :       :      :      :
+!
+!     To achieve this order, the user would enter LINE- as the prefix prompted
+!     for.  The utility will then read the full list as a table and search row 1
+!     for the prefix in some column.  That column is then used to reorder the
+!     rows as suggested above.  Not finding the prefix on row 1 is considered an
+!     error, as is not finding it in the same column for some other row.
+!
+!     Existing subroutine get_coordinates is reused to isolate the number that
+!     follows the prefix in each row.  Those numbers are sorted via an index
+!     list, and the rows are written in the sorted order.  The numbers are most
+!     likely to be integers, but reals are also allowed for, such as 12.345.
+!
+!     (Later:)  Since get_coordinates searches for numbers from the right, the
+!     original implementation could not sort something like this ...
+!
+!        ant1_13.attenuation_v3.30_h38.00.dat
+!        ant1_13.attenuation_v3.60_h39.00.dat
+!        ant1_13.attenuation_v3.80_h40.00.dat
+!        ant1_13.attenuation_v4.00_h41.00.dat
+!        ant1_13.attenuation_v4.30_h42.00.dat
+!        ant1_13.attenuation_v3.26_h42.08.dat
+!        ant1_13.attenuation_v4.70_h43.00.dat
+!        ant1_13.attenuation_v3.70_h43.00.dat
+!
+!     ... except in the order of h, while sorting in order of v may be desired.
+!     This has been handled now.
+!
+!  History:
+!
+!     02/10/17  D.A.Saunders  Initial design and implementation minus sorting.
+!     02/13/17    "      "    Completed the sorting part after extending the
+!                             table_io module so that the "read as alpha" option
+!                             can work with input lines that are all alpha-
+!                             numeric (meaning no leading header lines).
+!     03/16/17    "      "    Handled more than one "coordinate" (number) in the
+!                             column containing the prefix.
+!
+!  Author:  David Saunders, AMA, Inc./NASA Ames Research Center, Mnt. View, CA
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

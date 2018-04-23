@@ -1,0 +1,29 @@
+SURFACE_PAD Description:
+
+For a structured surface grid (one or more patches), apply 1-dimensional
+interpolations versus arc length to pad the number(s) of points.  Existing
+program MSPLINE should be able to do this, but it seems to fail for surface
+grids, and it preserves relative arc lengths where one might prefer roughly
+uniform distributions as offered (only) here, at least initially.
+
+Either or both index directions may be treated, patch by patch.  If the i
+direction is specified, it is treated first.  Those results are further
+interpolated in the j direction if so-specified.  (Program ADJUST_GRID can
+transpose indices if some other order is desired.)
+
+Two-dimensional surface interpolations are avoided, since the nonlinear
+ones are dubious at best in the author's experience.
+
+Modest numbers of data points are anticipated, for which existing sub-
+routine uniform_edge is appropriate (although its linear interpolation
+option for specified index intervals is unlikely to be made use of here).
+
+Input and output files are in PLOT3D format, ASCII or unformatted.
+
+03/30/09  D.A.S.  Initial implementation to pad a mesh of wing leading
+                  edge sensor locations.
+07/30/09    "     Densifying our finest Shuttle surface grid by factors
+                  of 4 in each direction showed that the new number of
+                  points for a multiple of m should be m*(n-1) + 1.
+
+Author:  David Saunders, ELORET Corp./NASA Ames Research Center, CA

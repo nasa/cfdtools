@@ -1,0 +1,125 @@
+   BSPROFILE manipulates and/or displays a B-spline curve representing
+an airfoil in wrap-around form.  It provides some of the functionality
+of program PROFILE, which deals strictly with discretized (X,Y) airfoil
+datasets but should still be of interest to a BSPROFILE user.
+
+   A given B-spline curve may be discretized for plotting purposes, or
+for compatibility with other applications.  The plot includes the
+control polygon and curve evaluations corresponding to the knots.
+
+   The airfoil is expected to consist of a single curve from the lower
+trailing edge, round the leading edge (blunt or sharp), to the upper
+trailing edge.  It need not be closed at the trailing edge.
+
+   This version can also discretize an arbitrary curve, which is
+distinguished from the wrap-around airfoil case by whether the first
+and last control point Xs (almost) match or not.
+
+   Results are in QPLOTable form.  Tailoring to some other plot package
+may be required - possibly externally via a translator.  A modified
+B-spline airfoil dataset may also be output.
+
+   BSPROFILE also provides for converting a discretized curve into a
+B-spline curve, either by standard interpolation (where the number of
+control points is determined by the number of data points), or by the
+standard linear least squares method (to employ a specified, smaller,
+number of control points), or by a nonlinear least squares method which
+improves the curve fit attainable with a given number of control points
+by iteratively adjusting the knots as well.  This more elaborate method
+was developed at Ames to keep the number of control points to a minimum
+for design-by-optimization purposes.
+
+   A curve fit may also be performed using a specified set of knots,
+since multiple sections of a wing (say) with common knot vectors are
+most convenient for a CAD system to convert to NURBS surface form.
+Knot commonality also permits spanwise lofting of sections by applying
+the lofting to the control points.
+
+   BSPROFILE is built upon the DT_NURBS library of NURBS utilities,
+which is the only such package known to be in the public domain and
+written in FORTRAN 77.  A collection of higher-level utilities, mostly
+airfoil-related, has been developed in the Applied Aerodynamics Division
+at Ames as the AA_NURBS library.  Some of these are used by BSPROFILE.
+Along with a modest subset of the DT_NURBS package, they have also been
+employed in CFD-based design-by-optimization applications with mixed
+results.  Whether use of B-spline control points as design variables
+is preferable to using conventional perturbing shape functions remains
+an open question.  Either way, BSPROFILE enables an aerodynamicist to
+interface with a CAD system in what is nowadays the preferred manner.
+
+
+Data format:
+------------
+
+   DT_NURBS employs a compact "C-array" format for 2-space B-spline
+curves as follows:
+
+   C(1) = 1 (# parametric variables);
+   C(2) = 2 (for X and Y);
+   C(3) = polynomial order k (e.g., 4 for cubics);
+   C(4) = # control points, N;
+   C(5) = pointer for efficient evaluations;
+   C(6 : 5 + N + k) = knot vector,
+   followed by the X coords. of N control pts.,
+   followed by the Y coords. of N control pts.
+
+   Initially, BSPROFILE reads and writes B-spline curves in this format,
+which is far more readable and compact than an IGES representation and
+may well be preferred for a design application.  Direct I/O of IGES
+representations may become an option, but for now, program DTIGES serves
+to convert a curve from DT_NURBS to IGES format and vice versa.
+
+   The curve-fitting options expect (X,Y) coordinates forming a single
+curve as follows:
+
+   Title  ! Descriptive text
+   N      ! # points
+   X   Y  ! Coordinates
+   :   :
+
+   If a knot vector is specified for the fit, it is extracted from a
+B-spline curve file in the DT_NURBS format.  A file of values of the
+parametric variable U corresponding to the data points is also required
+as input.  It should be in a single-column version of the (X,Y) data
+format, as output from the original fitting process which produced the
+knot vector being reused.
+
+
+History:
+--------
+
+05/19/92  D.A.Saunders  Adapted from TESTAFGEOM.
+05/29/92    "    "      Added area calculation.
+06/01/92    "    "      Added option to normalize the chord.
+09/19/92    "    "      Made the disretization variable, for possible
+                        use of coordinates in a flow solver.
+12/21/92    "    "      Provided for discretizing an arbitrary 2-space
+                        curve (as needed for a camber line).
+02/26/93    "    "      Provided for adjusting chord, leading edge,
+                        and thickness of an airfoil curve.
+04/05/93    "    "      Provided for adjusting the trailing edge with
+                        a shear to compensate for a moved leading edge.
+04/26/93    "    "      Provided for discretization according to
+                        arc-length.  Introduced display of the leading
+                        edge radius of curvature (also used to control
+                        the discretization).
+06/23/93    "    "      Radius of curvature is units-dependent: needed
+                        chord in the empirical formula for unnormalized
+                        airfoils.
+01/28/94    "    "      Added knot insertion option (mainly to fix a
+                        control point at an airfoil leading edge).
+02/11/94    "    "      Provided for standard linear transformations.
+July '97    "    "      Version 2.0: Installed B-spline curve fitting
+                        options originally implemented in a version of
+                        SMOOTH; provided for multiple grid distributions.
+Apr 2004    "    "      Handle up to 256 points per curve; TOL = 0.01 was
+                        too small to identify space shuttle wing sections
+                        as airfoils - make it 0.02.
+08/13/13    "    "      Resurrecting BSPROFILE on an Intel x86 64-bit
+                        processor gave airfoil area trouble, though the
+                        nonlinear B-spline curve fit of a 12% oblique wing
+                        airfoil appears to work as earlier (degree 4, 16
+                        control points, 10,000 iterations, 500 points per
+                        surface evaluation of the fit).  The machine-
+                        dependent constants are set for an IRIS 4D though,
+                        so maybe that's the reason (no time to pursue it).

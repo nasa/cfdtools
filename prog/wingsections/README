@@ -1,0 +1,143 @@
+WINGSECTIONS Description:
+
+One-liner:  Prepares a wing surface as 2D sections in B-spline form
+----------
+
+Purpose:
+--------
+
+   WINGSECTIONS completes a simplified form of wing surface definition
+   from previously-prepared chord/thickness data and associated defining
+   sections.  The input sections are in B-spline form, and the results are
+   output as an expanded file of B-spline sections along with a summary
+   tabulation and an expanded file of XY coordinates for possible use by
+   a flow solver.
+
+Method:
+-------
+
+   The simplifying assumption here is that all sections can be represented
+   adequately by B-spline curves with the SAME KNOTS. (See a version of the
+   SMOOTH program for methods of determining such B-spline representations
+   of related XY datasets.)
+
+   As long as two sections have the same knots, lofting of intermediate
+   sections can be achieved by lofting the control points.  This allows
+   standard algebraic methods to produce a compact surface representation
+   that is readily adapted by NURBS-based CAD/CAM systems as a full 3-D
+   surface.  Ideally, the same procedure could provide an alternative
+   input scheme for flow solver applications, although a CAD system is
+   better suited to geometry refinements such as detailed wing tip design.
+
+   Initially, WINGSECTIONS uses a slightly-modified version of the
+   geometry summary table output by R22OPT for the thickness/chord data.
+   For each station with "LOFT" = 1, a defining section in B-spline curve
+   form is expected.  The defining sections may be normalized (or not).
+   They should be concatenated as one input file.
+
+   Sample thickness/chord data file:
+   ---------------------------------
+
+   OAW-1E Geometry (Squared-tip form)                          <Title>
+   KG         Z       XLE       YLE     CHORD  ...    MAX T  ...  LOFT
+    1 -203.4000  10.87916   0.00000  21.80275  ...  1.27510  ...     0
+    2 -197.1225  10.34812   0.00000  23.46226  ...  1.57230  ...     0
+    3 -190.8450   9.81707   0.00000  25.12178  ...  1.87720  ...     1
+    4 -187.6130   9.54366   0.00000  25.97618  ...  2.06160  ...     0
+    . .........   .......   .......  ........  ...  .......  ...     .
+   43  -61.5653   0.03096   0.00000  55.70325  ...  8.88560  ...     0
+   44  -58.3333   0.00000   0.00000  55.80000  ...  8.92800  ...     1
+    . .........   .......   .......  ........  ...  .......  ...     .
+   58   58.3333   0.00000   0.00000  55.80000  ...  8.92800  ...     1
+   59   61.5653   0.03096   0.00000  55.70325  ...  8.90020  ...     0
+    . .........   .......   .......  ........  ...  .......  ...     .
+   98  187.6130   9.54366   0.00000  25.97618  ...  1.33900  ...     0
+   99  190.8450   9.81707   0.00000  25.12178  ...  1.11590  ...     1
+  100  197.1225  10.34812   0.00000  23.46226  ...  0.88500  ...     0
+  101  203.4000  10.87916   0.00000  21.80275  ...  0.36720  ...     0
+
+   Corresponding defining sections file:
+   -------------------------------------
+
+   OAW-1E-P2-MOD2 Tip-cap Section                                <Title>
+     1.000000000000000       2.000000000000000       5.000000000000000
+     21.00000000000000       21.00000000000000
+
+   0.0000000000000000E+00  0.0000000000000000E+00  0.0000000000000000E+00
+   0.0000000000000000E+00  0.0000000000000000E+00  9.1353959917732475E-02
+   0.2411894763703840      0.4024486663234111      0.5634075800663552
+   0.7232546095157547      0.8761017106844363      0.9779216600852452
+   1.022438833587189       1.065594150116754       1.154251426767800
+   1.286308448870403       1.428047814045446       1.568080209559026
+   1.710104876249171       1.852958747840903       1.984070742665636
+   2.067673456116899       2.067673456116899       2.067673456116899
+   2.067673456116899       2.067673456116899
+
+    1.000000000000000      0.9766573616010096      0.9167987120914935
+   0.8182593557168120      0.6759316525938030      0.5204441164611799
+   0.3669437255341476      0.2052794078141187      0.1237065524658922
+  -5.3327239734320598E-03 -1.3476529667296819E-03  7.8166813309687295E-02
+   0.1828410957291661      0.2952688069166972      0.4437506124776002
+   0.5805998573300908      0.7177141130728990      0.8390485132513349
+   0.9283616157847692      0.9785103137567076       1.000000000000000
+
+   4.7510568983852863E-03  4.2093382707367472E-03  5.6186343982026685E-03
+  -5.3332570885323248E-04 -9.6907468475426527E-03 -1.7661125500254172E-02
+  -3.1396893930427520E-02 -2.6467468887536488E-02 -2.1503660335958938E-02
+  -1.7591147529822391E-02  1.5159539809190553E-02  4.0424128341521668E-02
+   4.8592957581737368E-02  4.6747271055867917E-02  4.4292514180655268E-02
+   4.6004845731045817E-02  3.6009187829119820E-02  2.3870693882375195E-02
+   1.4528201781536322E-02  9.4037158124965926E-03  7.2510391473770142E-03
+   OAW 60-085-16 (OAW-1 Cabin section)            <Next defining section>
+   1.000000000000000       2.000000000000000       5.000000000000000
+   21.00000000000000       21.00000000000000
+
+   0.0000000000000000E+00  0.0000000000000000E+00  0.0000000000000000E+00
+   0.0000000000000000E+00  0.0000000000000000E+00  9.1353959917732475E-02
+   0.2411894763703840      0.4024486663234111      0.5634075800663552
+   0.7232546095157547      0.8761017106844363      0.9779216600852452
+   1.022438833587189       1.065594150116754       1.154251426767800
+   1.286308448870403       1.428047814045446       1.568080209559026
+   1.710104876249171       1.852958747840903       1.984070742665636
+   2.067673456116899       2.067673456116899       2.067673456116899
+   2.067673456116899       2.067673456116899                <Same knots>
+
+   1.000000000000000       0.9766573684613700      0.9167986913545925
+   0.8182593719759367      0.6759316192254129      0.5204440817792035
+   0.3669437646467861      0.2052793407910668      0.1237065913369712
+  -5.3327403303544115E-03 -1.3476487841357643E-03  7.8166807256873784E-02
+   0.1828411143917873      0.2952687381718988      0.4437506889818151
+   0.5805997456052916      0.7177141687293529      0.8390484488001356
+   0.9283616554188250      0.9785102941149742       1.000000000000000
+
+  -2.4999999441206455E-03 -1.5764163893617429E-03 -3.8547663530724645E-04
+  -1.0803315819805590E-02 -3.8935721655883260E-02 -5.1152378185592381E-02
+  -5.1869694038945192E-02 -5.0224055012760078E-02 -5.0413761744842232E-02
+  -3.5318966792019309E-02  3.0945843199744209E-02  7.4389077816659148E-02
+   9.5813309764173755E-02  0.1101315601432895      0.1102606125877267
+   9.1098402348239831E-02  6.2800820726638147E-02  3.6244110229431285E-02
+   1.8563923826951780E-02  8.3565019335236754E-03  2.4999999441206455E-03
+   <The next section follows similarly.>
+
+Points to note:
+---------------
+
+   > The 5-word header of each curve must be readable list-directed.
+     It is offset for this reason.  The other blank lines are for
+     human readability only.
+
+   > A compact representation is the goal here.  (Otherwise, a vast
+     collection of points defining the wing section could be supplied
+     to the CAD system.)
+
+History:
+--------
+
+   02/23/93  D.A.Saunders  Initial implementation.
+   02/27/93    "     "     Added discretized output file for R22OPT, etc.
+   03/07/93    "     "     Added more commentary; checked for mismatches.
+   04/14/93    "     "     Allowed for 72 pts. per surface.
+   06/16/93    "     "     Allowed for 75 control pts. per wing section.
+
+Author:   David Saunders, Sterling Software/NASA Ames Research Center
+-------                                     Moffett Field, CA

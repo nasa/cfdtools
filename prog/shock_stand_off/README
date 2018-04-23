@@ -1,0 +1,75 @@
+SHOCK_STAND_OFF Description:
+
+   For an entire CFD grid & function file containing just the function used
+   to detect shock location (probably Temperature), compute shock stand-off
+   distance at every inner surface point.  A single function is stipulated
+   because the normals off the surface may cross block boundaries, meaning
+   all the volume data must be stored.  This precludes use of the volume
+   data processed by the boundary layer edge detection utility, results
+   from which the stand-off distances are to be merged with in a subsequent
+   step that requires the stand-off results to be saved in Tecplot surface
+   file form.
+
+   This version handles 2-D cases as well.  It is most expedient to turn a
+   single plane of data into two parallel planes then apply the existing
+   3-D technique.
+
+Initial assumptions (probably generalizable, but they may not need to be):
+
+   o  The structured volume grid contains one layer of blocks, with k = 1
+      at the wall.  This simplifies determination of the inner and outer
+      boundary patches.  (To overcome these restrictions, one could use the
+      boundary condition data employed by the relevant flow solver.)
+
+   o  For the 2-D case, assume j = 1 at the wall initially.  The program
+      converts 2-D inputs to 3-D form with k = 1 at the wall.
+
+Strategy:
+
+   o  Read the entire volume data and extract the inner & outer boundaries
+      as multiblock surface grids.
+
+      o  In order to handle 2-D cases transparently, we need to parse the
+         grid file header, so 2-D files must be formatted.
+
+      o  For a 2-D case, the 3rd coordinates are assumed to be missing,
+         even though this is incompatible with the I/O package used here.
+
+      o  For a 2-D case, replicate the given plane of data with a parallel
+         plane close apart in the third dimension, then proceed as for 3-D.
+
+   o  Build a search tree from the outer boundary.
+
+   o  For each inner surface point:
+
+      > Construct a two-point line normal to the wall with length that of
+        a local radial line.  This should be at least as long as the
+        straight line distance to the outer boundary.
+
+      > Intersect the line with the outer boundary; store the new end pt.
+
+   o  Release the outer surface search tree; build one for the volume grid.
+
+   o  For each 2-point normal, if the surface x exceeds a specified limit,
+      set the stand-off distance to zero (assumed to be on the aft body),
+      else impose a uniform distribution (as opposed to one derived from a
+      nearby radial grid line) and for k = nk, 1, -1 interpolate the flow
+      quantity until a spike is apparent, making further relatively costly
+      interpolations redundant.  The spike defines the stand-off distance.
+
+   o  Save results in Tecplot form for merging with BLAYER results via the
+      MERGE_FILES utility.
+
+History:
+
+   04/20/07  D.A.S.  Initial adaptation of LINES_OF_SIGHT and the other
+                     single-function tools originally strung together
+                     to provide data for QRAD.  They are better suited
+                     to a thinned set of results.
+   05/08/07    "     Another XYZ convention forced a new control input.
+   08/28/09    "     Option to handle 2-D cases added transparently.
+   08/08/13    "     All ADT variants have been merged into a module
+                     with generic build_adt and search_adt interfaces.
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+                         (now with ERC, Inc. at NASA ARC)

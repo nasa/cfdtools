@@ -1,0 +1,189 @@
+HEMISPHERES_OF_SIGHT Description:
+
+  HEMISPHERES_OF_SIGHT is a variant of CONES_OF_SIGHT, itself an adaptation
+  of LINES_OF_SIGHT, q.v.  Originally, it worked with structured discretiz-
+  ations of lines of latitude and longitude, and retained the functionality
+  of LINES_OF_SIGHT if the lat/long steps were specified as zero.  However,
+  such discretizations produce clustering of the lines of site towards the
+  north pole of each hemisphere.  Therefore, this version triangulates the
+  underlying unit hemisphere (or rather one quadrant of it) to produce more
+  uniform (but not perfectly uniform) spacing of the lines associated with
+  one target body point.  The option to treat more than one body point at a
+  time has been retained, but generating only the primary line(s) of sight
+  is no longer an option - use LINES_OF_SIGHT for those.
+
+  Note that a full 3D volume grid, not half the volume, is all that makes
+  sense here, so be sure to reflect the half grid likely used for the
+  associated flow solution, unless the target points are all on the (y = 0)
+  symmetry plane, in which case the y < 0 half of the output hemisphere
+  data is suppressed.  This volume grid is assumed to contain a single
+  layer of grid blocks with k in the body normal direction, as is typical
+  for hypersonic flow over atmospheric entry vehicles.  Ox points down-
+  stream, y is positive on the starboard side, and Oz is "up."
+
+Further details:
+
+  For radiative heat flux calculations on an atmospheric entry vehicle, at
+  a specified body surface point, the "right" answer should account for all
+  possible viewing directions.  For a typical convex body, this means a
+  full hemisphere of lines of sight at each body point, not just the line
+  of sight normal to the body at each point as used with the tangent-slab
+  approximation in a typical radiation solver.  Here, the solver is expected
+  to provide a value of radiance (W.sr^-1.m^-2) for each hemisphere line
+  (vastly more expensive for even moderate discretizations), and a companion
+  utility will integrate those values with respect to solid angle subtended
+  at the body point to produce a truer estimate of radiative heat flux
+  (W.m^-2).
+
+  The primary line of sight is taken to be normal to the k = 1 surface at
+  the indicated target point.  It extends to the outer grid boundary with a
+  point distribution derived from (but not necessarily the same as) that of
+  the nearest local radial grid line.  The secondary lines have the same
+  relative distribution as the primary line.  All discretized lines are
+  saved in PLOT3D multiblock form (one line of sight per block) compatible
+  with the earlier FLOW_INTERP, which can perform the flow interpolations
+  and tabulations that are normally what are really desired for application
+  to hypersonic flows, in this case for radiation calculations involving
+  full angular integration.
+
+  The hemisphere discretization is determined by the prompted-for number of
+  points (ne) along a great circle from pole to equator (and along a 4th
+  of the equator) defining a certain triangulation.  A quarter of the
+  underlying unit hemisphere discretization is produced by slices parallel
+  to the equator through the uniform arc points, starting from near the
+  north pole.  The rest of the hemisphere is obtained by geometric trans-
+  formations.  Common edge points are presently NOT suppressed:  they will
+  be needed for eventual quadratures with respect to solid angle.
+
+  For the ne edge points specified, the number of node points on a quarter
+  hemisphere is ne*(ne + 1)/2, and the number of triangular elements is
+  (ne - 1)**2.  The primary line (along the surface normal through the
+  body point) is line number 1 in the <ID>.<bp #>.lines.g output file(s).
+
+  The triangulated surfaces, before and after the intersections-with-outer-
+  grid-boundary calculations, are output as multizone triangulations for
+  visualization with Tecplot.
+
+Strategy:
+
+  o  Read the entire volume grid and extract the inner and outer boundaries
+     as multiblock surface grids.
+
+  o  For all body points (expected to be one, but more are allowed for)
+     defining (primary) lines of sight, search the inner boundary and save
+     the relevant patch number, cell indices, and fractional interpolation
+     coefficients (which are already in hand if surface grid indices are
+     input instead of coordinates).
+
+  o  Build a [new?] search tree from the outer boundary, for the inter-
+     section calculations.
+
+  o  Construct a triangulation of a quadrant of a unit hemisphere, as
+     indicated by the input number of edge points, ne.
+
+  o  For each inner surface target point:
+
+     > Construct a two-point line normal to the wall with length that of
+       a local radial grid line.  This should be at least as long as the
+       straight line distance to the outer boundary.
+
+     > This line determines the transformations to be applied to the
+       discretized unit hemisphere quadrant.
+
+     > For each line defined by the two or four transformed quadrants,
+       intersect the line with the outer boundary and impose the indicated
+       point distribution.
+
+     > Save all lines of sight in multiblock form, with each block sized
+       1 x 1 x npts, where npts is the prompted-for number.
+
+Input body point format (read to EOF):
+
+     Either                                      or
+
+     n   i   j                                   x   y   z
+    [n   i   j                                  [x   y   z
+     n   i   j                                   x   y   z
+     :   :   :]                                  :   :   :]
+
+     where n = block number and k = 1 is implied.
+
+     Presence or absence of a decimal point in line 1 determines whether
+     indices or coordinates are being entered.
+
+Outputs:
+
+  For each target body point:
+
+      (a) Discretized hemisphere (or half-hemisphere if all target points
+          are on the symmetry plane), tangent to the body at the body pts.
+          for visualization purposes (<ID>.<BP #>.hemi.dat):
+
+          Tecplot triangulation (1 hemisphere quadrant/zone; 2|4 zones)
+
+      (b) The topologically similar triangulated surface resulting from
+          intersecting this hemisphere with the roughly-uniformly-spaced
+          lines of sight, also for visualization purposes
+          (<ID>.<BP #>.boundary.dat):
+
+          Similar Tecplot triangulation
+
+      (c) Lines of sight in PLOT3D multiblock form, 1 line per block,
+          all blocks 1 x 1 x npts, where npts is prompted for, ASCII
+          (<ID>.<BP #>.lines.g):
+
+          nnodes x nquadrants
+          1 1 npts
+          1 1 npts
+            : : :
+
+History:
+
+  10/07/05  D.A.Saunders  Initial design of LINES_OF_SIGHT.
+  11/22/05    "     "     Expanded the range of t for INTSEC6 to 2, not 1.1;
+                          Added the option to read a structured surface grid
+                          rather than a list of indices or coordinates.
+  03/06/06    "     "     Added the cone angle option.
+  03/07/06    "     "     Renamed it as CONES_OF_SIGHT.
+  03/08/06    "     "     HEMISPHERES_OF_SIGHT variant, using discretized
+                          latitude and longitude.
+  03/20/06    "     "     Users requested separate delta lat/long angles.
+  03/27/06    "     "     Move origin of longitude from xy plane to xz;
+                          suppress half a hemisphere if ytarget = 0.
+  03/29/06    "     "     Specify multiples of the first and last grid
+                          spacings, and allow the # points to vary from nk.
+  03/30/06    "     "     Reversed the storage of latitudes to go from 90 to
+                          zero, and output one line-per-block form with no
+                          replication at the "north pole."
+  02/01/14    "     "     All variants of the ADT routines have been merged
+                          into a module (generic build & search calls).
+  02/12/14    "     "     The search range for secondary-line intersections
+                          has been raised from 0.5 L : 10 L to 0.5 L : 30 L
+                          where L is the length of the initial primary line
+                          that is rotated to all the secondary positions.
+  02/21/14    "     "     A body point on the aft-body of a sphere-cone
+                          showed that 0.5 L is too large.  Use 0.1 L now.
+  03/17/14 -  "     "     Replaced latitude/longitude discretization with
+  03/24/14                triangulation of a unit hemisphere quadrant and
+                          transformations of that, to obtain roughly uniform
+                          solid-angle spacing of the lines of sight defined
+                          by the primary line and its hemisphere for each
+                          target body point.
+  03/26/14    "     "     Realized that the underlying unit hemisphere
+                          quadrant needs to be rotated about its original
+                          Oz axis to be properly axisymmetric, because the
+                          triangulation is done with constant-z slices, not
+                          constant-x (which in retrospect would have been
+                          preferable).
+  03/31/14    "     "     The last fix happily means the primary line is
+                          now the first line, not nnodes - (ne - 1).
+  01/26/15    "     "     An aft body point near the shoulder for MSL
+                          with a longer wake needed a larger search range
+                          for some of the intersections:  double the
+                          default range for aft body points.
+                          Also: element type needs to be TRIANGLE for all
+                          zones of output triangulations, now that the
+                          triangulation_io package handles volume grids too.
+
+Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
+         Now with ERC, Inc. at  NASA ARC.

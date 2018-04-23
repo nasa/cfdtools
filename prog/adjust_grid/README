@@ -1,0 +1,38 @@
+This is a variant of the earlier SCALE_GRID that uses the XYZQ_IO package
+in place of the CFD_IO_PACKAGE.  It is restricted to 3-space multiblock
+grids, and automatically determines whether the input grid is formatted
+or not.  The output format must still be prompted for.
+
+ADJUST_GRID applies one or more transformations (shift, scale, rotate,
+etc.) to all blocks of the indicated grid, in PLOT3D form:
+
+This version also includes some menu choices that affect only specified
+blocks.
+
+   data menu / &
+      '  -2: Start over',                      &
+      '  -1: Undo last transformation',        &
+      '   0: Review data',                     &
+      '   1: Translate X',                     &
+      '   2: Scale X',                         &
+      '   3: Translate Y',                     &
+      '   4: Scale Y',                         &
+      '   5: Translate Z',                     &
+      '   6: Scale Z',                         &
+      '   7: Reflect Z about the XY-plane',    &
+      '   8: Reflect X about the YZ-plane',    &
+      '   9: Reflect Y about the ZX-plane',    &
+      '  10: Reverse the order (1:N)',         &
+      '  11: Switch X & Y',                    &
+      '  12: Switch Y & Z',                    &
+      '  13: Switch Z & X',                    &
+      '  14: Scale X & Y & Z the same way',    &
+      '  15: Rotate (X,Y) about (Xc,Yc)',      &
+      '  16: Rotate (Y,Z) about (Yc,Zc)',      &
+      '  17: Rotate (Z,X) about (Zc,Xc)',      &
+      '  18: Convert inches to meters',        &
+      '  19: Convert meters to inches',        &
+      '  20: Rotate (X,Y,Z) about line PQ',    &
+      '  21: Clean up a symmetry plane face',  &
+      '  22: Edit the coordinates of a pt.',   &
+      '  99: Done' /

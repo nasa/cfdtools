@@ -1,0 +1,87 @@
+
+Description for program triangulation_tool:
+
+   Read one surface triangulation file, perform the indicated analysis or
+analyses, and (if indicated) save the result as another triangulation.
+Initially, this serves as a driver for testing geometric property additions
+to triangulation_io.f90.
+
+   The triangulation may contain more than one zone (but probably doesn't).
+
+   No control file is needed - just some prompts.
+
+Input Tecplot data format (vertex-centered):
+
+   VARIABLES = "X", "Y", "Z", "TEMP", "PRESS", "CP", "MACHE", "ASOUNDE", ...
+   ZONE N=96000, E=32000, F=FEPOINT, ET=TRIANGLE
+   0.000000  0.000000 0.000000 2838.386719 51330.925781 1.552663 0.609412 ...
+   0.000883 -0.007150 0.113643 2838.386719 51330.925781 1.552663 0.609412 ...
+   0.000883  0.000000 0.113868 2838.386719 51330.925781 1.552663 0.609412 ...
+   ::::::::::::::::
+   ::::::::::::::::
+   4.882953  0.000000 0.011285 950.867676 16.506409 -0.001166 5.062649 ...
+   1 2 3
+   4 5 6
+   7 8 9
+   10 11 12
+   ::::::::
+   ::::::::
+   95992 95993 95994
+   95995 95996 95997
+   95998 95999 96000
+
+Alternative cell-centered Tecplot input format (DPLR overset grid tools):
+
+   TITLE     = ""
+   VARIABLES = "x"
+   "y"
+   "z"
+   "p"
+   "Chm"
+   "h"
+   "qw"
+   "Re_c"
+   ZONE T="ZONE 001"
+    STRANDID=0, SOLUTIONTIME=0
+    Nodes=9367, Elements=18438, ZONETYPE=FETriangle
+    DATAPACKING=BLOCK
+    VARLOCATION=([4-8]=CELLCENTERED)
+    FACENEIGHBORCONNECTIONS=55014
+    FACENEIGHBORMODE=LOCALONETOONE
+    FEFACENEIGHBORSCOMPLETE=YES
+    DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )
+    3.756540120E-01 3.601163924E-01 3.451932967E-01 3.309260905E-01  ...
+   ::::::::::::::::
+
+  Format for a Tecplot unstructured volume file:
+
+    variables = x y z
+    zone T="grid", n=      505286 , e=     2759284 ,et=brick,     f=fepoint
+     2.273000031709671E-002  1.339999958872795E-003  0.119850002229214
+     2.288999967277050E-002 -1.100000008591451E-004  0.119819998741150
+    ::::::::::::::::
+     7.481993472351248E-002 -1.206158433734931E-002 -1.534229517647054E-002
+     98307    98308    98309    98309    98310    98310    98310    98310
+     98308    98307    98309    98309    98311    98311    98311    98311
+    ::::::::::::::::
+    263981   238511   270276   270276   270277   270277   270277   270277
+    318887   318885   378503   378503   378505   378505   378505   378505
+
+
+    If, as in this example, each hex cell is actually formed by duplicating
+    vertex 3 of a tetrahedron as vertex 4, and vertex 4 as vertices 6,7,8,
+    then volumes are treated as single tetrahedra -- not as 5 or 6 of them.
+
+History:
+
+   10/17/14  DAS  Initial adaptation of TRI_TO_TRI as a driver for applying
+                  geometric utilities that have been added to the surface
+                  triangulation module triangulation_io.f90:
+                  x/y/z/data ranges, surface area, and enclose volume.
+                  Further extensions are expected.
+   10/20/14   "   More geometric options along the lines of ADJUST_GRID.
+   10/21/14   "   Surface enter of mass and moments of inertia options.
+   11/17/14   "   Volume grid analogues of the triangulation utilities have
+                  been added to triangulation_io.f90 and are driven here.
+
+Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA

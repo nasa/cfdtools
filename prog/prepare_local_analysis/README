@@ -1,0 +1,157 @@
+Prepare_local_analysis Description:
+
+   This is a variant of prepare_rapid_analysis with an extra prompt for the
+   number of species in the flow solution.  Renaming it avoids affecting
+   existing automation scripts. This variant was prompted by turbulent flow
+   cases, where it is no longer feasible to handle 1 or 2 temperatures in
+   air without the prompt that affects existing automation.
+
+Site-Specifics:
+
+   If this program is installed at another site, the following path should
+   be edited appropriately prior to compiling and linking:
+
+      /share/apps/cfdtools/         ! See parameter constant "path" below
+
+   It is assumed that all the utilities invoked here are in subdirectories
+   with uppercase names and this indicated path.
+
+   E.g., thin_grid, adjust_grid, ... should be installed here:
+
+      /share/apps/cfdtools/THIN_GRID/thin_grid
+      /share/apps/cfdtools/ADJUST_GRID/adjust_grid   and so on.
+
+   The following utilities may be invoked by the script from this program:
+
+      thin_grid           ! Option to thin new input surface/cavity grids
+      adjust_grid         ! Option to convert input inches to meters
+      combine_blocks_turb ! Option to append/init. cavity blocks (lam|turb)
+      template            ! Generates dplr interface & control files
+      plug_interp         ! Specialized treatment of a wing LE plug
+
+Description (mostly from the original prepare_rapid_analysis):
+
+   Program prepare_local_analysis generates a shell script, named
+   local_analysis_script, and control files to run the NASA Ames tools for
+   rapid CFD analysis of damage configurations (or other perturbations -
+   often a tile cavity) with minimal user interaction.  The intended flow
+   solver is DPLR.
+
+   The baseline grid is assumed to have a single layer of blocks, with
+   k = 1 at the geometry surface.
+
+   Another shell script may be used to run prepare_local_analysis, to make
+   its output script executable, and to invoke that script. At NASA ARC see
+
+      /share/apps/cfdtools/PREPARE_LOCAL_ANALYSIS/local_analysis.sh
+
+   which is also pointed to by a symbolic link that should be in your path:
+
+      /share/apps/cfdtools/bin/local_analysis
+
+   Then typing "local_analysis" performs everything between the Gridgen and
+   FCONVERT steps via answers to a few prompts.
+
+   Alternatively, run prepare_local_analysis directly, then use
+
+      source local_analysis_script
+
+   to execute its output script.
+
+Usual sequence of steps:
+
+   Given a baseline grid (vertex-centered) and a flow solution with the 
+   cell-centered form of the grid, including "halo" cells, plus a new
+   surface grid (probably confined to the locality of a surface perturb-
+   ation) and (commonly) an associated cavity grid block or plug/gap
+   filler collar blocks, the usual sequence is:
+
+   1:  Thin the new surface and volume grids (THIN_GRID with 2 2 1 inputs).
+
+   2:  Convert the thinned grids from inches to meters (ADJUST_GRID).
+
+   3:  Generate a volume grid from the new surface & baseline volume grids
+       (first application of RADIAL_INTERP, with vertex-centered data).
+
+   4:  Interpolate the flow soln. to this volume grid (second application
+       of RADIAL_INTERP, with cell-centered data but same new surface grid
+       as 3).
+
+   5:  Combine the main volume grid from 3 with the ancillary block(s)
+       (first application of COMBINE_BLOCKS, with vertex-centered data).
+
+   6:  Combine the main flow starting guess with estimates for ancillary
+       block(s) calculated as a specialized option by a second application
+       of COMBINE_BLOCKS (cell-centered data except for the cavity grid).
+
+   7:  Generate DPLR control files (dplr.inputs and dplr.interfaces) using
+       TEMPLATE.  A sample.inputs file should be present so that the header
+       and trailer records can be transcribed to dplr.inputs.  Some editing
+       of dplr.inputs may still be needed:  the correct number of blocks,
+       the correct flight conditions, and the appropriate CFL schedule.
+
+N.B.:  Note that TEMPLATE can now avoid the need to edit certain BCs for
+       the cavity blocks (and different BCs for blocks around a plug repair
+       or a protruding gap filler) via the 'template.inp.2' ancillary file.
+       Ideally, the present program would write such a file based on how
+       many blocks are in the (optional) second grid file.  Instead, if the
+       file is present, this program can use it to distinguish between a
+       cavity and a plug/gap filler case.  Otherwise, it assumes it is
+       neither - probably just a new surface grid.
+
+       Note that gap filler cases are treated as for plug cases, and should
+       contain 'plug' in template.inp.2 (case-insensitive).
+   
+   Two runs of FCONVERT could in principle be added, but how to split the
+   blocks may need to be decided at run time according to how many CPUs are
+   deemed appropriate.
+
+History:
+
+   11/28/05  DAS  Initial step towards automating rapid cavity analysis.
+   11/29/05   "   Added the THIN_GRID, SCALE_GRID and TEMPLATE options.
+   01/09/06   "   Ryan McDaniel ran into a glitch in the no-cavity case,
+                  and suggested a prologue to summarize requirements.
+   03/31/06   "   Remind the user about editing the cavity wall BCs, and
+                  default the baseline volume grid and solution files.
+   04/14/06   "   Added handling of the leading edge plug repair case
+                  and exploited the new TEMPLATE option to make use of
+                  a 'template.inp.2' control file.
+   04/17/06   "   Fixed a couple of typos in the prologue.
+   08/04/06   "   RADIAL_INTERP's distance tolerance should be negative,
+                  meaning it will decay any surface discrepancies to
+                  zero at the outer boundary.
+   10/24/06   "   Changed the default Shuttle baseline file names from
+                  "right half" to "both halves".  Documented the fact
+                  that protruding gap filler cases are treated as for
+                  plug cases at this level.
+   07/11/08   "   The output script now begins with #! /bin/tcsh.
+   10/15/08   "   It now removes any RADIAL_INTERP log files that might
+                  be present from an earlier run.
+   10/19/08   "   A Todd White case broke the assumption that the new
+                  surface and volume files are formatted the same way.
+                  That is no longer assumed.
+   09/09/09   "   PREPARE_LOCAL_ANALYSIS is just PREPARE_RAPID_ANALYSIS
+                  with one extra prompt for cavity-type cases (number of
+                  species in the flow solution).  Renaming it avoids
+                  impacting automation scripts.
+   09/11/09   "   The prologue shouldn't mention RADIAL_INTERP control
+                  files because these are generated here once all the
+                  prompts have been answered.
+   02/13/10   "   Decaying surface discrepancies to zero at the outer
+                  boundary is found to be the wrong choice for a WLE
+                  plug (working with an offset surface in a high-
+                  curvature region).  Only shallow cavities really
+                  need the decay, so suppress it here via the +0.0002
+                  inputs to RADIAL_INTERP that had been -0.0002.
+   01/18/12   "   Installation on Redwood-2 prompted use of a path to
+                  the utilities.  But all of them have uppercase
+                  directories now, instead of the earlier mixture.
+   07/19/12   "   An extra prompt allows the decay/no-decay choice now.
+   01/13/14   "   ADJUST_GRID is preferable to SCALE_GRID now, so the
+                  option to convert inches to meters has been recoded.
+   
+Author:  David Saunders, ELORET Corp./NASA Ames Research Center, CA
+                         Now ERC, Inc./NASA ARC.
+
+

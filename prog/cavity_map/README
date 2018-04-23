@@ -1,0 +1,216 @@
+CAVITY_MAP Description:
+
+   This program maps a CFD surface solution in and around a cavity or gouge
+   on to an idealized cavity grid for comparison with other calculations.
+
+   The earlier Ensemble program assumed the cavities were rectangular, but
+   no such assumption is made here.  Instead, an idealized rectilinear
+   form of the cavity is used as an ancillary input.  This has four cavity
+   walls and floor at arbitrary angles, plus surrounding surface patches.
+
+   The rectilinear outer envelope comes from Boeing's Cavity Heating Tool.
+   Mapping the CFD solution to the Cavity Heating Tool grid turns out to be
+   what was really required here (not the mapping to a unit cavity done in
+   Ensemble), so that CFD fidelity can indicate if the engineering tool
+   is conservative or not.  Such a mapping has been added as a further
+   output, without eliminating the unit cavity mapping of both the CFD and
+   outer envelope solutions. This version does more than interpolate at the
+   coarse mesh vertices: it averages the CFD soln. over the areas of each
+   coarse cell.  It also generates slices of both the mapped/smoothed CFD
+   data and the input CHT data for line plot comparisons.
+
+Strategy of original outer/inner envelope approach, & the alignment scheme:
+
+   >  Impose CFD-type dense grids on the idealized surface patch edges.
+      This is the outer envelope for the actual damage.
+   >  Construct a scaled-down, shallow form of the idealized walls and
+      floor, sitting on the smooth OML and centered sensibly.  This acts
+      as an inner envelope for the cavity portion.
+   >  Align the CFD surface grid with the working axes by calculating the
+      principal axes of the CFD cavity patches (masses <-> cell areas
+      acting at cell centroids lead to moments of inertia about the center
+      of mass; the eigenvectors of the inertia matrix form rows of the
+      needed rotation matrix).
+      N.B.:  This version no longer uses cavity L, W, D to distinguish the
+      principal axes, because as the dimensions become less distinct, and
+      with sloping walls in the picture, the area-based moments of inertia
+      are less likely to make the distinctions reliably.
+      Instead, all possible permutations of the tentative rotation matrix
+      are applied, and the one that best transforms a third (derived)
+      reference point and the center of mass is chosen.
+   >  For each line connecting corresponding points of the two sets of
+      idealized wall and floor patches, find the intersection with the
+      realigned CFD surface grid.  The CFD solution at that intersection is
+      the desired mapped solution on a unit cavity, which is topologically
+      the same as the dense, idealized cavity and can be derived from it by
+      normalizing the arc lengths as (u,v) in the unit square and using u
+      and v for the non-constant x, y, or z appropriately.
+   >  For the smooth OML patches downstream & adjacent to the unit cavity,
+      employ the ADT search and interpolation techniques used in Ensemble.
+   >  There appears to be no point in retaining the option to perform
+      ensemble averaging of multiple solutions.
+
+   N.B.: This version also permits use of plain ADT searches for all
+   idealized patches.  It appears that the inner/outer envelope method for
+   the cavity matches may not be necessary, and it suffers in places where
+   the intersection lines are almost parallel to the CFD surface.  This
+   possibility forced suppression of possible line extrapolation during the
+   line/surface intersection calculations.  Method 2 is now recommended.
+
+Assumptions:
+
+   >  Shuttle coordinates:  X -> downstream, Y -> right wing, Z -> up
+   >  The idealized outer envelope comes from the Cavity Heating Tool and
+      is in a standard 10-patch form.  No assumptions are made about the
+      (i,j) convention, however.
+   >  The x,y,z coordinates have the same units.  A hidden scaling factor
+      applied to the CFD data is optional at the end of control file.
+
+Control file format ('cavity_map.inp'):
+
+   Cavity_map control file
+   dplr_cavity_soln.dat  ! CFD surface solution (Tecplot ASCII file)
+   1                     ! Flow variable representing heating bump factor
+   1  10  33             ! CFD patch # and (i, j) of reference upstrm. pt.
+   8  10  33             ! CFD patch # and (i, j) of reference dnstrm. pt.
+   1.0                   ! Reference heating value; < 0 => diagnostics
+   ! List of CFD patches inside the cavity
+   1, 2, 10:25
+   heating_tool_grid.dat ! Idealized cavity grid (Tecplot ASCII)
+   2                     ! 1 = inner/outer envelope method; 2 = plain ADT
+  [-0.0254               ! Optional scale factor applied to the CFD xyzs;
+                         ! negative means divide rather than multiply.]
+
+Notes:
+
+   (1) The reference CFD points should be at the upstream and downstream
+       cavity lips near the mid-points.  The line joining them after
+       realignment will be in the Z = 0 plane.
+   (2) The reference heating value allows flow values to be converted to
+       bump factors; use 1.0 if the flow values are already bump factors;
+       use < 0 to turn on output of intermediate grids and diagnostics
+   (3) The list of CFD cavity patches can use commas and colons.
+   (4) See the optional scale factor at the end of the control file above.
+
+Input Surface Solution Format (Tecplot ASCII, structured, CFD & Idealized):
+
+      TITLE     = ""
+      VARIABLES = "x" "y" "z" "BF" ["..."]
+      ZONE T="G1"
+       I=66, J=66, K=1, ZONETYPE=Ordered
+       DATAPACKING=BLOCK
+       DT=(DOUBLE DOUBLE ... (variable # of them) ... DOUBLE DOUBLE )
+       6.647333145E+00 6.575638294E+00 6.489704609E+00 6.390774727E+00 6...
+        :               :               :               :               :
+   POINT data packing is also permitted.  One or more flow variables may be
+   present.
+
+Output Results (Tecplot ASCII files):
+
+   (1) CFD solution mapped to a unit cavity with CFD-type grid density.
+   (2) CFD solution mapped to the plain outer envelope grid (CHT grid).
+       This was added belatedly as what was really wanted.
+       However, the realignment benefits from use of CFD-type resolution.
+       Results have been non-dimensionalized by the ideal cavity length.
+   (3) Two pairs of slices and dices of mapped/smoothed CFD data on the
+       CHT grid and of any functions input with the CHT grid.
+       The slice & dice abscissas are arc length, not X or Y, for better
+       display of results along vertical cavity walls.
+       Each cut is a separate zone.
+
+   The output formats are similar to the input formats (Tecplot ASCII).
+   The output file names are derived from the input CFD file name.
+
+History:
+
+   05/13/05  D. Saunders  Final version of Ensemble (rectangular cavities).
+   6/14:6/21   "      "   Initial adaptation as Cavity_Map.
+   06/22/05    "      "   Map the plain outer envelope (probably from the
+                          cavity heating tool) by making sure the indexing
+                          is in standard order then normalizing as for the
+                          form used with the interpolated CFD solution.
+   06/29/05    "      "   The transpose of the rotation matrix should be
+                          applied for realignment.  This was hidden during
+                          tests that mapped the outer envelope to itself.
+   07/01/05    "      "   Added the option to use the plain ADT mapping
+                          method everywhere.  Added mapping to the plain
+                          outer envelope grid.
+   07/03/05    "      "   Introduced a second CFD reference point in order
+                          to take out a misalignment that is inevitable if
+                          the ideal cavity walls are not symmetric.
+   09/21/05    "      "   Steve Alter urged a control-volume averaging
+                          approach for the interpolations to the coarse
+                          Cavity Heating Tool mesh. This is now done by
+                          dividing the coarse cells into many sub-cells.
+   10/19/05    "      "   Output line plots from the CHT grid (CFD + CHT).
+   10/29/05    "      "   Mapping a copy of the coarse, linear CHT data to
+                          the CHT grid highlighted the lack of continuity
+                          at patch edges caused by the area-based averaging
+                          to cell centers.  Therefore, force equality along
+                          common edges by averaging in map_to_envelope.
+   11/02/05    "      "   Make arc length the abscissa for slices & dices.
+                          This was a little awkward, requiring temporary
+                          copies of slice X & Ys, etc.
+   02/06/06    "      "   Internal procedure deallocate_blocks is now a
+                          part of Tecplot_io.f90.
+   02/16/06    "      "   Steve Alter's subscript check caught something in
+                          in subroutine slice_patch.  The slice arrays
+                          passed from the higher level are big enough but
+                          were wrongly dimensioned in the routine. Using
+                          (*) is simpler than passing the right length.
+   04/27/06    "      "   Using the same slice & dice arrays for the CFD
+                          and CHT solutions is bad inside the Tec I/O pkg.
+                          if the numbers of functions differ.  We need to
+                          deallocate %q arrays and reallocate them if a
+                          CHT solution is present.
+   05/02/06    "      "   Divide the dimensional outputs by cavity LENGTH.
+   06/01/06    "      "   Permute_R had a glitch affecting the case where
+                          cavity W > L > D.
+   08/14/06    "      "   Revised to use Tecplot 360 version of the
+                          Tecplot_io package.
+   08/24/06    "      "   The mapped.* file's variable names beyond 4
+                          were not being copied from the CFD file.
+   07/26/07    "      "   Use of L, D, W to distinguish the principal axes
+                          is not reliable if any two are close to each
+                          other, and sloping walls add to the fuzziness of
+                          the calculations.  Instead, all 48 permutations
+                          of the initial rotation matrix are now tried, and
+                          the one that best transforms a third, derived
+                          reference point is chosen.
+                          An optional scale factor may be included at the
+                          end of the control file.  It is applied to the
+                          CFD coordinates.  If it is negative, it is used
+                          to divide rather than multiply the coordinates.
+   07/29/07    "      "   Offset the derived reference point to help break
+                          ties, and include the transformed center of mass
+                          in the test for the best rotation.
+   07/30/07    "      "   Tabulate floor averages for 85/15% and 50/40/10%
+                          splits.
+   07/31/07    "      "   Tabulate floor averages for the CHT solution too.
+   08/05/07    "      "   CFD uncertainties are now added according to the
+                          Length/Depth ratio (floor and walls) or half the
+                          excess over 1 (outside, after averaging).  The
+                          line plot files now contain an extra variable.
+   08/10/07    "      "   Bill Wood revised the uncertainty definitions:
+                          walls and OML now use |BF - 1|.  Also, the short/
+                          long cavity cutoff changed from 10 to 15 L/D.
+   08/15/07    "      "   Before the principal axis calculations, align the
+                          reference points with the X axis.  This makes no
+                          difference in some cases (suggesting consistency)
+                          yet can help other cases (possibly with more of a
+                          rotation about OX).
+   08/16/07    "      "   Determine preliminary and final rotations about
+                          line joining reference points by 1D optimization.
+   08/20/07    "      "   Remove possible bad scaling of the CFD data by
+                          shifting it to the cavity patch center first.
+                          However, it doesn't help - moments of inertia
+                          work with X - Xcg, etc. anyway.
+                          Now that the third 2-D rotation can be found via
+                          1-D optimization, just go with that now.
+                          This does depend on the reference points' being
+                          on a line parallel to the length axis.
+   08/08/13    "      "   All ADT variants are now in one module with
+                          generic build_adt and search_adt interfaces.
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+         Now with ERC, Inc. at NASA ARC.

@@ -1,0 +1,35 @@
+GRADIENT_BASED Description:
+
+   This is a driving program for subroutines GRADDIS2 and GRADDIS and their
+   3-space analogues, which are intended to redistribute grid points along
+   a 2- or 3-space line or curve based on the gradient magnitudes of the
+   function accompanying the (x,y[,z]) points.
+
+   It was prompted by a desire to thin the line-of-sight data used to
+   perform radiative heating calculations via NEQAIR, in a somewhat
+   intelligent way.
+
+Input data format:
+
+   x1  y1  [z1] f1
+   x2  y2  [z2] f2     Arc lengths along this curve will be redistributed
+   :   :   :    :
+   xn  yn  [zn] fn
+
+Output:
+   X1  Y1  [z1] F1
+   X2  Y2  [z2] F2     Here, m is probably less than n, but not necessarily
+   :   :   :    :
+   Xm  Ym  [zm] Fm
+
+   Chances are that multiple functions will need to be interpolated to the
+   new coordinates, but interpolating the driving function tests the new
+   variant of LCSFIT (LCSFIT2, which normalizes the data beforehand).
+
+History:
+
+   11/21/2013  D.A.Saunders  Initial test program for GRADDIS[2] ...
+   11/22/2013    "      "    ... and for LCSFIT2 (interpln. w/ normalzn.).
+   12/02/2013    "      "    Added the 3-space option.
+
+Author:  David Saunders, ERC Inc. at NASA Ames Research Center, CA

@@ -1,0 +1,11 @@
+NBYN, NBYN2, and NBYN3 provide for interactive solution of small square
+systems of equations:
+
+NBYN  drives the versions of DECOMP & SOLVE from Forsythe, et al., giving
+      the matrix condition number estimate as well as the solution for
+      one or more right hand sides.
+
+NBYN2 drives LUSOLVE from the linsys library, suited to a single RHS.
+
+NBYN3 drives the versions of DECOMP & SOLVE from the linsys library (no
+      condition number estimate; multiple right hand sides).

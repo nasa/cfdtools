@@ -1,0 +1,9 @@
+EXTRACT_LINES Description:
+
+Extract every nth line from a text file consisting of a title
+followed by groups of n lines, until EOF.
+
+03/13/00  D.Saunders  Initial implementation for dealing with
+          ELORET      trajectory results from HAVOC/Excel file.
+          NASA Ames
+08/03/02      "       If i1 = 0, no title is assumed.

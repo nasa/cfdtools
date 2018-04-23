@@ -1,0 +1,200 @@
+HYPER_AERO Description:
+-----------------------
+
+Calculate Newtonian-type aerodynamic lift/drag/moment coefficients for
+a hypersonic vehicle at a range of Mach numbers and angles of attack.
+A choice of impact pressure methods and shadow methods is provided.
+
+The geometry OML (outer mold line) is input either as a triangulated
+surface in FAST or STL formats, or as a surface paneling of the form
+produced by AEROSURF (structured multiblock surface grid in PLOT3D/FAST
+format).  If the OML is in surface patch form, it is triangulated here
+prior to the aerodynamic calculations.
+
+Coefficients for one or more flight conditions are calculated and
+tabulated as standard output.  A surface Cp distribution is an optional
+output, corresponding to the last case calculated.  The associated
+triangulation may be suppressed (since it may have been produced by
+an earlier run), and does NOT match the initial triangulation.  This
+is because the Cp values are associated with the triangle centroids,
+not their vertices.  Rather than interpolating to the vertices, each
+Cp is simply written three times and the corresponding triangulation
+contains all the implied repetitions of points with trivial connectivity.
+
+Special case for Cp studies:
+--------------------- ------
+
+   If a single triangle is being analyzed (two faces), and the Cp file
+name is not 'none', that file is used for saving (M, Alpha, Cp, Cp-shadow)
+at all of the indicated angles of attack (= impact angles), where the
+range 0 : 180 degrees is suggested.
+
+   Here is a sample such single triangle with two faces:
+
+      3  2  0                               ! points, faces, tetrahedra
+      -.5773502693 -.5773502693 1.154700539 ! X coordinates
+      0. 0. 0.                              ! Y coordinates
+      -1. 1. 0.                             ! Z coordinates
+      1 3 2 1 2 3                           ! Connectivity
+      1 1                                   ! Component numbers
+
+Sample control file (standard input):
+-------------------------------------
+
+   INPUT SURFACE      QUADS/TRIS/STL?    NORMAL_FLAGS?    FORMATTED?
+   sharp-v5.xyz           quads          .TRUE.           .TRUE.
+
+   OUTPUT TABULATION      OUTPUT TRIANGULATION         Cp file (last case)
+   sharp-v5.coefs         none                         mach20.cps
+
+   REF. LENGTH   REF. AREA   X_CG   Y_CG   Z_CG    GAMMA
+   39.7534       173.95     20.862    0.     0.    1.2
+
+   MACH1  MACH2  INCREMENT
+   20.    20.    1.
+
+   ALPHA1 ALPHA2 INCREMENT
+   0.     10.    2.
+
+   BETA1  BETA2  INCREMENT
+   0.     0.     1.
+
+   PITCH/YAW/ROLL MOMENT SWITCHES (to overcome convention uncertainties)
+   -1.   1.   1.
+
+   X/Y/Z CONVENTION SWITCHES (for conversion to Jameson convention)
+   1  0  0
+   0  1  0
+   0  0  1
+
+   IMPACT METHOD  SHADOW METHOD
+   1              1
+
+Notes:
+------
+
+1. The internal X/Y/Z convention is that of the Jameson flow solvers:
+   X points downstream; Y points up; Z points outboard (left wing).
+   The permutation inputs allow for switching the sign of X and for
+   swapping and/or switching the signs of Y and Z (only).
+   Output coordinates are transformed back to the input convention
+   if necessary.
+
+2. NORMAL_FLAGS applies to structured surface patches only.
+   If NORMAL_FLAGS is TRUE, the surface paneling file should end with the
+   following data (as from the AEROSURF program):
+
+   Components:
+     1  1  1  1  2  2  2  ...  (as many integers as surface patches)
+   Signs to apply to normals:
+    -1 -1 -1 -1  1  1  1  ...  (means for switching the sign of normals)
+
+   Otherwise, all component numbers are set to 1, and all signs to +1,
+   meaning the input paneling should have outward normals implied by the
+   right-hand (i,j,k) rule: k should be out of the surface.
+
+3. The (final case) Cp distribution will not be written if the file
+   name is 'none' or 'NONE'.  The file is formatted (ASCII text).
+   It contains 3 * NFACES values - the same Cp at each vertex of each
+   triangle, for all triangles.  See above for the special case of a
+   single triangle, where instead Mach, Alpha, Cp, Cp-shadow are saved.
+
+4. Likewise, the corresponding triangulation will not be saved on disk if
+   the specified file name is 'none' or .NONE'.  Otherwise, the file is
+   formatted (not binary), for FAST.  It contains all vertices of every
+   triangle (meaning replicated points) in order to match the Cp file.
+   A Tecplottable form of this file is also written now.
+
+5. STL triangulation format:
+
+   solid ABC
+      facet normal 1.  0.  0.
+        outer loop
+          vertex 50. 30. 10.
+          vertex 50. 30. -10.
+          vertex 50. 31. -5.
+        endloop
+      endfacet
+      facet normal ...
+        ::::::::::::
+      endfact
+      ::::::::::::::
+      ::::::::::::::
+   endsolid ABC
+
+6. Available impact pressure methods:
+
+   1  Modified Newtonian
+   2  Improved Tangent-Cone
+   3  Tangent-Wedge (Empirical)
+   4  Tangent-Wedge (Oblique shock relationships of NACA TR 1135)
+   5  Newtonian + Prandtl-Meyer expansion method (slope matched)
+   6  Inclined Circular Cone
+   7  Dahlem-Buck method
+   8  Free Molecular Flow
+
+7. Available shadow methods:
+
+   1. Cp = 0.
+   2. Prandtl-Meyer expansion from free stream
+   3. Newtonian + Prandtl-Meyer
+   4. Base pressure relationship
+
+History:
+--------
+
+10/18/00  D.A.Saunders  Program NEWTONIAN is an initial completion of
+                        James Reuthers beginnings for AEROSURF-type
+                        paneled surfaces, with potentially reusable
+                        utilities in argument-driven form.
+10/20/00      "         The surface normals are problematic.  Ideally,
+                        the input paneling should be such that they are
+                        outward normals.  If not, a switch can now be
+                        imposed by this program (see NORMAL_FLAGS).
+10/24/00      "         Added L/D output and second tabulation for
+                        more convenient plotting of polars.
+11/29/00      "         Store the surface Cp distribution, and write it
+                        and/or the triangulation to disk if specified.
+                        Thanks to Scott Thomas (Raytheon/Ames) for the
+                        suggestion that avoids interpolation.
+12/13/00      "         FACE_AREA(*), not PROJECTED_AREA(1:3,*), is now
+                        stored at the cost of one multiply per triangle.
+01/03/01      "         Added option to read a triangulated surface.
+02/02/01      "         Provided X/Y/Z convention switches.
+                        Arranged for choice of impact pressure method
+                        (all components and all flight conditions for
+                        now, but this needs generalizing), prompted by
+                        installation of a free molecular flow method.
+02/08/01      "         Installed improved tangent-cone method from HABP.
+02/12/01      "         Installed tangent-wedge empirical method (HABP).
+02/14/01      "         Installed tangent-wedge method COMPR from HABP.
+03/01/01      "         Installed Newtonian + Prandtl-Meyer method of
+                        NEWTPM from HABP.  (COMPR never really needs it.)
+03/02/01      "         Installed INCLINED_CONE method (ACONE in HABP).
+03/05/01      "         Installed Dahlem-Buck method from in HABP.
+                        The ACONE method is not right yet.
+03/16/01      "         Introduced shadow method options in TANGENT_WEDGE_
+                        EMPIRICAL (only).
+03/23/01      "         Put the impact and shadow methods inside the
+                        loop over surface elements, as opposed to
+                        replicating the loop for each impact method.
+04/06/01      "         Introduced STL triangulated geometry input option.
+04/23/01   DAS/JJR      NEWTONIAN program name has changed to HYPER_AERO.
+07/05/01     DAS        Arranged for saving (M, Alpha, Cp, Cp-shadow) for
+                        the special case of a single triangle.
+06/07/02      "         Handled zero increments for ranges of Mach and
+                        Alpha; trapped likely misuse of NORMAL_FLAGS.
+07/19/02      "         STL input had a bug.
+04/01/08      "         The outputs in FAST format are no longer useful,
+                        but writing an addition file in Tecplot format is
+                        easier than eliminating them.  The file name is
+                        fixed at Tecplotable_Cp.dat.
+09/15/10      "         The control file is now read from standard input
+                        instead of being hardcoded as hyper_aero.inp.
+                        Any coordinate transformation is applied to the
+                        CG coordinates as well, and is undone before any
+                        surface Cp distributions are written.
+
+Authors:  David Saunders (ELORET Corporation), James Reuther (ASA Branch).
+
+Sponsor:  Reacting Flow Environments Branch, NASA Ames Research Center, CA

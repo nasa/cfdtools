@@ -1,0 +1,10 @@
+add_executable(reflect_blocks_2d
+  reflect_blocks_2d.f90
+)
+target_link_libraries(reflect_blocks_2d global)
+target_link_libraries(reflect_blocks_2d
+  progtools
+  xyzq_io
+)
+install(FILES README DESTINATION doc RENAME reflect_blocks_2d)
+install(TARGETS reflect_blocks_2d DESTINATION ${CMAKE_INSTALL_BINDIR})

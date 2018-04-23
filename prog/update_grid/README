@@ -1,0 +1,27 @@
+Program UPDATE_GRID description:
+
+   UPDATE_GRID overwrites the indicated block(s) of a multiblock grid.
+Blocks being replaced should be specified in ascending order so that
+only one block needs to be stored at a time.  The dimensions of the
+block(s) being replaced cannot change.
+
+   UPDATE_GRID might be used in conjunction with GSMOOTH, which smooths
+one block of a grid at a time.
+
+Known weakness:
+
+   If more than one block is being updated from the same replacement file,
+there is no attempt to suppress the prompt for that file (it is done from
+within the I/O package) or to avoid repeated reads from the top of the
+file to the desired blocks.  The anticipated usage is with multiple
+single-block files being plugged into one multiblock file.  Substituting
+patches in a surface grid is another possibility.
+
+History:
+
+   02/20/00  D.A.Saunders  Initial adaptation of GSMOOTH.
+   10/20/03    "      "    Remind the user to enter block changes in order.
+   02/10/14    "      "    Replaced CFD_IO_PACKAGE with xyzq_io package.
+   04/12/16    "      "    Fixed a glitch in transfer of untouched blocks.
+
+Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA.

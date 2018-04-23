@@ -1,0 +1,39 @@
+SURFACE_CURVATURE Description:
+
+   For a structured multiblock surface or volume grid, calculate four forms
+of curvature and save the surface results in Tecplotable form.  If the grid
+is a volume grid, determine the face of each block most likely to be a
+solid wall (via the smallest average off-wall increment) and output results
+for that face of the block.
+
+   This version has the option to add unit surface normals to the output.
+
+   The two main forms of curvature are Gaussian and mean curvature, from
+which two principal curvatures can be derived.  Most of the calculations
+are performed in subroutine "gaussian_curvature", q.v. for further details.
+
+   Note that the partial derivatives of x, y, z with respect to arc length
+along the grid lines are not true partial derivatives if the surface grid
+lines are not orthogonal.  Thus, in general, these curvature results are
+approximate only, less so the more orthogonal the surface grid lines.  A
+hemispherical test case gives very good results on the three main patches
+but the end cap patches that avoid singular points have almost 180-degree
+interior angles.  The method breaks down at those corners (though it is
+safeguarded), and is noisy near them.
+
+   Another weakness is that there is no guarantee of continuity across
+surface patches at common boundaries, since only one patch is treated at a
+time, with one-sided differencing at grid line end points.
+
+History:
+
+   09/07/05  D. A. Saunders  Initial implementation, for CEV capsules.
+   09/08/05     "     "      Added output of the principal curvatures.
+   09/09/05     "     "      Handled volume grids as well as surface grids.
+   09/12/05     "     "      More careful solution of the quadratic for the
+                             principal curvatures.
+   10/03/06     "     "      Installed Tecplot 360 version of the I/O pkg.
+   11/27/07     "     "      A question from Todd White about surface
+                             normals led to adding such an option here.
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA

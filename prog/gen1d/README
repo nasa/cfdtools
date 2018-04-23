@@ -1,0 +1,65 @@
+PURPOSE:
+
+   GEN1D is intended to generate data that can be used for evaluating 1-D
+   interpolation/smoothing routines. It provides a menu of likely functions
+   of one variable (easily modified as necessary).  It also provides the
+   option to evaluate the specified function at a self-generated set of
+   grid points or at a set read from a file.  Results are written to
+   'gen1d.dat' in the following (Tecplotable) format:
+
+                    # Title with function details
+                    # NPTS
+                    X(1)     Y(1)
+                    X(2)     Y(2)
+                     :        :
+                    X(NPTS)  Y(NPTS)
+
+   If a grid is read from a file, its format is the same except that it has
+   1 column, not 2.  (Columns after the first will be ignored.)
+
+   Provision is made for parametric functions in the form X = X(T),
+   Y = Y(T).  Here, reading a T distribution is an unlikely requirement
+   and is NOT provided for.
+
+   An option for applying noise to the Y values (or to both X and Y for the
+   parametric functions) is also provided.
+
+METHOD:
+
+      Select function of X from menu.
+      Prompt for type of grid to use:
+      IF <self-generated> THEN
+         Prompt for XMIN, XMAX, DX.
+         Generate points X(*).
+      ELSE
+         Prompt for grid file name and read X(*).
+      END IF
+      Prompt for additional constants and evaluate function at all pts.
+      Write them to the output file.
+
+HISTORY:
+
+  DAS   10/17/86   Adapted from GEN2D
+  DAS   02/18/87   Provided for X=X(T), Y=Y(T) parametric functions
+  DAS   11/20/87   Installed option to apply noise to the data
+  DAS   06/05/91   Added sin(x)/x and sinh(x)/x options.
+  DAS   03/21/92   Added parametric form of the parabola.
+  DAS   01/09/93   Made the cubic a quartic.
+  DAS   08/22/97   Added Hermite cubic on [0, 1]
+  DAS   09/27/00   Replaced IMSL's GGNML with GAUSS/RAN3 found on the web.
+  DAS   10/26/01   Added QUINTIC.
+  DAS   10/29/03   Slight changes for 64-bit version.
+  DAS   07/19/04   Use of $ carriage control was obsolete.
+  DAS   10/27/10   Added f(x) = Aexp(Bx) + C option; Fortran 90 upgrades.
+  DAS   11/15/10   Generalized previous option to handle Aexp(B/x) + C too.
+  DAS   11/22/10   Added Ax**n*exp(Bx) and power law option:  Ax**B + C.
+  DAS   05/24/11   Outputs are 64-bit precision now, not single precision.
+  DAS   10/06/11   Added sin**n(x.pi/2) (x in [0, 1]) & 2 catenary options.
+  DAS   10/13/11   Replaced explicit discretization of a cosh (x/a) - a
+                   with a call to catenary grid (left|right|both halves)
+                   unless a desired parameter a is input.
+  DAS   05/16/14   Added Gaussian and normal distribution options, along
+                   with the error function-related options.
+
+
+AUTHOR:  David Saunders, Sterling Software/ELORET/ERC at NASA Ames.

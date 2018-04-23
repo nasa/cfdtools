@@ -1,0 +1,141 @@
+SORT_SURFACE_SLICE Description:
+
+This utility reads a dataset resulting from Tecplot's option to slice a
+surface dataset defined by a plane.  The dataset has been saved as a single
+zone of nodes and 2-point line segment pointers.  Plotting the points as
+symbols may not be appropriate: a continuous curve is commonly desired, and
+sorting by x, y, or z may be all that is needed.  Plotting against arc
+length along the curve may also be desirable, so the option to add
+cumulative arc length as an additional variable is also provided.
+
+Originally, the program just treated the common case where sorting the
+nodes in x, y, or z suffices to produce a single meaningful continuous
+curve.  This version retains that option but can also allow for more than
+one contiguous curve in the slice, as in the case of a cut through a
+fuselage that also encounters the outboard portion of a swept wing.  Each
+such segment appears as a distinct zone in the output file and may have
+arc lengths added.  This option makes use of the 2-point line segment
+pointers accompanying the slice coordinates.
+
+Further, a specialized option is provided for the common requirement of
+plotting surface quantities versus run length from the stagnation point of
+a hypersonic flow solution (capsule centerline, or possibly near the wing
+leading edge of a wing section slice).  If a single contiguous curve is
+found, and a flow variable name starts with p or P, and insertion of arc
+lengths has been requested, then the peak pressure point along the curve is
+taken to be the stag. pt., and arc lengths are adjusted to increase in both
+directions away from it.  This form is appended as a second output zone,
+preserving the initial ordered slice zone in case the stag. pt. option is
+not intended, since no extra prompts have been added.
+
+Sample input dataset (POINT order, single zone, 1 variable name per line):
+
+   TITLE     = "A"
+   VARIABLES = "x [m]"
+   "y [m]"
+   "z [m]"
+   "pw [Pa]"
+   "qw [W/m^2]"
+   ZONE T="Slc: Z=0"
+    STRANDID=0, SOLUTIONTIME=0
+    Nodes=118, Elements=109, ZONETYPE=FELineSeg
+    DATAPACKING=POINT
+    DT=(DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE )
+    1.584258E-02 3.505522E-01 0.000000E+00 1.358903E+03 1.643338E+05
+    1.646541E-02 3.586402E-01 1.969463E-19 1.358848E+03 1.643071E+05
+     :            :            :            :            :
+    1.250000E+01 1.000000E+01 4.147692E-18 1.009208E+03 4.999492E+04
+    2 1
+    2 3
+    3 4
+    6 5
+    : :
+    117 118
+
+Corresponding output (single segment case with arc lengths inserted):
+
+   TITLE     = "A"
+   VARIABLES = "x [m]"
+   "y [m]"
+   "z [m]"
+   "pw [Pa]"
+   "qw [W/m^2]"
+   "s [m]"
+   ZONE T="Slc: Z=0"
+    STRANDID=0, SOLUTIONTIME=0
+    I=118, J=1, K=1, ZONETYPE=Ordered
+    DATAPACKING=POINT
+    DT=(DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE )
+    1.58425E-02 3.50552E-01 0.00000E+00 1.35890E+03 1.64333E+05 0.0000E+00
+    1.64654E-02 3.58640E-01 1.96946E-19 1.35884E+03 1.64307E+05 1.2345E-02
+     :           :           :           :           :           :
+
+   [ZONE T="Slc: Z=0, Stag. Pt. Run Length"
+    STRANDID=0, SOLUTIONTIME=0
+    I=118, J=1, K=1, ZONETYPE=Ordered
+    DATAPACKING=POINT
+    DT=(DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE )
+    1.64654E-02 3.58640E-01 1.96946E-19 1.35884E+03 1.64307E+04 1.2345E+00
+    1.58425E-02 3.50552E-01 0.00000E+00 1.35890E+03 1.64333E+04 1.2340E+00
+     :           :           :           :           :           :
+    1.58425E-02 3.50552E-01 0.00000E+00 7.65432E+03 1.64333E+05 0.0000E+00
+     :           :           :           :           :           :
+    1.58425E-02 3.50552E-01 0.00000E+00 1.35890E+03 1.64333E+04 1.2340E+00
+    1.64654E-02 3.58640E-01 1.96946E-19 1.35884E+03 1.64307E+04 1.2345E+00]
+
+I/O Strategy:
+
+   Keep the parsing that would elsewhere be de rigeur to a minimum.
+   This is a file written consistently by Tecplot, after all.
+   Scan the header lines as strings until a purely numeric string is found.
+   Rewind and reread the header lines as an array. Find the line containing
+   NODES (after upcasing) and adjust as shown in the sample if simple sort-
+   ing is specified.  If arc length is to be appended as an extra column,
+   insert its name appropriately during writing of the output header lines.
+   Read the indicated number of points, sort them as specified, and write
+   them in the desired order, possibly appending an arc length to each
+   line.  If the 2-point line segments are to be pieced together as one or
+   more contiguous curves, a more awkward output strategy is required, but
+   existing utility CUTORDER does the hard part after extension to one or
+   more functions.
+
+History:
+
+   07/30/10  D.A.S.  Initial implementation of useful functionality
+                     prompted by John Theisinger's axisymmetric/3-D
+                     aero-heating correlation study.  Sorting should
+                     suffice for simple geometries, but the 2-point
+                     line segments should be pieced together properly
+                     for general cases where multiple curve segments
+                     should be written as separate zones.
+   08/13/10    "     Completed it with the option to process the
+                     2-point line segment information properly.
+   08/19/10    "     Data lines from BLAYER exceed 512 characters,
+                     so the apparent number of variables was wrong.
+   08/20/10    "     Plotting versus run length from stagnation point
+                     is desirable enough that it has been added as a
+                     somewhat specialized option for cases that find
+                     one contiguous curve and have a flow variable
+                     starting with p or P (since peak pressure is
+                     taken to be at the stag. pt.).
+   08/23/10    "     A slice that happens to be a closed curve and
+                     can start/end anywhere needs special treatment
+                     for the stag. pt. run-length option.  We assume
+                     that the stag. pt. is on y = 0, locate the
+                     aft-most point with y closest to 0, and shift
+                     the data circularly to make that point index 1,
+                     then proceed as for an open single curve.  Also,
+                     blunt bodies don't suit positive arc lengths on
+                     the lee side, so make those negative, and allow
+                     for the common case of an upside-down capsule
+                     by making the shorter of the two run lengths use
+                     negative arc lengths if aspect ratio < 1.5.
+   09/28/10    "     Slices from layouts with text boxes turn out to
+                     include the text boxes before the zone info., so
+                     inserting the arc length variable name had to be
+                     done more carefully.
+   10/06/10    "     Last_var_line wasn't being set if a pressure
+                     variable was not present.
+Author:
+
+   David Saunders, ELORET Corporation/NASA Ames Research Center, CA

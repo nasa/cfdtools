@@ -1,0 +1,104 @@
+Program forebody_regrid:
+
+Program HEAT_SHIELD produces a single-patch surface grid with spokes that are
+uniformly distributed in the azimuthal direction and form a singular point at
+the apex. This specialized application replaces the apex region with a quasi-
+rectangular patch (or two) to avoid a singular axis in the associated volume
+grid.  It reads the left half of the forebody as written by HEAT_SHIELD, but
+results are written in the more usual form as the starboard (right) half with
+Y positive and Z up.
+
+Input Coordinate System (Right-Handed):
+
+   X points downstream for zero angle of attack
+   Y points up
+   Z points to the right looking from upstream
+
+Output Coordinate System (Right-Handed):
+
+   X points downstream for zero angle of attack
+   Y points to the left looking from upstream
+   Z is up
+
+This version has been extended for the specialized case of an umbrella-type
+configuration, where some deflection needs to be applied to the conical
+portion of the (assumed sphere-cone) geometry between the "spokes" to model
+flexible thermal protection material.  This is done before regridding the
+nose, and should be independent since the nose quadrant patches are expected
+to be forward of the sphere-cone juncture.  The vertical centerline is
+placed between umbrella spokes so that the symmetry plane shows the region
+of maximum deflection.  The edges of the now-polygonal shoulder are morphed
+to be straight lines in the azimuthal direction for any (semi)patch between
+spokes, before the deflections are applied.  Because of the assumed symmetry,
+the strategy is to regrid one deflected semipatch and transcribe it to all
+the other locations.  The deflections are constructed from catenary curves.
+
+Original Nose-Regridding Strategy:
+
+>  Retain the existing outer portion of the grid, split into subpatches as
+   needed.
+>  Some radial index defines the roughly circular perimeter of the new
+   patches in the nose region (not necessarily at constant X).  17 or 33
+   are the usual choices depending on grid dimensions.  These are heuristic
+   but are good choices for 101 or 201 points along the input grid spokes
+   and 65 or 121 spokes.  N.B.: the number of spokes minus 1 must be a
+   multiple of 4 for the 2-quadrant nose patch option.
+>  An elliptically smoothed planar, normalized patch (quarter or half circle)
+   underlies the new patch(es) as a template.  (Thanks, Jim Brown.)
+>  Its number of perimeter cells in the template is redistributed if
+   necessary to match the given surface grid.
+>  This form is morphed to the desired perimeter (WARPQ3D, a TFI-like scheme
+   that employs the interior relative spacings).
+>  The interior points are projected onto the original surface grid (ADT
+   scheme).
+
+   The implied form of surface interpolation has the potential to introduce
+   faceting, but that should be negligible for reasonable resolution in the
+   input surface grid.  Gridgen or equivalent appears the only alternative.
+   Densifying the input surface grid by a factor of 16 beforehand helps.
+
+Control:
+
+   Answer the prompts.
+
+History:
+
+   01/09/2008  D.A.Saunders   Initial design.
+   01/10/2008-   "    "       Initial implementation (quarter circle case).
+   01/14/2008
+   12/17/2010  DAS, ERC, Inc. Fudged the two poor corner points of the
+                              circular quadrants (only), after pondering
+                              squarer nose patches that aren't really
+                              doable (well) algebraically.
+   10/11/2011 -  "    "       Added the options to impose umbrella-type
+   10/14/2011                 shoulder edge faceting & catenary deflections.
+   10/18/2011    "    "       Added the option to round off the sharp ridges.
+   10/20/2011    "    "       Noticed method ='b' should be 'B' (loose fits).
+                              Added the option to resolve the rib ridges by
+                              restretching outboard of where the spacing is
+                              more than (half) the specified rib thickness.
+   11/03/2011    "    "       Actually, 'b' was as intended for ADJUSTN: it
+                              gives 'B' (loose fits) and uniform spacing.
+   03/18/2012    "    "       A capsule+sting grid, initiated with the full-
+                              body CAPSULE_GRID option then truncated, needed
+                              the revolved surface grid to look like a spoked
+                              surface from HEAT_SHIELD.  Therefore, if the
+                              input surface is not named 'heat_shield.xyz',
+                              swap y and z and reverse the j indices to make
+                              it match the original HEAT_SHIELD conventions.
+   02/26/2014    "    "       All ADT variants have been merged into a module
+                              with generic build & search calls.
+                              Having to rename a file as heat_shield.xyz to
+                              avoid changing its x/y/z convention is clunky.
+                              Therefore, prompt the user.
+   04/18/2014    "    "       Application to extreme ellipsoid shapes by
+                              John Theisinger prompted transcribing the
+                              CAPSULE_GRID changes that do not assume the
+                              template nose quadrant has uniform spacing,
+                              even though experience has shown that DPLR
+                              gives cleaner nose heat flux contours when
+                              the nose patching spacing is uniform.
+Author:
+
+   David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+              now: ERC Inc./NASA ARC

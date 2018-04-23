@@ -1,0 +1,16 @@
+LINE_GRID Description:
+
+Generate a 3-space grid between specified end points.  Write results either
+as columns or for use as a PLOT3D file.
+
+02/03/05  David Saunders  Initial implementation to generate target points
+                          at which to interpolate CFD data for comparison
+                          with wind tunnel boundary layer measurements.
+                          Uniform distribution only, initially.
+03/02/05    "      "      Kludged in a way of extrapolating, as needed for
+                          generating a normal from adjacent radial grid
+                          points.
+06/30/16    "      "      2D/3D choice now; higher-precision output.
+
+David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
+                Now with AMA, Inc. at ARC.

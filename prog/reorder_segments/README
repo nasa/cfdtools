@@ -1,0 +1,34 @@
+REORDER_SEGMENTS Description:
+
+This is a rather specialized utility prompted by the need to manipulate a
+centerline dataset from a full-body flow solution on a CAPSULE_GRID grid.
+The dataset is first extracted with POSTFLOW as 8 zones then turned into a
+single zone via the XLINE utility, which is used to remove all the " zone"
+lines).  Actually, this utility now has the option to remove the "zone"
+lines itself.
+
+The problem with merging as a single zone is that the line segments don't
+fit end-to-end as needed for plotting as a single curve.  Simple lists of
+zone dimensions, reverse-order switches, and output order of the adjusted
+segments serve to drive the utility.
+
+The control file name is hard-coded as 'reorder_segments.inp' as opposed
+to being read from standard input so that the file to be processed can be
+prompted for.  The input file name is prepended with 'reordered.' for the
+output file name.
+
+Sample reorder_segments.inp:
+
+   1   ! nheader    = # file header lines to transmit unchanged
+   1   ! nzonelines = # zone header lines/zone to suppress in the output
+   5   ! ncolumns   = # columns in all remaining lines
+   8   ! nzones     = # line segments (zones) to be shuffled
+   17 17 90 90 111 111 17 17  ! Input segment lengths
+   T  F  F  T  F   T   T  F   ! T = reverse segment order
+   2  3  6  7  8   5   4  1   ! Output order of segments
+
+05/07/13  D.A.Saunders   Initial implementation for Mars InSight work.
+05/09/13    "      "     Added the option to suppress zone header lines.
+                         Enter nzonelines = 0 if there are none to delete.
+
+Author:  David Saunders  ERC, Inc. at NASA Ames Research Center, CA

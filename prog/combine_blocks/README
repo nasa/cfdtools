@@ -1,0 +1,42 @@
+Description:
+
+   COMBINE_BLOCKS appends the blocks of a second grid to those of an
+initial grid in PLOT3D format.  Accompanying flow solutions are optional.
+In particular, it has proved handy for appending tile cavity blocks to
+smooth OML grids during damage/repair studies for the Shuttle program.
+
+   Some specialization is pragmatic for cavity cases when solution files
+are present.  Wing leading edge plug repair cases are also handled by this
+same option, except that a second specialized procedure (PLUG_INTERP)
+should then be used to adjust the outer boundary flow interpolations.
+
+   The input and output files are prompted for.  If a flow solution is
+present with the first grid but not the second, then blocks corresponding
+to the second grid file (presumably in a cavity) are added to the output
+solution file and their flow fields are initialized from the k = 1 layer
+of the flow for the first set of blocks as follows:
+
+       pressure is reduced by a factor of 10 (default; now prompted for);
+       velocity components are zeroed;
+       remaining state variables are retained.
+
+   The nearest point in the first grid's k = 1 surface layer is located
+efficiently (for each volume point of the cavity blocks) via an ADT search.
+This avoids dealing with interface files and produces smoothly varying flow
+within the cavity blocks which is presumably a little better than choosing
+some constant flow throughout each cavity block.
+
+Further clarification of flow-solution cases:
+
+   (1) If both grids are accompanied by solution files, the solutions may
+       be either vertex-centered or cell-centered - it doesn't matter.
+       The operation is quite general - just the number of flow variables
+       must be the same in each solution file.
+
+   (2) If no solution file accompanies the second grid, then the first
+       grid and solution should both be cell-centered as output by the
+       POSTFLOW procedure for DPLR solutions.  The second grid, on the
+       other hand, is most conveniently vertex-centered.  In this case,
+       it is converted here to cell-centered form (with halos) prior to
+       transcribing to the output grid, and a corresponding flow solution
+       is generated as described above.

@@ -1,0 +1,57 @@
+PURPOSE:
+
+   RESHAPE is a utility to transform (X,Y) data in one or more of
+   a variety of ways such as scaling, rotating, reversing order, etc.
+   Since X and Y may be in specified columns other than 1 and 2,
+   RESHAPE can also serve the purpose of extracting two columns of
+   data from many without other changes.
+
+METHOD:
+
+   > Deal with just one dataset at a time.  The formats chosen are
+     those of program SMOOTH:
+
+        [TITLE]             <Optional title, up to 80 characters>
+        [N]                 <Optional no. of pts - EOF also serves>
+                            <Blank lines are ignored>
+        X (1)  Y (1)
+         :     :            <X and Y may be extracted from specified
+         :     :             columns if there are more than two>
+         :     :
+        ! X     Y           <! suppresses points or adds comments>
+        X (N)  Y (N)
+
+   > Transformations are done in-place (Y and/or X).
+
+   > "Undo last" and "start over" operations are done with spare copies.
+
+PROCEDURES:
+
+   ALPHA     Distinguishes text and numeric data
+   GETLINE   Gets next significant line
+   OPENER    File opening utility
+   RDLIST    Gets an indefinite number of integers
+   RDXYZ     Gets 2 or 3 columns from many
+   READER    Prompting utility (entry pts. READI, READR, etc.)
+
+HISTORY:
+
+   08/29/86   DAS   Initial implementation (in haste) -
+                    simple Y-translation or scaling.
+   09/03/86   DAS   Added rotation and X-translation/scaling.
+   10/21/86   DAS   Using EOF to determine number of points turns
+                    out to be inconvenient for other utilities.
+                    Expect N to be with the data.  (Changed later.)
+   08/19/88   DAS   Added option to reverse the order 1:N.
+   10/21/88   DAS   Bug fix for reverse-order option; added
+                    "start over", "switch X and Y", and
+                    "reflect" options.
+   10/13/92   DAS   Handled multi-column files with ! comments or
+                    blank lines ignored.  N and title are now optional.
+   01/03/98   DAS   Provided for rotating Y about (Zc=0, Yc).
+   05/20/99   DAS   Minor Fortran 90 changes.
+   08/30/10   DAS   The advance='no' prompting was misbehaving; added a
+                    "Done" item to the menu.
+   05/24/11   DAS   64-bit precision outputs now, not single precision.
+
+AUTHOR:  David Saunders, Sterling Software/NASA Ames, Mt. View, CA.

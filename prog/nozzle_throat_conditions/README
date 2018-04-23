@@ -1,0 +1,282 @@
+NOZZLE_THROAT_CONDITIONS Description:
+=====================================
+
+   Calculate boundary conditions at an arc-jet nozzle throat that
+   correspond to a choice of distributions of two real gas flow variables
+   along a radius of the (circular) throat, from center to wall.  Results
+   are output in the form of a pointwise boundary condition for the DPLR2D
+   flow solver.
+
+Approach:
+=========
+
+   This is a more thorough implementation than the earlier program
+   THROAT_CONDITIONS, which was limited to air, didn't provide species
+   mass fractions, sought a target equilibrium Mach number above 1 (to
+   simulate a "frozen" Mach number of 1), and treated a list of one or
+   more target pairs of specific total enthalpy and mass flow rate.
+
+   Here, equilibrium gas compositions are calculated with a C implementa-
+   tion of the relevant portions of the CEA program by Gordon and McBride
+   dated May 20, 1998.  Gary Allen wrote the C package at NASA ARC and
+   continues to maintain it.  Initially, a C driving program was invoked
+   here via a system call whenever a gas composition was required.  This
+   has now been streamlined with a C interface routine (equilibrium_gas.c)
+   even though its inefficiency was not much of an issue.
+
+Flow Specification Options:
+===========================
+
+   Gary/CEA provides 6 options for the given pair of flow specifications.
+   These are preserved as options here, but normal usage is likely to
+   specify other combinations, the first of which prompted this program.
+
+   Option   Flow variables specified          Units
+
+   Ht_MF    total stagnation enthalpy         J/kg
+            mass flux                         kg/(m^2.s)
+            (safeguarded Newton iteration)
+   Ht_Ru    total stagnation enthalpy         J/kg
+            mass flux                         kg/(m^2.s)
+            (2 nested 1-variable iterations, no longer recommended)
+   Rho_T    density                           kg/m^3
+            temperature                       K
+   Rho_H    density                           kg/m^3
+            mixture enthalpy                  J/kg
+   Rho_S    density                           kg/m^3
+            mixture entropy                   J/kg-mole
+   P_T      pressure                          Pa
+            temperature                       K
+   P_H      pressure                          Pa
+            mixture enthalpy                  J/kg
+   P_S      pressure                          Pa
+            mixture entropy                   J/kg-mole
+
+   Ht_MF and Ht_Ru Algorithms:
+   ---------------------------
+
+   These options determine throat conditions at a specified frozen Mach
+   number (not necessarily 1) for given [distributions of] total stagnation
+   (reservoir) enthalpy and mass flow rate per unit area.  If the species
+   mass fractions for starting guess pressure and temperature are treated
+   as known, the energy balance and mass balance equations are separable
+   and may be solved via inner and outer iterations (the Ht_Ru option).
+
+   Alternatively, the Ht_MF option treats the same case as two general
+   nonlinear equations, solved via a safeguarded 2-variable Newton iter-
+   ation with central difference derivatives as in the earlier program,
+   THROAT_CONDITIONS.
+
+   Until both approaches were implemented, it was not clear which would
+   cope best with the limited precision available from the equilibrium
+   composition calculations.  The clear winner proves to be the Newton
+   iteration, which uses about one fourth of the function evaluations in
+   spite of the central differencing.
+
+   The equations at a point r are:
+
+      f(1)  =  ho(r)  -  t1 Cpbar T  -  evbar(T)  -  sum (ci hfi)  =  0
+
+      f(2)  =  rho u(r)  -  P Mf sqrt (gamf / (Rbar T))            =  0
+
+   where, at point r, the frozen flow variables are:
+
+      ho      =  mixture total stagnation enthalpy  =  0.5 u**2 +  h
+      h       =  mixture enthalpy per unit mass     =  P / rho  +  e
+      rho     =  mixture density
+      P       =  mixture pressure
+      T       =  mixture temp. (translational T = vibrational temp. Tv)
+      e       =  mixture internal energy per unit mass (H is per unit vol.)
+      Mf      =  frozen Mach number (not necessarily 1)
+      af      =  frozen speed of sound
+      u       =  Mf af  =  Mf * sqrt (gamf Rbar T)
+      t1      =  1  +  0.5 (gamf - 1) Mf**2
+      ci      =  mass fraction of species i
+      hfi     =  reference enthalpy at O K for species i
+      Mi      =  molecular weight for species i
+      gamf    =  Cpbar / Cvbar
+      Cpbar   =  mixture specific heat at const. pr.  =  Rbar  +  Cvbar
+      Cvbar   =  mixture specific heat at const. vol. =  sum (ci (Cvi^/Mi))
+      Rbar    =  mixture gas constant                 =  sum (ci  R^ / Mi)
+      evbar   =  mixture vibrational energy           =  sum (ci (evi^/Mi))
+      evi^    =  R^ (thetavi / (exp (thetavi / Tv) - 1))
+      thetavi =  characteristic temp. for species i vibrational energy
+      Cvi^    =  1.5 R^ or 2.5 R^ for atomic or diatomic species resp.
+      R^      =  universal gas constant
+
+   The two variables to be solved for are T and P, with the mass fractions
+   essentially converging as well during the iterative solution.
+
+   Ht_Ru and Ht_MF Starting Guesses:
+   ---------------------------------
+
+   For a specified mass fraction of argon (say 10%), fractions for N2 and
+   O2 are readily derived from the values 0.767 & 0.233 for pure air, with
+   other mass fractions set to 0.
+
+   For the current point in space, the previous solution serves as a good
+   starting guess.  For the first point r in space, starting guesses for P
+   and T are implemented as follows:
+
+      P  =  C (2 / (gamf + 1)) ^ (gamf / (gamf - 1)) rho u (r) ho(r)^n
+      T  =    (2 / (gamf + 1)) ^ To
+
+   where
+
+      C     =  3.41831 (SI units)
+      n     =  0.397
+      gamf  =  1.15 - 1.18  (lower for higher ho)
+      To    =  6500 K  if  ho  <  15 MJ/kg  else
+            =  7000 K  if  ho  <  20 MJ/kg  else
+            =  7500 K  if  ho  >  20 MJ/kg
+
+Sample control file (standard input):
+=====================================
+
+   ========================================================================
+   Control file for NOZZLE_THROAT_CONDITIONS (2 flow variables prescribed)
+   ========================================================================
+   V1_V2 specification
+   ------------------------------------------------------------------------
+   Ht_MF         ! Ht_MF, Ht_Ru, Rho_T, Rho_H, Rho_S, P_T, P_H, or P_S
+   1.0           ! Frozen Mach number
+   ------------------------------------------------------------------------
+   Iteration controls
+   ------------------------------------------------------------------------
+   1             ! Iterate for target bulk enthalpy?   0 = no | 1 = yes
+   2.9E+07       ! Target bulk enthalpy, J/kg
+   1             ! Iterate for target bulk mass flow rate?  0 | 1
+   90.           ! Target bulk mass flow rate, kg/s
+   ------------------------------------------------------------------------
+   V_1 specifications
+   ------------------------------------------------------------------------
+   Linear        ! Uniform, Linear, Parabolic, Sinusoid, Gaussian, Dataset
+   0.   3.E+07   ! (r, V1) at nozzle center-line
+   1.   3.E+07   ! (r, V1) at nozzle wall
+   999.          ! "Width" of distribution (usage depends on profile type)
+   none          ! Dataset file name or "none" or Sigmoid steepness
+   ------------------------------------------------------------------------
+   V_2 specifications
+   ------------------------------------------------------------------------
+   Uniform       ! Profile shape as for V_1 (which now includes Lorentzian)
+   0.   0.1      ! (r, V2) at nozzle center-line
+   1.   0.1      ! (r, V2) at nozzle wall
+   999.          ! "Width"  (most profiles)
+   none          ! Dataset file name or "none" or Sigmoid steepness
+   ------------------------------------------------------------------------
+   Mixture specifications
+   ------------------------------------------------------------------------
+   13            ! # species
+   N2   0.6903   ! Species names (DPLR) and mass fraction starting guesses
+   O2   0.2097
+   NO   0.0
+   N    0.0
+   O    0.0
+   Ar   0.1000
+   Ar+  0.0
+   N2+  0.0
+   O2+  0.0
+   NO+  0.0
+   N+   0.0
+   O+   0.0
+   e    0.0
+   ------------------------------------------------------------------------
+   Output specifications
+   ------------------------------------------------------------------------
+   21             ! Uniform pts. for initial BC evals.; < 0 for diagnostics
+   grid.dat       ! File with target radii for interpolating to | none
+   61             ! DPLR's input profile BC code:  60 | 61 | 62
+   conditions.f   ! File name for output throat conditions (PLOT3D func.)
+   conditions.dat ! Plottable data (Tecplot ASCII)
+
+Output format (DPLR *.pbca file):
+=================================
+
+   Initially, we write just the PLOT3D-type function file portion.
+
+Usage Notes:
+============
+
+   (0) Run the code like this: nozzle_throat_conditions < xxx.inp > xxx.log
+
+   (1) As indicated above, the Newton iteration of method Ht_MF is
+       preferable to the nested 1-variable iterations of method Ht_Ru.
+       Excessive "step-halving iteration failed" messages normally mean
+       something unreasonable is being requested.
+   (2) When the Sigmoid shape function option was installed, the extra
+       control variable it needs threatened inclusion of an extra control
+       for all shape functions.  However, this was avoided by making use
+       of the (character) file name control provided for shapes defined by
+       discretized points.
+   (3) The Lorentz profile tends toward 0 less rapidly than the Gaussian,
+       and is more peaky at r = 0 for the same "width" parameter.
+
+History:
+========
+
+   06/09/04  DKP/DAS  Earlier THROAT_CONDITIONS: Dinesh Prabhu/D. Saunders.
+   12/19/05  TG /DAS  Initial NOZZE_THROAT_CONDITIONS (Ht_Ru option).
+   12/20/05  TG /DAS  Added the Ht_MF alternative (Newton iteration) to the
+                     Ht_Ru option (no-derivative zero finder). Newton wins.
+   01/19/05  TG /DAS  Tahir noticed glitches in the Tec variable names.
+   11/28/06  DKP/DAS  One test on "diagnostics" treated it as an integer.
+                      Lowered convergence tolerance from 1.e-5 to 1.e-6.
+   11/29/06   "   "   Put the tolerance back to 1.e-5.  It seems the "Gary"
+                      part of the scheme can give different results for
+                      different initial estimates of the mass fractions.
+                      This needs to be investigated.
+   03/16/07  D.Prabhu Dinesh suggested the sigmoid shape function, which
+             DAS      required another control dubbed "steepness", entered
+                      here via the "dataset" file name inputs.
+   03/28/07   "   "   Scaling the variables (P and T) and the residuals
+                      (f(1) and f(2)) allows using 1.e-6 tolerance on ||f||
+                      and overcomes mysteriously poor convergence/ragged
+                      pressures observed in a low-pr. case from Dinesh.
+   04/11/07   "   "   Bulk mass flow rate and bulk enthalpy options added;
+                      frozen Mach # is not assumed to be 1 (new input).
+   05/02/07   "   "   Uniform profiles need to work with the wall value,
+                      not the center value, because of the bulk flow
+                      options.
+   06/14/07   "   "   Added Gaussian profile option.
+   07/05/07   "   "   Added Lorentz  profile option.
+   10/29/08     DAS   Replaced system call in equilibrium_composition.f90
+                      to Gary's CEA driving program with a call to inter-
+                      face routine equilibrium_gas.c, without change here
+                      except to update the documentation and to control
+                      the extra printing to standard output.
+   09/07/11      "    Maria Pulsonetti needed CO2, CO, C species in the top
+   as in the 3D       level tables (already handled at the lower levels).
+   code update,       WARNING:  Polyatomic species have more than one
+   03/25/10           characteristic vibrational temperature, so if there's
+                      any significant CO2 fraction, enthalpy & temperature
+                      calculations are only approximate.
+                      Gary's package has also been updated, affecting
+                      equilibrium_composition.f90 and equilibrium.c.
+   09/08/11      "    Incorporated Tahir's more thorough handling of the
+                      CO2 and NCO triatomics with three vibrational modes.
+                      Note that lewis.c does not handle NCO yet, though.
+   09/12/11      "    Redirecting standard output (unit 6) was found to
+                      interact badly with singular matrix diagnostics from
+                      the lewis function.  Therefore, open a log file on
+                      unit 7 and write to that.  Any C code diagnostics
+                      still come to the screen.
+
+                      [Later:  Separating the two print streams is too
+                      inelegant.  Therefore, we revert to putting the log
+                      file name on the command line.]
+
+                      Continuing if the lewis (CEA) calculations fail was
+                      originally intentional (in case a poor Newton step
+                      can be halved enough to achieve success).  But now,
+                      a non-zero return from lewis/equilibrium_composition
+                      is treated as fatal.
+                      Also, Gary pointed out that Ar+ should've been among
+                      the subset of species here all along (at least for
+                      high temperature cases).
+
+Authors:
+========
+
+   Analysis:          Tahir Gokcen,   ELORET/NASA Ames Research Center, CA
+   Implementation:    David Saunders, ELORET/NASA Ames Research Center, CA
+                                 now: ERC, Inc./NASA ARC

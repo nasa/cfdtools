@@ -1,0 +1,20 @@
+NPOPT_DRIVER provides a framework for performing constrained optimization
+via NPOPT, including the option to perform a sequence of such optimizations
+that are presumably related.  A new application should be able to confine
+its specifics to fun.f90, which includes subroutine nlcon, called by both
+confun.f90 and subroutine summary in fun.f90.
+
+The initial implementation has been adapted from the QNMDRIVER3 framework
+for a sequence of unconstrained optimization, and HEAT_SHIELD, which uses
+NPOPT for a single constrained optimization.  Marrying the two proved
+awkward, but a table-driven scheme for any linear and nonlinear constraints
+has helped.
+
+The generalized Rosenbrock function has been employed as a demonstration.
+See fun.f90, which includes two kludged nonlinear constraints but no
+example of linear constraints.
+
+FIAT_Opt is a more complex example, available from the CFD_Utilities
+maintainers.
+
+The NPOPT package is available from Stanford University.

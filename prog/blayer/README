@@ -1,0 +1,170 @@
+Note to BLAYER users:
+
+Ancillary program EXTRACT_BLAYER_DATA has been added to the BLAYER
+folder.  It automates tabulating selected variables from a list of
+BLAYER outputs for one body point at a time.
+
+Sample control file (and the trailing comments can stay):
+
+1 1                           ! (iblock, i) for a 2-D case
+5 26 6 58 32 7 27 28          ! pw, qconv, Tw, CH, Hedge, Hw, tauwx, tauwy
+MHL-t52.0/Baldwin-Lomax/blayer.Re-theta.dat ! Any number of BLAYER outputs
+MHL-t55.3/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t57.9/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t61.2/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t64.2/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t65.8/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t70.0/Baldwin-Lomax/blayer.Re-theta.dat
+
+Corresponding output:
+
+  pw (Pa)          qw (W/m^2)       Tw (K)           CH (kg/m^2.s)    ...
+  1.015842438E+04  4.485145706E+06  3.107182014E+03  6.644886509E-02  ...
+  3.740018736E+04  7.853650464E+06  3.574295442E+03  1.203493771E-01  ...
+  9.548843572E+04  1.160357837E+07  3.940674287E+03  1.899228560E-01  ...
+  2.367064900E+05  1.546494660E+07  4.234085869E+03  3.137207389E-01  ...
+  3.591160591E+05  1.251104156E+07  4.015558173E+03  3.819044204E-01  ...
+  3.768805570E+05  9.299941983E+06  3.728572697E+03  3.887879077E-01  ...
+  2.860373898E+05  2.720219644E+06  2.742038501E+03  3.272788944E-01  ...
+
+
+BLAYER implements a curvature-based method of determining boundary layer
+edges.  This method is consistent with more standard 99.5% approaches if
+the total enthalpy profile has no anomalies, and more likely to produce
+a plausible result if it does.  No method is foolproof, however, so odd
+results should be looked into and may be worked around with different
+control inputs.
+
+BLAYER is employed at NASA ARC in conjunction with the DPLR flow solver
+and at NASA LaRC in conjunction with the LAURA flow solver.
+
+The following description has been adapted from the header of program
+BLAYER.  Please see blayer.f90 for many more details.
+
+Introduction:
+
+   BLAYER reads a volume dataset from a 2-D or 3-D multiblock real gas flow
+solution and derives a one-layer set of results, some of which apply to the
+wall, some to the edge of the boundary layer, and (optionally) some to the
+roughness height or (if that height is entered as -1. or -2.) to the momentum
+thickness height.
+
+   BLAYER is a generalization of BLAYER_RESULTS without the handling of TPS
+tile data.  It has been adapted from BLAYER2D and BLAYER3D, which were first
+adapted from BLAYER_RESULTS.  A variable number of species is handled, along
+with (possibly) more than one temperature and additional flow quantities
+beyond those that are required as inputs.
+
+   This version reads Tecplot files (ASCII only), or PLOT3D grid and function
+files (ASCII or binary), and writes Tecplot ASCII or binary files.  The
+merger of BLAYER2D and -3D was prompted by an upgrade of the Tecplot_io
+package to handle Tecplot 360 auxiliary data records.
+
+Assumptions:
+
+   >  The surface is normally expected to be at k = 1 for all grid blocks,
+      or j = 1 for the 2-D case.  [Internally, 2-D arrays are treated as if
+      they are dimensioned (1:ni, 1, 1:nk).]  However, for each block, the
+      program does look for the face or edge with the smallest average
+      initial increment off it, and if necessary permutes the block to put
+      the wall at the k = 1 position.
+      [Overriding the automated wall detection is also possible - see below.]
+      If necessary, blocks can be suppressed via the optional blayer.inp.2
+      file.
+
+   >  The radial lines are sufficiently normal to the surface for the 1-D
+      boundary layer edge detection method to make sense.
+
+   >  The flow quantities are given at the grid-points, not cell centers.
+
+   >  Lee-side results will not be used:  any boundary layer edge detection
+      method used is likely to be inappropriate for separated flows.
+
+   LEE-SIDE NOTE:  In spite of the disclaimer about detecting the edge in
+                   wake regions, an option has been provided to save the
+                   calculated edge locations (and thicknesses) as a second
+                   surface dataset to help visualize results with dubiously
+                   large edge thicknesses.  See dual use of the output
+                   datapacking control below to activate this option.
+
+Tecplot ASCII Input Format:
+
+          TITLE     = ""
+          VARIABLES = "x, m"
+          "y, m"
+         ["z, m"]          for the 3-D case
+      1:  "rho, kg/m^3"    density
+      2:  "p, Pa"          pressure
+      3:  "T, K"           translational temperature
+     [ :  "Tv, K"          vibrational temperature; the default is 1 temp.]
+       :  "c_N_2"          1 or more species densities
+       :  "c_O_2"
+       :  "c_N_O"
+       :  "c_N"
+       :  "c_O"
+     [ :   :::             more species if specified; the default is 5 sp.]
+       :  "u, m/s"         velocity components
+       :  "v, m/s"
+       : ["w, m/s"]        for the 3-D case
+       :  "H0, J/kg"       total enthalpy
+       :  "M"              Mach number
+       :  "mu, Pa.s"       viscosity
+     [ :  "kappa, W/m.K"   total thermal conductivity if # temperatures > 1]
+     [ :   :::             miscellaneous extras; the default is 0 extras]
+          ZONE T="Zone 1"
+           I=17, J=25, [K=81, ]ZONETYPE=Ordered
+           DATAPACKING=BLOCK
+           DT=(SINGLE SINGLE .................... SINGLE SINGLE )
+           6.64733315E+00 6.57563824E+00 6.48970469E+00 6.39077472E+00 6. ...
+            :              :              :              :              :
+
+      Also, the format written by DPLR's Postflow is handled:
+
+           [Optional title]
+           variables=x,y,[z,]rho,p,T,C_n2,C_o2,C_no,C_n,C_o,u,v,[w,]h,M,mu
+           zone t="flow2|3d" F=point, i= 161 j= 157 k=  1|81
+           6.64733315E+00 6.57563824E+00 6.48970469E+00 6.39077472E+00 6. ...
+            :              :              :              :              :
+
+PLOT3D Input Format (ASCII or Binary):
+
+      File pairs xxx.g/xxx.f or (preferably) xxx.gu/xxx.fu are implied if the
+      control file contains (in place of a Tecplot xxx.dat input volume file)
+      a file named xxx.g or xxx.gu.
+
+      For DPLR users, the POSTFLOW file should use output format 3 and
+
+         ivarp =  0 100 110 120     1000 150 151 [152] 132 154 50    [extras]
+      or ivarp =  0 100 110 120 125 1000 150 151 [152] 132 154 50 52 [extras]
+
+      for single-temperature and two-termperature solutions, respectively,
+      analogous to the Tecplot format.
+
+Output Results (Tecplot ASCII or Binary File, One Zone Per Grid Block):
+
+          Wall               Boundary layer edge     Roughness height (k > 0)
+
+       x                     density                 height k
+       y                     pressure                density
+       s | z                 temperature             |velocity|
+       density               total enthalpy          viscosity
+       pressure              u                       Re-kk
+       temperature           v
+     [ Tvw ]               [ w ]                     or (if k = -1. or -2.):
+       total enthalpy        Mach number
+       viscosity             viscosity               Theta height values
+       N2 species density    N2 species density
+       O2    "       "       O2    "       "         k (= theta)
+       NO    "       "       NO    "       "         density    at theta
+       N     "       "       N     "       "         |velocity| at theta
+       O     "       "       O     "       "         viscosity  at theta
+     [ ??    "       "  ]  [ ??    "       "  ]      Re-theta     (k = -1.) |
+       heat flux             delta                   Re-theta/Medge (= -2).
+       tau_x                 delta* or vel-thickness, depending on input k
+       tau_y                 theta                   (see more on k below)
+     [ tau_z  ]              Re-ue
+     [ kappaw ]              CH
+     [ extras ]            [ kappae ]
+                           [ extras ]
+
+Please see blayer.f90 for many more details.

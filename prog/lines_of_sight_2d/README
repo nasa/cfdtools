@@ -1,0 +1,100 @@
+LINES_OF_SIGHT_2D Description:
+
+   This is the 2D analogue of the the earlier LINES_OF_SIGHT 3-space
+   utility.  It can handle either an (x,y) dataset with z = 0 assumed or
+   an (x,y,z) dataset with z assumed constant (and ignored).
+
+   For a list of surface pts. (grid indices or (x,y) coordinates) and the
+   associated 2D volume grid, generate lines of sight - i.e., straight
+   lines normal to the surface and extending to the outer boundary with
+   point distributions close to those of the local radial grid lines.
+   The results are saved in PLOT2D multiblock form (one line of sight
+   per block, ASCII) compatible with FLOW_INTERP_2D, which can perform
+   the flow interpolations and tabulations that are normally what are
+   really desired for application to hypersonic flows.
+
+   This version has the option to produce lines parallel to Ox rather than
+   normal to the wall.  Most recently, it also has the option to produce
+   lines normal to the outer shock boundary, which may be the best choice
+   for tangent-slab radiation calculations.
+
+   It is understood that body points will normally be confined to
+   forebodies, since aft-body points are unlikely to have solutions
+   in the usual sense.
+
+Assumptions (probably generalizable, but they may never need to be):
+
+   o  The structured 2D volume grid contains 1 layer of blocks, with j = 1
+      at the wall.  This simplifies determination of the inner and outer
+      boundary curves.  (To overcome these restrictions, one could use the
+      boundary condition data employed by the relevant flow solver.)
+
+Strategy:
+
+   o  Prompt for all inputs (no control file).
+
+   o  Read the entire 2D volume grid (ASCII|binary, 2D|3D; any zs ignored).
+
+   o  For all lines of sight, search the inner boundary and save the
+      relevant block number and cell indices.
+
+   o  For each line of sight:
+
+        If body-normal:
+
+          > Construct a 2-pt. line normal to the wall with length that of a
+            local radial grid line.  This should be at least as long as the
+            straight line distance to the outer boundary.
+
+          > Intersect the line with the outer boundary and transform the
+            point distribution of the radial grid line to the relevant
+            portion of the straight line.
+
+        If shock-normal:
+
+          > Simply apply the NEAREST_CURVE_POINT utility to each body point
+            and the outer grid boundary: this finds the closest pt. on the
+            shock boundary, and the associated line is orthogonal to that
+            boundary.
+
+          > Discretize the 2-point line very simply.
+
+        If parallel to Ox:
+
+          > Adjust the body-normal method to work with unit vector (-1, 0)'
+            instead of the unit normal at the body point, and perform the
+            same intersection calculation and discretization.
+
+Input surface point format (ASCII, read to EOF):
+
+   Either                                      or
+
+   n   i                                       x   y
+   n   i                                       x   y
+   n   i                                       x   y
+   :   :                                       :   :
+
+   where n = block number and j = 1 is implied.
+
+XYZ Conventions:
+
+   Since the DPLR postprocessor extracts only x & y for a 2D grid, the
+   input volume grid to be interpolated may be either 2D/xy or 3D/xyz
+   with z all 0.  Thus y is "up" for input and output files here.
+
+Control:
+
+   A handful of prompts suffice.
+
+History:
+
+   10/07/05  D.A.Saunders  Initial implementation of 3-space LINES_OF_SIGHT.
+   02/14/12    "     "     LINES_OF_SIGHT_2D adapted from the 3D form.
+   07/09/13    "     "     Dinesh Prabhu proposed making the lines of sight
+                           orthogonal to the shock as the proper thing to
+                           do for tangent-slab radiation calculations.  The
+                           earlier body-normal and Ox-parallel options have
+                           been retained, and the starting guesses for
+                           line-line intersections have been improved.
+
+Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA

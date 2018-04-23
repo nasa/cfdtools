@@ -1,0 +1,48 @@
+SURFACE_DIFFS Description:
+
+   Map each point of a first ("current") surface solution to a second
+   ("previous") surface (possibly the same grid, but not necessarily),
+   and output the first surface grid with the differenced solution for
+   the specified variable (one variable per run).
+
+   The surface solutions are expected to be structured Tecplot datasets.
+   Input files must be ASCII; outputs may be ASCII (.dat) or binary (.plt).
+
+   The difference distribution is written as a 2-variable dataset:
+
+      (1)  first - second                  (signed differences)
+      (2)  100*(first - second)/|first|    (signed percentage differences)
+
+   Tabulations of minimum & maximum differences are also provided by block.
+
+Possible uses:
+
+   >  convergence testing for solutions n iterations apart on the same grid
+   >  grid resolution comparisons
+   >  other kinds of perturbed-surface comparisons
+
+   The variable treated is likely to be surface pressure, temperature, or
+   heat flux.  See also the earlier BUMP_FACTORS program if ratios rather
+   than differences are preferred.  SURFACE_INTERP may also be relevant.
+
+Sample control file (standard input):
+
+   SURFACE_DIFFS control file
+   qw, W/m^2   ! Function name for plottable results
+   3           ! Function in current (first) dataset to treat
+   3           ! Function in previous (second) dataset to compare with
+   0           ! 1 = flip y of current data
+   1.0000      ! Scale applied to current function
+               ! Current file first, previous file 2nd, output 3rd
+   CFD06_10000.dat
+   CFD06_9500.dat
+   CFD06_10000-9500.dat  ! Use *.plt to get binary output
+
+09/13/07  David Saunders  Initial adaptation of BUMP_FACTORS at Todd
+                          White's suggestion.
+05/07/08    "      "      Todd's question about identifying the function in
+                          printable tabulation prompted showing its name.
+08/08/13    "      "      All ADT variants have been merged into one module
+          now ERC, Inc.   with generic build_adt and search_adt interfaces.
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA

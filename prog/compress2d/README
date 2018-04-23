@@ -1,0 +1,40 @@
+COMPRESS2D Description:
+
+   This specialized program adjusts the single-block hyperbolic 2D volume
+   grid associated with a generatrix from CAPSULE_GRID by compressing its
+   forward portion to improve initial flow calculations.  It prompts for a
+   handful of controls.  A heuristic new forward boundary is established as
+   a 2-space local parametric cubic spline (x and y vs. arc length) and the
+   input radial grid lines are intersected with it then redistributed.  The
+   untouched radial lines are also redistributed to ensure smooth blending
+   of the radial grid spacings.
+
+   The number of points in the radial direction for the output grid can be
+   changed along with the wall spacing (some constant) and outermost
+   spacings.
+
+Input Grid Format (from Gridgen glf file, with z = 0 everywhere):
+
+         1
+       285      101        1
+   0.0000000000e+00  8.9617965000e-06  3.5930872000e-05  8.0875672000e-05
+   1.4379119000e-04  2.2467045000e-04  3.2350445000e-04  4.4028221000e-04
+    :                 :                 :                 :
+
+   The input grid is assumed to have i along the surface and j in the
+   radial direction.
+
+Option to Derive a 3D Volume Grid From the Compressed 2D Grid:
+
+   "Umbrella" (faceted and open at the back) full-body surface grids have
+   been found difficult to grow hyperbolic volume grids from in Gridgen.
+   Therefore, an option is provided to read a spoked form of the faceted
+   surface grid and morph the plane 2D hyperbolic grid to each azimuthal
+   station of the spoked surface.
+
+   The expected surfaces are spoked_surface_fore.g and spoked_surface_aft.g
+   from CAPSULE_GRID.  The option is invoked automatically if the first of
+   these is found in the working directory, but a prompt allows skipping
+   this volume gridding if the 2D compression controls still need to be
+   checked graphically, if the surface is axisymmetric, or if there is no
+   aft body.

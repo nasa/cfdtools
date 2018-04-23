@@ -1,0 +1,48 @@
+REVOLVE_GRID is a revision of Todd White's original "hotdog" utility for
+turning a 2-D grid and optional flow solution into a 3-space equivalent.
+For axisymmetric vehicles, even at angle of attack, an initial 2-space grid
+and flow solution can provide an effective start for 3-space cases once the
+resulting singular grid lines are removed (see RADIAL_INTERP in conjunction
+with CAPSULE_GRID procedures).
+
+The right (starboard) half of the body of revolution is produced with a
+180-degree rotation.
+
+Input  Coordinate System:    X streamwise, Y up
+Output Coordinate System:    X streamwise, Y positive to the right, Z up
+
+The input dataset[s] are rotated about OX by the indicated angle (normally
+180 or perhaps 360 degrees) to produce the specified number of grid points
+uniformly spaced in the azimuthal direction.
+
+The input 2-space grid may or may not include Z = 0.  Reading is attempted
+first as multiblock 3-D (X/Y/Z), then retried as 2-D if necessary.
+All file names and other control inputs are prompted for, along with the
+number of species densities, ns, from which any velocity component indices
+are deduced.
+
+Any input flow field file should normally contain state variables in the
+following order, with zero or more extra variables appended:
+
+species densities (ns of them), vx & vy (no vz), temperature[s], any extras
+
+However, this does not suit flow inputs to a radiation solver such as
+NEQAIR, which expects 4 temperatures followed by species number densities.
+Therefore, provision is made for NO velocity components, meaning all of the
+flow variables are simply replicated at each azimumthal station.
+
+The resulting output file MAY have one extra flow variable (3rd velocity
+component) with the y and z components adjusted appropriately at each
+angular station for axial symmetry.
+
+11/09/2011  David Saunders  Initial adaptation of Todd White's hotdog tool.
+05/10/2012    "      "      Testing of the function file option had been
+                            overlooked, and there were indexing errors.
+                            Apologies to Jay Hyatt.
+04/08/2014    "      "      Todd found that flow datasets for radiation
+                            calculations don't contain velocity components,
+                            so there's now an option to handle that.
+04/09/204     "      "      Allow for Z = 0. or not (3-D or 2-D) in the
+                            input grid (automatically detected).
+
+Authors: Todd White/David Saunders, ERC, Inc./NASA Ames Research Center, CA

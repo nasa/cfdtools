@@ -1,0 +1,13 @@
+MERGE_FILES Description:
+
+   Merge the contents of 2 Tecplot files which apply to the same structured
+   grid (2-D or 3-D, same number of zones and same zone sizes).  The coord-
+   inates are assumed to match, so only those from the first file are
+   carried over.  The inputs must be ASCII files; the merged output may be
+   ASCII or binary.  File types are deduced from their names (*.dat|*.plt),
+   which are prompted for.  Zones are processed one at a time (no need to
+   store more than one).
+ 
+   10/31/06  D.A.Saunders  Initial implementation.
+ 
+   Author:  David Saunders, ELORET/NASA Ames Research Center, CA

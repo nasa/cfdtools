@@ -1,0 +1,5 @@
+COMPARE_PATCHES reads two PLOT3D surface grids and locates the largest
+and average point differences in the specified subscript range(s).
+The grids are assumed to be /3D /MGRID /FORMATTED or /UNF.
+
+See also COMPARE_BLOCKS and COMPARE_FLOWS.

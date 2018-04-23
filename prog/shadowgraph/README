@@ -1,0 +1,153 @@
+SHADOWGRAPH Description:
+
+   For a real gas CFD solution on a structured or unstructured grid in 3-
+space, construct an image that simulates an experimental shadowgraph.
+Options for interferograms and schlieren are also [to be] provided.
+
+   [Actually, only the mixture density is treated at present (ns = 1), and
+it is unlikely that distinguishing the species densities (and their deriv-
+atives) would produce perceptible differences in the images.  In the case
+of FUN3D, where the derivatives must be included with the density,
+handling multiple species could also involve much larger files for
+negligible gain.]
+
+   [Interferograms have not been implemented yet.  Simulated schlieren and
+shadowgraphs can both be obtained via Tecplot gray-scale contouring of the
+various functions written to quadratures.f[u] - see a sample layout.]
+
+Control File (Standard Input):
+
+   SHADOWGRAPH Control File
+   1              ! Image type    1|2|3 = shadowgraph|schlieren|interfrgrm.
+   1              ! Grid type 1|2|3|4|5 = P3D|P3D/iblnk|DPLRovrst|FUN3D|VTK
+   3              ! Dimensions      2|3 = 2D/(x,z)|3D/(x,y,z)
+   mygrid.gu      ! Grid file name|FUN3D/US3D file name|@name -> FUN3D list
+   F              ! Formatted?      T|F = ASCII|unformatted
+   myflow.fu      ! Flow data file name (mixture density or blank, density)
+   F              ! Formatted?      T|F = ASCII|unformatted
+   F              ! ASCII results?  T|F = ASCII|unformatted
+   0.  1.  0.     ! Unit view vector;  0. 1. 0. => no rotation of CFD data
+   2000 2000      ! Image pixel counts
+   999. 999.      ! Image width, height; CFD units; 999. => grid bbox vals.
+   999. 999. 999. ! Image center (x,y,z) before any rotation; 999. => "   "
+   10.            ! Distance of shadowgraph image from the exiting rays
+   999999.        ! Clip image data further than this # st. devs. from mean
+
+Notes:
+
+   o  Input flowfield datasets for structured grids need only one function,
+      density, except that DPLR overset cases have blanking information as
+      function 1 and density as function 2.  Partial derivatives are
+      computed by SHADOWGRAPH.
+   o  Unstructured datasets are expected to include density as function 1
+      and the partial x/y/z derivatives of density as functions 2, 3, 4.
+   o  US3D introduced a VTK (Virtual ToolKit) unstructured binary format
+      that allows for cell-centered and/or vertex-centered function data.
+      SHADOWGRAPH handles one or the other, but not both at the same time.
+   o  US3D datasets are expected to contain x/y/z coordinates at grid pts.
+      and function data at the cell centers.  This program detects cell-
+      centered data and interpolates it to the vertices via inverse
+      distance-weighted averaging.
+   o  Cart3D datasets as written at NASA Ames are expected to have both the
+      grid coordinates and the function data at cell centers, and this is
+      no different from having both at the vertices as far as SHADOWGRAPH
+      is concerned.
+   o  Both US3D & Cart3D can employ grid type 5 (VTK unstructured binary),
+      which (like the earlier-handled FUN3D format but with different
+      node-numbering conventions) allows for cells that are tetrahedra,
+      hexahedra, prisms, or pyramids.
+
+History:
+
+   Jan-Mar 2010  DAS     Initial implementation of some capabilities
+                         published for program CISS by Leslie Yates in
+                         AIAA Journal Vol. 31, No. 10, October 1993:
+                         "Images Constructed from Computed Flowfields."
+   04/13/10      DAS     Option to read integration data from a prior
+                         run rather than regenerate it before testing
+                         changes to the image construction details.
+   04/15/10       "      After too much effort trying to get useful
+                         images from actual deflections and accumulated
+                         pixel counts, it appears that contour plots of
+                         the integrated quantities (1/n)(dn/dx) and
+                         (1/n)(dn/dz) in gray-scale provide schlieren
+                         images corresponding to horizontal & vertical
+                         knife edges respectively, while the magnitude
+                         of this vector pair simulates a shadowgraph.
+   04/19/10       "      Choosing to do spline integrations along the
+                         lines of sight comes at a high price: each
+                         line requires scanning the entire flow field.
+                         [A 2000 x 2000 case for a Shuttle solution
+                         with 8,143,360 grid cells takes 4.5 hours.]
+                         Therefore, an option to use the trapezoidal
+                         rule (as in CISS) is also provided, allowing
+                         each cell of the flow field to be visited
+                         just once for the rays that intersect it.
+                         The above case now takes 4.5 minutes, and the
+                         differences are imperceptible everywhere
+                         except along the top of the OMS pod. Puzzling.
+   04/28/10       "      PLOT3D/iblank option implemented.
+   05/05/10       "      A large OVERFLOW grid shows that the bounding
+                         box of the grid can be way too big to define
+                         the imaged region.  Retain that option, but
+                         provide for confining the image to smaller
+                         regions.  Also, Bil Kleb suggested using a
+                         unit vector to allow any view direction.
+   06/30/10       "      The 04/13/10 option for reprocessing the
+                         integrated data is retained but should not be
+                         needed following the 04/15/10 realization.
+                         Entering a non-defaulted image center is best
+                         done in the input grid coordinate system.
+                         This means entering three coordinates, even
+                         though only the rotated x & z are the only
+                         ones used to define the output image center.
+                         Note that rotations are about a line through
+                         the origin of the input grid coords.
+   07/09/10       "      Filled in the FUN3D option (FieldView data
+                         format, 32-bit, unformatted).  The whole
+                         program can safely be compiled for 32-bit
+                         arithmetic.
+   07/28/10       "      PLOT3D input files are now processed one block
+                         at a time.  One price paid is having to read
+                         (and possibly rotate) the grid twice in order
+                         to default the image size, but worse is the
+                         impact on program modularity.  Now, several
+                         steps are interleaved rather awkwardly and
+                         more variables are moved to the highest level
+                         for inheritance by the internal procedures.
+                         The spline quadrature option had to be killed,
+                         and so did the reprocessing option.
+   08/02/10       "      Wondering about the 5.*machine_epsilon by
+                         Jan-Renee Carlson prompted use of x1 - eps
+                         for the i2 test, to err on the safe side
+                         as for i1; likewise for j2 (symmetric now).
+   08/03/10       "      Extended the FUN3D case to allow multiple
+                         input files, one zone per file, via a list
+                         of file names indicated by @<list file name>.
+   11/04/10  D. Saunders Incorporated DPLR overset case, requiring that
+           ERC, Inc./ARC flow function 1 = blank, function 2 = density,
+                         and igrid_type = 3.
+   07/07/11       "      Added US3D/VTK unstructured grid option
+                         (igrid_type = 5).  Cart3D data is expected to
+                         use the same format as well.
+   07/12/11       "      VTK hexagon and prism cells needed translating
+                         to FieldView's node-numbering convention.
+   07/15/11       "      If cell-centered VTK function data are found,
+                         convert to cell vertices in-place.
+   07/19/11       "      Realized the intended (1/n) factor in the
+                         integrated quantities was unintentionally
+                         missing.  Results appear identical, though,
+                         because n is very close to 1, and the partial
+                         derivatives dominate.
+   07/20/11       "      The documentation above now covers files from
+                         Cart3D solutions, which can employ the same
+                         VTK format as US3D but can omit the conversion
+                         of function data here from cell centers to
+                         cell vertices because both the coordinates and
+                         the functions are cell-centered (but can be
+                         treated as though they are vertex-centered).
+   07/24/11       "      The VTK cases were incrementing the il pointer
+                         at the end of each cell case, forgetting the
+                         tests for cycling (skipping the cell) above.
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA

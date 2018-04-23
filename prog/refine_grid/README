@@ -1,0 +1,105 @@
+REFINE_GRID Description:
+
+   REFINE_GRID densifies all blocks of a multiblock grid the same way, at
+   least initially.  If different treatment for different blocks is ever
+   needed, we can cross that bridge when we come to it.  For now, use of
+   other available utilities may suffice to extract/refine/merge groups of
+   blocks appropriately.
+
+   If grid densification were limited to integer multiples of the input
+   cell counts, treatment of function files could be avoided, since DPLR's
+   FCONVERT can perform grid sequencing on solution files.  However, since
+   fractional multiples of cell counts are permitted here, the option to
+   process function files as well as grid files is provided.
+
+   Any function file should have the same block dimensions and formatting
+   as the grid file.  One may choose to work with cell-centered function
+   data and corresponding cell-centered grid, but keep in mind that if
+   mere doubling of dimensions, say, is all that is required, then a DPLR
+   user should be able to employ FCONVERT's options and avoid processing
+   function files here.  Processing just a vertex-centered grid with no
+   function file is expected to be the most common usage.
+
+   The three index directions are treated independently (possibly with
+   different degrees of refinement), meaning it is up to the user to know
+   that different treatment will not produce mismatches at common block
+   faces.
+
+   Any sensible multiples of the input grid block dimensions (possibly
+   non-integer multiples greater or less than 1) may be specified to
+   define the output dimensions.  The same scaling applies to all blocks.
+
+   Nothing more than 1-D spline interpolation is provided, multi-dimen-
+   sional nonlinear interpolation being unreliable in the author's
+   experience.  Indices are treated in the i-j-k order, and each new
+   set of interpolations operates on the previous interpolated values.
+   This asymmetry may lead to slight mismatches at common faces even if
+   the point counts match.  [There are no easy answers here.]
+
+   [Originally:]
+   Arc-length-based monotonic Hermite cubic spline interpolation is
+   employed as in OUTBOUND's option to adjust the number of radial grid
+   points.  (Use OUTBOUND rather than REFINE_GRID if the grid topology
+   allows it, and the off-wall direction is the only one of interest.)
+   Note that 2nd-derivative continuity at the data points/spline knots is
+   NOT guaranteed by such splines, which is likely to introduce noisy
+   curvature at geometric surfaces.
+
+   [Currently:}
+   Conventional cubic splines are now used for the (x,y,z) coordinates.
+   Local cubic splines still suffice for flow solution interpolations.
+
+   For a completely general grid with arbitrary topology, treating all
+   index directions identically may be the only safe operation.  For
+   cases commonly treated in hypersonic blunt body analysis (single layer
+   of grid blocks, with k = 1 at the wall), an OUTBOUND-type option is
+   provided, namely preserving the input spacing off the wall rather than
+   preserving the existing relative spacing.  Use it with discretion!
+
+Control File Format (on standard input):
+
+   [Note that the formatting of the input grid is determined by this
+    program.  For the output result, use *.g/gu and *.f/fuappropriately.]
+
+   REFINE_GRID control file. For output formatting, use *.g or *.gu names.
+   my_coarse_grid.gu   ! Input grid name
+   my_coarse_f.fu      ! Input function file name, or "none"
+   my_refined_grid.gu  ! Output grid name (*.g | *.gu)
+   my_refined_f.fu     ! Output function file name (*.f | *.fu | none)
+   2 2 1.5             ! si/sj/sk applied to cell counts; may be < 1.
+   1 1 2               ! mi/mj/mk: 1 retains relative spacing; 2 keeps ds1
+   1. 1. 0.2           ! ds2_frctns (mi=2): ds2i = 1-sided ds2 * ds2_frctn
+
+Procedures:
+
+   XYZQ_IO package     I/O utilities for PLOT3D grid and function files
+   DENSIFY_GRID_BLOCK  Adjust the number of cells in i/j/k directions
+   CHORDS3D            Arc lengths along a 3-space curve
+   EXPDIS5             One-sided stretching (Vinokur/geometric hybrid)
+   BLGRID              Two-sided stretching (Vinokur)
+!! PLSCRV3D            Arc-length-based spline interpolation, 3-space crv.
+   CSPLINE             Conventional cubic spline for the grid lines
+   LSCFIT              Monotonic Hermite (local) cubic spline for the flow
+
+History:
+
+   11/19/09  D.A.Saunders  Adapted OUTBOUND's radial point count option.
+   11/21/09    "     "     Introduced the cspline_module and applied it
+                           to the grid coordinates (only) to improve
+                           curvature continuity on geometric surfaces.
+                           Block boundary effects are still likely.
+   11/23/09    "     "     If a scale factor is 2., preserve the odd/
+                           evenness of the input dimension.  I.e.,
+                           odd n --> 2n - 1, but even n --> 2n for the
+                           case of cell-centered data.  If it is 0.5,
+                           use of THIN_GRID & THIN_FLOW is recommended.
+                           Todd White suggested checking for blocks with
+                           negative cell volumes.
+   09/29/16    "     "     Aaron Brandis noticed that a scale factor of 4
+                           didn't preserve oddness as expected, the way 2
+                           does. Therefore, treat all integer multipliers
+                           the same way.  Remember, even point counts are
+                           still likely for cell-centered data.
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+         Now with AMA, Inc. at NASA ARC.

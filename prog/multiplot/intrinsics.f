@@ -1,0 +1,41 @@
+C     Nonstandard intrinsics.
+
+      FUNCTION ATAND (A)
+
+      PARAMETER (RAD2DEG = 57.2957795130823)
+
+      ATAND = RAD2DEG * ATAN (A)
+
+      END
+
+      FUNCTION ATAN2D (A, B)
+
+      PARAMETER (RAD2DEG = 57.2957795130823)
+
+      ATAN2D = RAD2DEG * ATAN2 (A, B)
+
+      END
+
+      FUNCTION COSD (A)
+
+      PARAMETER (DEG2RAD = 0.0174532925199433)
+
+      COSD = COS (DEG2RAD * A)
+
+      END
+
+      FUNCTION SIND (A)
+
+      PARAMETER (DEG2RAD = 0.0174532925199433)
+
+      SIND = SIN (DEG2RAD * A)
+
+      END
+
+      FUNCTION TAND (A)
+
+      PARAMETER (DEG2RAD = 0.0174532925199433)
+
+      TAND = TAN (DEG2RAD * A)
+
+      END

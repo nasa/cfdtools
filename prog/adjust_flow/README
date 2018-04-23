@@ -1,0 +1,7 @@
+This adaptation of ADJUST_GRID offers just the transformations that would
+affect the velocity components of a flow solution containing the state
+variables, and applies them to both the flow data and the corresponding
+grid.  Both input files should be either cell-centered or vertex-centered,
+in PLOT3D format.
+
+For convenience, the options to shift x, y, or z are retained.

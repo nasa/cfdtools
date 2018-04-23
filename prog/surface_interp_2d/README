@@ -1,0 +1,54 @@
+
+Program SURFACE_INTERP_2D Description:
+
+   This is the 2D analogue of SURFACE_INTERP.
+
+   Read a multizone 2D surface dataset (Tecplot ASCII) and a second target
+dataset of one or more zones (or possibly unstructured points in a simpler
+format).  Interpolate the first dataset at each target point and save the
+results as a Tecplotable file and (for the simpler input format) as a tab-
+ulation for possible pasting into a spreadsheet.  The output file(s) may
+contain just a subset of the input functions.
+
+Control file format (standard input):
+
+   SURFACE_INTERP_2D control file
+   body_points.inp        ! Target file name
+   1                      ! Target format: 1 = list of points; 2 = Tecplot
+   Subset of functions in output file(s):
+   2 6
+   cssr-fullbody-wall.dat ! File to be interpolated
+   body_point_pw_qw.dat   ! Single-zone plottable results
+   body_point_pw_qw.txt   ! Tabulated results
+   1 1                    ! Target (zone, i) for debug output; 0s suppress
+  [BLOCK                  ! BLOCK | POINT overrides default of POINT output]
+  [1.e10     0.           ! Optional X & F; if x > X, set finterp(:) = F]
+  [1. 1.e-4               ! Optional scale factors for output functions]
+
+Random target points format (mode 1):
+
+   x1   y1   [Stag point 1]       ! Any string may follow the coordinates
+   x2   y2   [Shoulder point 2]   ! else x is inserted as a tag
+   x3   y3   [Aft stag point 3]
+   :    :    [:    :]
+
+Tabulated output format (mode 1):
+
+   x1   y1   f21  f61  Stag point 1 (or x1)     Min. distance
+   x2   y2   f22  f62  Shoulder point 2 (or x2)    "      "
+   x3   y3   f23  f63  Aft stag point 3 (or x3)    "      "
+   :    :    :    :
+
+History:
+
+   07/31/05  David Saunders  Initial implementation of 3-space SURFACE_INTERP.
+   02/05/14    "      "      Variant of SURFACE_INTERP from which the 2-space
+                             version is being adapted.  (All ADT variants had
+                             been placed in a single module with generic
+                             BUILD_ADT and SEARCH_ADT interfaces.)
+   03/15/15    "      "      SURFACE_INTERP_2D adapted from SURFACE_INTERP.
+                             (Two-space multiblock curve utilities have just
+                             been added to the ADT package.)
+                             W/m^2 data suggested an option to scale results.
+
+Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA

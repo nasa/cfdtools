@@ -1,0 +1,22 @@
+Installation notes for program GESTIMATE.
+
+0.  "mkdir gestimate" establishes a gestimate directory.
+    Place gestimate.tar there and cd to this working directory.
+
+1.  "tar -xvof gestimate.tar"  unpacks all files into this working directory.
+
+2.  Check the compiler flags in makefile.
+
+3.  "make" builds the executable.
+
+4.  Glance over the description in the header of main program, gestimate.f90.
+
+5.  "./gestimate < gestimate.inp > g.out" runs a set of cases obtained from
+    14 standard Shuttle reentry CFD points.  (A 15th case is also included.)
+
+6.  "diff g.out gestimate.out" compares your result with the authors'.
+
+7.  "./gestimate < English.inp > E.out" runs the same set of cases entered
+    and written in English units.  (It lacks the above 15th case.)
+
+8.  "diff E.out English.out" compares your results with the authors'.

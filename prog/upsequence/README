@@ -1,0 +1,43 @@
+Description:
+
+   UPSEQUENCE is a specialized utility for treating coarse-grid forms of
+   the multiblock flow solutions for cavity or plug configurations produced
+   by NASA Ames procedures for rapid local analysis of damage/repair with
+   known grid topology.  It simply copies the coarse grid solution to the
+   finer grid cells indicated by iseq, jseq, kseq (same for all blocks is
+   assumed), and then transcribes the outer boundary flow from the original
+   fine-grid solution starting guess as part of speeding the calculation on
+   the finer grid.
+
+   All flow solution files should contain cell-centered data with halo
+   cells included.
+
+Assumptions for cavity cases:
+
+   o  6 blocks, with block 6 in the cavity (no outer boundary)
+
+Assumptions for plug cases:
+
+   o  13 blocks, with blocks 1:5 above the plug (kmax boundary to treat)
+
+   o  Blocks 6:13 have their jmax faces at outer local boundaries
+
+Assumptions for gap filler cases:
+
+   o  9 blocks, with blocks 1:5 above the filler (kmax boundary to treat)
+
+   o  Blocks 2:9 have their jmax faces at outer local boundaries
+
+Procedures:
+
+   XYZQ_IO package  I/O utilities for PLOT3D grid and function files
+
+History:
+
+   06/06/2006  D. Saunders  Adaptation of THIN_FLOW.
+   06/07/2006   "       "   Testing via THIN_GRID was misleading: more
+                            care is needed, treating interior cells the
+                            expected way and halo cells separately.
+   09/13/2006   "       "   Added the gap-filler case.
+
+Author:  David Saunders, ELORET/NASA Ames Research Ctr., Moffett Field, CA

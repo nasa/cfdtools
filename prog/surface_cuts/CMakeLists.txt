@@ -1,0 +1,16 @@
+add_executable(surface_cuts
+  surface_cuts.f
+)
+target_link_libraries(surface_cuts
+  global
+  gridlib
+  geomlib
+  interplib
+  integrate
+  intrinsics
+  numodules
+  searchlib
+  triangulation_io
+  ugridlib
+)
+install(TARGETS surface_cuts DESTINATION ${CMAKE_INSTALL_BINDIR})

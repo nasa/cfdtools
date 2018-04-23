@@ -1,0 +1,34 @@
+DISTRIBUTE Description:
+
+PURPOSE:
+
+   DISTRIBUTE is a driving program for the available 1-D grid point
+distribution utilities.  It allows generation of one or more distri-
+butions on the specified interval(s) [a, b].  Results may be saved
+in one or both of two ways: one for plotting via QPLOT, and one that
+is more convenient for use by programs such as SMOOTH or PROFILE or
+some other grid generator.
+
+METHOD:
+
+   The indicated output file(s) are opened, then an indefinite loop
+is entered over the desired cases, which are selected one at a time
+from a menu.  Some selections may require additional interactive
+inputs.  The interval [a, b] may be changed for each case.  Defaults
+are [0, 1] initially, and the previous interval subsequently.
+
+   All distributions generated in one run of DISTRIBUTE will appear on
+the same plot frame (if plotting is requested).  Unconnected symbols are
+the normal choice of line type, though the symbols may be suppressed.
+The plot legend is used (with internal writes in some cases) to make
+each plotted distribution as self-descriptive as possible.  Other plot
+parameters such as max/min values are defaulted - QPLOT handles them.
+
+NOTES:
+
+o  QPLOT is a general purpose plotting package developed by Robert
+   Kennelly and David Saunders (Sterling/Aerodynamics Division, NASA
+   Ames).  Regrettably, its underlying graphics package, CA-DISSPLA,
+   is not supported for Linux, and needs a license anyway.
+   Adaptation to some other line-plotting package should be doable
+   if someone has the time to do it.

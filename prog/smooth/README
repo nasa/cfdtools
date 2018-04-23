@@ -1,0 +1,247 @@
+PURPOSE:
+
+   SMOOTH drives a variety of 1-D smoothing/interpolating algorithms,
+   either for evaluating or comparing them, or for generating quanti-
+   ties that may be used elsewhere.   It applies the chosen method(s)
+   to one or more "curves" read from a single file, and saves results
+   in a form suited to plotting by some other program.   On VAXes and
+   IRISes at NASA Ames,  plottable results are tailored to the  QPLOT
+   package.   A Macintosh derivative known as QuickFit is also avail-
+   able for which QuickPlot is appropriate. Results may also be saved
+   in the format used for the input data.
+
+   This version permits repeating the above with further input files.
+   Plots of curves from any one input file will appear on one frame -
+   a new plot frame for a new input file.
+
+   This version also allows selection of X and Y from multiple-column
+   files (same columns for all curves assumed),  and two data formats
+   are supported (the original "NPTS" form and an "indefinite" form).
+
+   Input data file format:
+
+      [TITLE]         <Optional title, up to 80 characters.>
+      [N1]            <# pts. in 1st curve: not needed if "END"
+      X (1)  Y (1)        is present; both are redundant if
+      X (2)  Y (2)        there is only one curve.>
+      X (3)  Y (3)
+      X (4)  Y (4)    <X and Y may be extracted from specified
+      :      :            columns if there are more than two.>
+      :      :
+      ! X     Y       <"!" suppresses points or adds comments.>
+      X (N1) Y (N1)
+                      <Blank lines are ignored.>
+      N2  or  END     <Repeat for more curves, omitting title.>
+      X (1)  Y (1)
+      :      :
+      :      :
+
+   Normally,  uniformly-spaced abscissas are generated for evaluating
+   fitted curves in order to plot them, but these may be suppressed.
+
+   Evaluating fitted curves at further abscissas read from  (column 1
+   of) a file is also provided for, with these abscissas being in the
+   same format as above - any further columns are ignored.
+
+   The original data,  the fitted curve,  and any further evaluations
+   are written to a file of plottable results, named "smooth.plt." In
+   the case of least squares methods, plots of deviations may also be
+   obtained via a separate plot file, "smooth.dev."   (Its scaling is
+   unlikely to be the same as for the original data.)  This file con-
+   tains  X (data), Y (fit), and Y (fit) - Y (data)  in three columns
+   with columns 1 and 3 set ready to plot (but column 2 there in case
+   it is needed).
+
+   Evaluated results may also be saved in "SMOOTH" format as the file
+   "smooth.out" if requested.
+
+   Any coefficients computed by a smoothing/fitting method are  saved
+   separately in "smooth.log."
+
+
+METHOD:  <Outline>
+
+   Open files for plottable and/or reusable results.
+
+   NEW FILE:
+      Prompt for and open an input data file.
+      Read the input data title.
+      Prompt for whether to normalize the data to [0,1].
+      Prompt for plot title and axis labels, and initialize plot frame.
+      Prompt for the number of uniformly-spaced abscissas to be used in
+         evaluating and plotting each fitted curve (may be suppressed).
+      Prompt for the filename of optional user-supplied abscissas for
+         an additional fit evaluation and plot, and for possible reuse.
+      If <user-supplied abscissas> open and read this file.
+      Initialize the tabulated output.
+
+   NEW CURVE FIT:
+      Rewind data file.
+      Select a smoothing routine (else GO TO NEXT).
+      Skip the data file title.
+      Read NX, number of data points in the first dataset (curve).
+
+      WHILE <not EOF> DO
+         Read one dataset (curve).
+         If <first selection>
+            Write plot info for this dataset.
+            If <normalizing> normalize X (*) and Y (*) to [0, 1].
+         If <fit to be plotted> generate uniformly-spaced abscissas
+            in the data range.
+         Prompt for smoothing parameters (if applicable).
+         Perform requested curve fit.
+         If <fit to be plotted> evaluate curve at generated abscissas.
+         If <user-supplied abscissas> evaluate curve at these.
+         If <normalizing> denormalize results.
+         Read NX for next curve.
+      END WHILE
+
+      GO TO NEW CURVE FIT
+
+   NEXT:
+
+      Close input data file for possible reuse of logical unit.
+      If <new file desired> then
+         Output "end-frame" to plottable data file.
+         GO TO NEW FILE
+      Else
+         Close plottable and printable files.
+         Done.
+
+HISTORY:
+
+  DAS   06/10/83   Initial design and code (ICSSCU, PNFIT; new frame
+                   for each method - multiple curves per frame).
+  CLH   06/16/83   Added ICSFKU option.
+  DAS   06/20/83   Added FSFIT  option for periodic data.
+  DAS   06/22/83   Added FSCOEF option for periodic data.
+  CLH   07/07/83   Added ICSVKU option.
+  CLH   10/11/83   Added ICSMOU option.
+  CLH   12/12/83   Added IQHSCU option.
+  RGL   04/25/84   Updated line type for compatibility with current
+                   QPLOT conventions; added legend for each curve;
+                   installed prompting utility READER.
+  DAS   06/29/84   All curves on a single frame now; QPLOT namelist
+                   introduced; data may be in columns or rows.
+  RGL   07/17/84   Added CSFIT option.
+  RGL   02/15/85   Added option for a file of abscissas to be used
+                   in smoothed curve evaluation and plotting;
+                   reverted to restricting data format to columns;
+                   included on-line description of available methods
+                   and of spline end conditions possible with CSFIT;
+                   incorporated QPLDAT to write the plot file.
+  DAS   03/05/85   Added WAGFIT option.
+  RGL   05/14/85   Added TABLE1 option.
+  RGL   05/23/85   Added printing of calculated coefficients.
+  RGL   07/13/85   Evaluations at uniformly-spaced abscissas (for
+                   probable plotting purposes) may be suppressed now.
+  DAS   12/20/85   Streamlined the terminal I/O.
+  RGL   03/27/86   Suppressed unnecessary output of IMSL error codes.
+  DAS   04/21/86   Removed DO WHILEs and END DOs and use of MAX in
+                   parameter statement in anticipation of move to PC;
+                   added PSFIT option (PSTVAL only - not PSEVAL).
+  DAS   05/27/86   Added VECFIT option.
+  DAS   06/12/86   Added option to scale/unscale data for the case
+                   of polynomial fits (to handle large numbers).
+  DAS   06/16/86   Provided for simple shift of data by the mean,
+                   for polynomial fits.  (These last two are for
+                   comparison purposes; full scaling is probably
+                   unnecessary.)  [P.S.: Introduction of a normalizing
+                   option used by all methods meant giving up the
+                   shift-by-the-mean option for PNFIT later - see 7/89.]
+  DAS   07/17/86   WAGFIT was simplified - needed to handle "ramp"
+                   function differently here.
+  DAS   08/14/86   Installed tension spline (CURV1, CURV2).
+  DAS   12/10/86   Refinements prompted by QuickFit version on Mac:
+                   > go back for another input data file;
+                   > arbitrary units for Fourier methods;
+                   > smarter handling of closed case for PSFIT
+                     (insert a point at I=NX+1 if necessary).
+  DAS   12/23/86   Added MSFIT/CSEVAL combination; made use of SELECT.
+  DAS   01/15/87   PSFIT can now choose MSFIT, which now has optional
+                   periodic boundary conditions.
+  RAK   02/17/87   Installed PLSFIT for testing (the TIGHT option
+                   should give the same answers as MSFIT under PSFIT).
+  DAS   02/20/87   > Installed LINE1D in parallel with TABLE1. (Both
+                     are retained because SMOOTH serves to test them.)
+                   > Provided for plotting the deviations for least
+                     squares methods by setting XEVAL (*) = X (*).
+                   > SELECT now permits no default - handy at "done"
+                     time, when CR = CTRL Z = quit.
+                   > Echoed RMS and maximum deviations to the screen
+                     as well as to the log file.
+  DAS/RAK 3/3/87   > Straightened out some logic errors in the above.
+                   > Added Y (fit) as third column in smooth.dev.
+                   > Introduced PROTECT for checking monotonicity, etc.
+                   > FSFIT now works for N=0.
+  DAS   10/20/87   > Provided for timing (fit + evaluation) for each curve
+                     of each file more precisely.  (Total CPU time is also
+                     measured, but it includes the I/O.)
+                   > CSFIT and MSFIT can handle decreasing abscissas now
+                     because of revised search used by CSEVAL.
+                   > Upped MXPTS to 1001 (but PSFIT/PSEVAL retain internal
+                     COMMON block limit of 500).
+  DAS   11/20/87   Installed LSFIT1 to test it.
+  DAS   06/10/88   Safeguarded Fourier methods better; upped MXFCOF to 180.
+  DAS   10/22/88   Wagner function option now handles arbitrary units,
+                   including descending abscissas.
+  DAS   02/17/89   Handled LSFIT1's option to suppress spline step.
+  DAS   03/30/89   Added prompt for a subtitle on the plot.
+  DAS   05/08/89   LSFIT1 should have NEARPTS >= DEGREE + 2, not + 1.
+  DAS   07/09/89   Introduced GETSCALE/USESCALE for all methods.  This was
+                   prompted by a wind tunnel data case that worked fine in
+                   QPLOT, which normalizes before applying PLSFIT, but was
+                   poorly handled by SMOOTH's PLSFIT option.  (Only PNFIT
+                   had been given scaling/shifting options; now it is clear
+                   that ALL methods are best applied to normalized data.)
+  DAS   07/15/89   Installed FSERIES/FSSUM/FSEVAL2 (mainly to test
+                   Macintosh versions).
+  DAS   08/31/89   Installed LCSFIT.  Small fix to blank out legends after
+                   the first dataset.
+  DAS   09/09/89   EPS needed for WAGFIT [0,1] test; YPLOT(*) was not being
+                   vertically shifted; legend text for LSFIT1 was being
+                   clobbered by deviations info.; shortened it.
+  DAS   05/29/90   "No. of uniform abscissas" prompt was imprecise for
+                   parametric fits.  Normalizing prompt also needs a
+                   warning.
+  DAS   07/30/90   Installed RDXYZ which became available from program
+                   PROFILE, allowing commented-out points in the input
+                   files and eliminating list-directed I/O and some error
+                   handling.
+  DAS   01/17/91   Replaced XFORMX with GETXFORM/USESCALE.  MXPTS & MXPLOT
+                   raised to 1500.
+  DAS   05/27/91   Results may now be saved in SMOOTH format if desired (as
+                   well as or instead of QPLOT format).  Also handled the
+                   NX=0 dataset case.  [D. Serafini request in both cases.]
+  DAS   06/07/91   Replaced IMSL's IQHSCU with QHSFIT (same algorithm).
+  DAS   06/17/91   Added date/time stamp as caption in the QPLOTable file.
+  DAS   06/20/91   LCSFIT now has a periodic end-condition option.
+  DAS   10/16/91   PSFIT and PSTVAL usage changed.
+  DAS   12/11/91   Introduced multi-column capability plus an alternative
+                   "indefinite-number-of-points-per-curve" data format, as
+                   both supported by a revised form of RDXYZ.  The upward
+                   compatibility with SMOOTH's original "NPTS" data format
+                   was achieved at some cost in complexity, and not all
+                   cases of mismatched NPTS values are trapped gracefully.
+                   The alternative data format is now preferred.
+  DAS   12/31/91   Made TITLE optional for data files and target X file.
+  DAS   02/12/92   TITLE was being skipped at the top of the loop over
+                   datasets, even when none was present.  And the test for
+                   an empty file shouldn't have decremented DATASET if
+                   the (previous) value of NX was not zero.
+  DAS   08/16/97   CSEVAL needs NDATA = -NX for the periodic case now.
+  DAS   10/14/99   Fortran 90 translation (mainly to eliminate 0 carriage
+                   control).  Always display sum of squares & RMS deviation
+                   whether deviations are being plotted or not.
+  DAS   07/07/00   Added QINTERP.
+  DAS   09/27/00   Plugged SMOOTHXYZ into the defunct ICSMOU slot.
+  DAS   01/28/04   Increased LSFIT1 limit to 100 neighboring pts., not 10.
+  DAS   06/14/04   For FSFIT, the transformation to [0, 2pi] was using
+                   X(1) and X(NX) but the abscissas need not be ordered.
+  DAS   11/19/10   Added exponential curve fits AEBXPLUSC and ABXECX.
+  DAS   11/23/10   Added power law curve fit AXBPLUSC.
+  DAS   12/28/10   Exponential & power law fits need not trap unordered
+                   data.
+
+AUTHOR:  David Saunders, Sterling Software/NASA Ames, Moffett Field, CA
+                         (now with ERC, Inc. at NASA ARC)

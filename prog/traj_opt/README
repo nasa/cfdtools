@@ -1,0 +1,831 @@
+TRAJ_OPT Description:
+
+   Traj_opt performs trajectory optimization with respect to variables
+such as bank angle and angle of attack, using the Traj analysis package
+and the NPOPT nonlinear programming package.  The quantity being optimized
+may be some measure of cross range, down range, peak acceleration, etc.,
+or some weighted combination of these.  Constraints may be imposed on
+similar quantities.
+
+   This program does not treat trajectory optimization with respect to the
+shape of the vehicle.  However, an option to calculate sensitivities with
+respect to the aerodynamic database of lift and drag coefficients is
+included.  This can facilitate the choice of flight conditions at which
+multipoint shape optimization might be performed for a given trajectory.
+
+   Nonzero sideslip and side force coefficient are treated by this
+version of Traj/Traj_opt in response to the loss of the Columbia orbiter.
+
+APPROACH:  (Fixed-geometry/unpowered case/normal usage)
+
+   For a vehicle with fixed geometry, the variables for adjusting an
+unpowered trajectory are normally the bank angle and angle of attack,
+as functions of time.  Originally, Traj_opt had to manipulate these angles
+via the Traj maneuver script mechanism.  Now, Traj has the option to
+interpolate bank and alpha at every time step.  Traj also reads the
+control points (spline knots) from traj.alp and traj.bnk (originally done
+in Traj_opt).  Traj_opt merely updates these control points using their
+ordinates as the main optimization variables.
+
+   Any of the Traj command line arguments may be used as arguments to
+Traj_opt (at least under SGI IRIX; IARGC and GETARG system utilities may
+be missing from other operating systems).
+
+   Since the total trajectory time is unknown a priori, the tail ends of
+the bank and alpha schedules may not be well optimized.  However, the time
+ranges of the variables should normally exceed the trajectory duration;
+the last few variables for each schedule are "wasted" in this case.
+
+   If the optimized time interval t is short of a trajectory time T, the
+relevant angle is held constant from time t:T.  Normally, starting with
+t comfortably greater than T(final) is recommended.
+
+   The initial part of the trajectory may be frozen by specifying the
+indices of the first variable control points for alpha and bank to be
+greater than 1 - see KNOT1_A/B.  Keep in mind that the "local" spline
+technique employed within Traj uses 4-point formulas.
+
+   A new trajectory is calculated for each change of variable.  Quantities
+used for the objective function and constraints may be those from the last
+time step of the trajectory, or from some fixed time step.  (See NNTIME.)
+[Later: Traj now interpolates between time steps to capture the terminal
+condition precisely, making gradients much more reliable.]
+
+   Gradient information is calculated by finite differencing.  [An adjoint
+method for much-improved efficiency is very unlikely to be incorporated.]
+
+   Constraints imposed on the alpha and/or bank angles are simple bounds -
+the same BL and BU for all angle of attack control points and a second
+pair of bounds for all bank control points.  Other constraints such as on
+maximum deceleration are nonlinear.  [Later:  Crude control of roll rate
+and pitch rate has been implemented as linear constraints on the alpha and
+bank control points.]
+
+   Given that NPOPT always calls CONFUN before OBJFUN, duplicate function
+evaluations are avoided here by having CONFUN also calculate the objective
+function.  See NNGRAD = 2 or 3.
+
+   Use of an APC (aerothermal performance constraint) is appropriate for
+controlling heating at one leading edge point (presumably a sharp leading
+edge).  Traj also has the option to perform stagnation point heating
+calculations for blunt noses.  Normally, other key points on the surface
+should also have their temperatures constrained via the distributed
+heating capability within Traj_opt, more on which below.  Constraints on
+dynamic pressure and G load are generally recommended also.
+
+   Maximum down-range or minimum heat-load calculations should benefit
+from the "UPPERC" constraint (originally "CONSTQ", meaning a curve in
+velocity/altitude space corresponding to a low dynamic pressure such as
+10 psf).  This defines a meaningful upper corridor boundary with at least
+some control surface effectiveness.  The "OSCILL" constraint may also
+help avoid skipping or other altitude oscillations, although oscillations
+aren't necessarily bad.  Excessive roll reversals likely for certain
+types of trajectory can be inhibited via a TVD (total-variation-diminish-
+ing) term available for the objective.  A further TVD term can also
+encourage smoothness in the solution for the angle of attack schedule.
+[Likewise for Beta (MODE_VAR = 5) and CL, CD, CY (MODE_VAR = 6).]
+
+   Heat load and heat flux calculations by Traj are strictly for the
+stagnation point, suitable for blunt bodies.  More thorough treatment
+of surface heating is provided by the constraints SURF1[R], SURF2, ...
+and an aerothermal database containing m quantities at each of n key
+surface points as functions of Mach, angle of attack, and dynamic
+pressure.
+
+   The time history of these three independent variables as stored in
+Traj's "journal" block of output time steps is used to interpolate the
+aerothermal database at the Traj_opt level (as opposed to within Traj).
+From these interpolations, constraint values are determined either via
+peaks over time (as for peak temperature), or via integrations (as for
+heat load derived from the heat flux history at each point).  Actually,
+this version integrates elements of area above the bound for each point
+rather than just the peak violations.
+
+   The order of the aerothermal database quantities (which may grow) is:
+
+1: temperature  2: heat flux ...  m: ???
+
+   The order of the constraints is:
+
+SURF1: distrib. temperature  SURF2: distrib. heat flux  ...  SURFm: ???
+
+   Rather than a distinct nonlinear constraint at each surface point,
+a total violation of the constraints over all surface points is used,
+for each quantity implied by SURF1, SURF2, ...  The upper bound (on
+total violation) should therefore be zero.  Typically, only one or two
+of the points touch their limits, so summing over points is not as
+crude as it sounds, and certainly keeps the constraint nomenclature
+more manageable.
+
+   A meaningful integrated heat load over the surface requires an area-
+based weight associated with each surface point.  Associated constraint
+or objective function calculations are invoked via HEATLD or RHO_HEATLD.
+<This still needs thought.>
+
+   These calculations require possibly different temperature/heat flux
+limits at each surface point along with a point weight.  Therefore, if a
+SURFj or HEATLD constraint is present, or RHO_HEATLD is nonzero, a file
+of point weights and upper limits should be supplied as follows:
+
+"traj_opt.surface_bounds" format:
+
+   Title
+   m   n                  ! # quantities at each point; # points
+   W  BU1  BU2  ...  BUm  ! Wt. + upper bounds for m quantities at point 1
+   W  BU1  BU2  ...  BUm  ! .......................................point 2
+   .....................  ! ..............................................
+   .....................  ! .......................................point n
+
+Note:  It has been belatedly realized that temperature and heat flux, as
+       typically calculated for these tables, are not independent.
+       Therefore, constraining both of them is redundant.
+       Moreover, trilinear interpolation of temperature in the presence
+       of insufficient data points (particularly in the dynamic pressure
+       direction - HAVOC is limited to 5 per run) is not as accurate as
+       deriving temperature from interpolated heat flux.  The retrofitted
+       SURF1R constraint (using heat-Rate-derived temperatures) therefore
+       expects surface emissivities in the BU2 column above.  This avoids
+       a separate input.
+
+   The aerothermal database is rectangular with format as follows:
+
+"aerothermal.database" format:  (Units should be mks, although
+                                 Qbar is shown in psi.)
+   Title
+   N_MACH_DH             ! # Mach numbers
+   N_ALPHA_DH            ! # angles of attack
+   N_QBAR_DH             ! # dynamic pressures
+   N_SURF_TYPES  (m)     ! # surface data types at each pt in the database
+   N_SURF_POINTS (n)     ! # surface points in the database
+   SURFACE POINT 1
+   Mach      Alpha     Qbar     Temp   [Qdot ....]    ! Column headers
+   2.        0.        100.     xxx     xxx           ! Mach varies first,
+   3.        0.        100.     xxx     xxx           ! then Alpha, then
+   4.        0.        100.     xxx     xxx           ! dynamic pressure
+   :         :         :        :       :
+   25.       45.       500.     xxx     xxx
+   SURFACE POINT 2
+   Mach      Alpha     Qbar     Temp   [Qdot ....]    ! Column headers
+   2.        0.        100.     xxx     xxx
+   3.        0.        100.     xxx     xxx
+   4.        0.        100.     xxx     xxx
+   :         :         :        :       :
+   25.       45.       500.     xxx     xxx
+   :         :         :        :       :
+   :         :         :        :       :
+
+
+ASCENT ABORTS:
+
+   Calculation of ascent abort trajectories prompted introduction of a
+target landing site (latitude, longitude) and Traj input script options
+   Run_to   Impact
+   Floor    10.
+which allow reaching the site at the specified altitude (10 km here).
+
+   Optimizing such abort trajectories (as opposed to use of trial-and-
+error starting points) requires reading booster launch trajectory data
+and treating abort time as an optimization variable.  See the TABORT
+variable description below for the ascent data format.
+
+AEROCAPTURE:
+
+   Aero-capture applications prompted the transfer of orbital parameters
+from Traj and use of the "run to apoapsis" option, initially using the
+eccentricity as an objective with constraints on apoapsis & inclination.
+
+   Aero-capture also prompted the step-function option for Alpha and bank
+(MODE_VAR = 3 or 4).  The format for entering the angle control points in
+this form via "traj_opt.steps" is as follows:
+
+   Alpha & bank steps
+   4  !    Alpha          Bank  Duration (s)
+   28.000000E+00 -5.286404E+01  4.292902E+01
+   28.000000E+00 -4.645406E+01  3.505116E+01
+   28.000000E+00  1.314490E+02  7.209257E+01
+   28.000000E+00  8.619661E+01  5.000000E+01
+
+   Optimized steps are output as "traj_opt.steps_opt" in this case.
+
+COMMAND LINE OPTIONS:
+
+   See the descriptions in Traj - the same mechanism is employed here.
+However, Linux and Windows-based systems appear to lack IARGC and GETARG
+system utilities, so all Traj options may have to be entered in "traj.in".
+
+CONTROL INPUT DESCRIPTION (traj_opt.inp):
+
+   NDV        Number of "design" (optimization) variables (total);
+              alpha variables normally precede bank variables;
+              others may follow (see MODE_VAR)
+   NDV_ALPHA  Number of variables affecting angle of attack vs. time;
+   (NDV_CL)   needs "Schedul Fnct_alpha_..." (or Fnct_cl_...) in traj.in;
+              if MODE_VAR = 3 or 4 (step functions), enter NSTEPS;
+              if MODE_VAR = 6, enter NDV_CL here
+   NDV_BANK   Number of variables affecting bank angle vs. time;
+   (NDV_CD)   needs "Schedul Fnct_bank_..."  (or Fnct_cd_...) in traj.in;
+              if MODE_VAR = 3 or 4 (step functions), enter NSTEPS;
+              if MODE_VAR = 6, enter NDV_CL here
+   NDV_BETA   Number of variables affecting sideslip angle vs. time;
+   (NDV_CY)   needs "Schedul Fnct_beta_..."  (or Fnct_cy_...) in traj.in;
+              MODE_VAR must be 5 for nonzero Beta;
+              Beta variables follow Alpha and bank variables in V(*);
+              if MODE_VAR = 6, enter NDV_CY here
+   MODE_VAR   Controls optimization variable choice:
+                 0 = CLs, CDs of aero. database, for sensitivities only;
+                     NDV = 2 * N_MACH * N_ALPHA * N_RE; see also H_ALPHA;
+                 1 = Alpha and/or bank only (fixed control point times);
+                     NDV = NDV_ALPHA + NDV_BANK;
+                 2 = As for 1 but provides for variable entry conditions,
+                     which are required to be inertial;
+                     NDV = NDV_(ALPHA + BANK) allows use of ENTRY_DV > 0;
+                     NDV = NDV_(ALPHA + BANK) + 1 means an ascent abort;
+                 3 = Alpha & bank are step functions (fixed durations):
+                     alpha & bank are assumed to step at the same times;
+                     NDV = 2 * NSTEPS in "traj_opt.steps";
+                 4 = Alpha & bank are step functions (variable durations);
+                     NDV = 3 * NSTEPS in "traj_opt.steps" - 1
+                 5 = Alpha + bank + Beta control points at fixed times;
+                     nonzero Beta is intended to allow calculation of a
+                     trajectory which minimizes heating at some damaged
+                     point while still constraining heating elsewhere
+                 6 = CL + CD + CY control points at fixed times;
+                     intended to be used with known schedules for Alpha,
+                     bank and sideslip (as from Columbia tracking data)
+                     to match the known trajectory as well as possible
+                     to estimate the side forces experienced and hence
+                     glean some information about the likely damage
+
+              The aero. database dimensions should be outputs from Traj
+              initialization, but are instead inputs to Traj_opt:
+
+   N_MACH     Dimensions of ...
+   N_ALPHA    ... the aerodynamic database ...
+   N_RE       ... which is a rectangular table in (M,AoA,log(Re)) space
+   N_BETA     ... or (M,AoA,log(Re),Beta) space if MODE_VAR = 5
+   PERCENT_LOVERD  Mechanism for checking sensitivities to L/D; enter a
+                   positive or negative value p in order for the CLs in
+                   the aero. database to be scaled in a way that changes
+                   L/D by p%.  E.g., -5.0 lowers L/D (and CL) by 5%.
+                   Enter 0. to suppress any scaling of lift coefficients.
+
+   LINCON     Control for specifying linear constraint TYPES (NPOPT only);
+                 0 means no linear constraints (NCLIN = 0);
+                 1 means pitch rate is limited for all alpha control pnts;
+                   NCLIN is set to NDV_ALPHA - 1;
+                 2 means roll rate is limited for all bank control points;
+                   NCLIN is set to NDV_BANK - 1;
+                 3 means both pitch and roll rate are constrained;
+                   NCLIN is set to NDV_ALPHA + NDV_BANK - 2
+              [Analogous treatment of Beta is not worth the trouble.]
+
+   NCNLN      Number of nonlinear constraints (NPOPT only)
+   NITMAX     Number of optimization steps or major iterations;
+              NITMAX = 0 means one analysis only;
+              NITMAX = 1 means initial analysis + initial gradient as
+                       probably desired for a study of gradients
+   KNOT1_A    First alpha knot to optimize (if NDV_ALPHA > 0)
+   KNOT1_B    First bank   "   "   "   "   (if NDV_BANK  > 0)
+              [The first Beta knot is assumed to be 1 if MODE_VAR = 5;
+              likewise for the first CL, CD, CY knots if MODE_VAR = 6.]
+
+   NNOPT      Optimizer switch:
+                 1 = QNMDIF2 (unconstrained [disabled now]);
+                 2 = NPOPT (constrained)
+   NNSPLINE   Controls splining of control points for alpha and bank;
+              Traj interpolates the angle control points it finds in
+              alpha.dat and/or bank.dat at every time step;
+              NNSPLINE > 0 in traj_opt.inp should match use of
+              "Schedul Fnct_alpha_mono" etc. in the Traj control file,
+              in order for similar interpolations to be indicated by
+              Traj_opt in traj_opt.qplot:
+                 1 = piecewise linear interpolation;
+                 2 = monotonic cubic spline;
+                 3 = non-monotonic ("Bessel") cubic spline
+   NNGRAD     Controls gradient scheme:
+                 0 = conventional finite differencing;
+                 1 = adjoint method;
+                 2 = finite differencing, but CONFUN does OBJFUN F & g;
+                 3 = adjoint method, with CONFUN used as for NNGRAD = 2
+   NNDIFF     Controls finite differencing for objective & constraints:
+                 2 = 2-point forward differencing with given h;
+                 3 = 3-point central differencing with h * EPSOBJ**(-1/6)
+   NNTIME     Controls time step to use from trajectory results:
+                 0 = last time step;
+                 N > 0 is the Traj journal block time step to use;
+                 N will be bounded by the actual last step
+   NALLOW     Upper limit on number of trajectory calculations
+   MAX_STEP   This should be at least as large as Step_mx in the Traj
+              control file if APC or SURF* constraints are present;
+              it is a limit on the number of uniform steps in the time
+              history maintained by Traj, some items of which are copied
+              in trajectory.c for use by Traj_opt.
+
+              OPTIMIZER INPUTS:
+
+   OBJBND     Lower bound on objective function
+   ETA        Controls line search's acceptance of a sufficiently lower
+              objective. 0 < ETA < 1.0; try 0.2 for expensive objectives
+   OPTOL      Minimum stepsize of QNMDIF2 line search;
+              see reference to optional NPOPT/SNOPT inputs below
+   STEPMX     Maximum stepsize of line search; units are obscure; use a
+              smaller value to help avoid a big initial step (but too
+              small can easily make NPOPT think it can't move)
+   EPSOBJ     Minimum absolute value of a significant difference in OBJ
+   ZETA       Reduces perturbation in CENDIF2 if a function eval. fails
+   ENTRY_DV   Velocity increment added to entry velocity found in traj.in
+              and also to velocities calculated from ascent data if a
+              TABORT design variable is present
+
+   H_ALPHA    2-pt. differencing interval for alpha variables (degrees);
+   (H_CL)     adjusted larger if central differencing specified (NNDIFF);
+              also used for coefficient perturbations, forward & back-
+              ward) when estimating aero. sensitivities (MODE_VAR = 0);
+   BL_ALPHA,  Bounds on alpha control points (degrees); note that
+   BU_ALPHA   alpha and bank variables are scaled for NPOPT purposes;
+   (BL_CL,    if MODE_VAR = 6, enter H_CL, BL_CL, BU_CL on this line
+    BU_CL)
+   PITCH_RATE Finite rate used when expanding alpha steps to spline form
+
+   H_BANK     Differencing interval for bank variables (degrees)
+   (H_CD      if MODE_VAR = 6)
+   BL_BANK,   Bounds on bank angle control points (degrees)
+   BU_BANK
+   (BL_CD, BU_CD if MODE_VAR = 6)
+   ROLL_RATE  Finite rate used when expanding bank steps to spline form
+
+   H_BETA     Differencing interval for beta variables (degrees)
+   (H_CY      if MODE_VAR = 6)
+   BL_BETA,   Bounds on sideslip angle controls (degrees)
+   BU_BETA
+   (BL_CY, BU_CY if MODE_VAR = 6)
+   YAW_RATE   <Inactive>
+
+              OBJECTIVE FUNCTION INPUTS:
+
+   RHO_xx is a multiplier for the corresponding contribution of xx
+   to the (possibly composite) objective function being minimized.
+   Multipliers are also used to scale the objective function to be
+   O(1) at the minimum.
+
+   Be sure to have at least one RHO* input nonzero.
+
+   RHO_CROSS_RANGE   [latitude is optimized for now, for equatorial orbit]
+                     N.B.:  Bank > 0 rolls the vehicle into the southern
+                     hemisphere from the equator.  Use either bank < 0 or
+                     RHO_CROSS_RANGE = -1. (but not both) to maximize the
+                     northern hemisphere latitude.  RHO * (-CROSS_RANGE)
+                     is always the quantity minimized.
+   RHO_DOWN_RANGE    [-(surface arc) is the quantity minimized]
+   RHO_HEAT_LOAD     Stagnation point heat load (joules/cm^2)
+                     [-(heat load) is minimized; see also RHO_HEATLD]
+   RHO_MAX_ACCEL     Max. acceleration magnitude in Gs
+   RHO_MAX_W_TEMP    Max. temperature            deg K  (stagnation point)
+   RHO_MAX_DYN_PR    Max. dynamic pressure       pascals
+   RHO_MAX_H_FLUX    Max. total heat flux        watts/cm^2  (stagn. pt.)
+
+   RHO_TABORT        If a TABORT variable is present after variable #
+                     NDV_ANGLES, RHO_TABORT > 0 minimizes the ascent abort
+                     time for which a target landing site can be reached;
+                     RHO_TABORT < 0 maximizes the abort time;
+                     use in conjunction with ENDLAT & ENDLON or ENDIST
+                     equality constraints, or with RHO_TARGET_POINT > 0
+
+   RHO_END_ALTITUDE  Use this multiplier in conjunction with terminating
+                     trajectories at (say) Mach 2, in order to maximize
+                     altitude over a target landing site (see TARGET_*).
+   RHO_ECCENTRICITY  Minimizing the orbit eccentricity means minimizing
+                     the velocity increment needed to circularize an
+                     orbit (later).  Use this for aero-capture problems
+                     (run to apoapsis), with constraints on apoapsis and
+                     orbital inclination.
+   RHO_HEATLD        Integrated heat load using an aerothermal database
+                     for multiple surface points with area-based weighting
+   RHO_TRIM          Time-integrated squared deviation of pitching moment
+                     (or flap deflection) from TARGET_TRIM.
+
+   RHO_TARGET_POINT  This multiple of the (squared) distance from target
+                     end point (TARGET_LATITUDE, TARGET_LONGITUDE) is
+                     minimized; the units are degrees ** 2;
+                     the appropriate ending altitude should appear in
+                     the traj.in control file via the Floor keyword
+   TARGET_LATITUDE   Target end-of-trajectory pt. (degrees), ...
+   TARGET_LONGITUDE  ... if RHO_TARGET_POINT > 0
+   TARGET_TRIM       Desirable bound on |Cm| or |flap deflection|.  Use
+                     the value 0. if RHO_TRIM > 0; use some small positive
+                     value if the corresponding constraint is being used
+                     instead (because zero everywhere is unlikely to be
+                     feasible).
+
+   RHO_ALPHA_TVD     Total-variation-diminishing contribution to the
+   (RHO_CL_TVD)      objective; adds a (small) multiple of the sum of
+                     (Alpha(i+1) - Alpha(i))**2 / TK_ALPHA(NK_ALPHA),
+                     where i is a control pt., not a time history value;
+                     0.01 is a typical input for RHO_ALPHA_TVD, which
+                     serves for smoothing of CL vs. T if MODE_VAR = 6;
+                     try 1.0 in this case
+   RHO_BANK_TVD      Total-variation-diminishing contribution to the
+   (RHO_CD_TVD)      objective, as for RHO_ALPHA_TVD but for the bank
+                     control pts.
+                     Rule of thumb:
+                     Use RHO_*_TVD = 1.E-m where m is the decimal place
+                     of the total objective function intended to be
+                     affected by this contribution.
+   RHO_BETA_TVD      Analogous contribution for sideslip if MODE_VAR = 5
+   (RHO_CY_TVD)      (or for CY if MODE_VAR = 6)
+   RHO_DURATION      Duration (total time) of the trajectory - probably
+                     in conjunction with reasonable constraints on the
+                     terminal velocity and flight path angle
+   RHO_LST_SQRS      Minimize the sum of squared differences between
+                     the current trajectory and a target trajectory,
+                     in (latitude, longitude, altitude) space; enter
+                     a negative multiple to indicate use of time
+                     ranges normalized to [0, 1]; otherwise, the current
+                     trajectory is compared only at times within the
+                     range of the target trajectory times; the target
+                     trajectory should look like this:
+
+                        ! Time, s  Lat, deg  Long, deg  Alt, km
+                            0.500    12.345    -23.567   20.000
+                            1.000    12.345    -23.578   20.000
+                            1.500    12.346    -23.591   19.998
+                             :         :          :        :
+
+
+              SUPPLEMENTARY OPTIMIZATION VARIABLE INPUTS
+
+              If NDV = NDV_ANGLES = NDV_ALPHA + NDV_BANK [+ NDV_BETA],
+              meaning no additional variables, just include two header
+              lines in traj_opt.inp.  Likewise for MODE_VAR = 3 or 4.
+
+   #          Ordinal number of design variable added to NDV_ANGLES
+
+   VTYPE      6-character design variable type or name:
+
+              TABORT   Time at which to initiate an ascent abort;
+                       if present, a launch trajectory dataset is
+                       read from "traj_opt.ascent" in this format,
+                       using INERTIAL coordinates:
+
+                          Title of ascent trajectory dataset
+                          N_ASCENT (# pts. defining the ascent trajectory)
+                          T (sec) V (kps) GAMMA HEADING ALT (km) LAT LONG
+                          T       V       GAMMA HEADING ALT      LAT LONG
+                          T       V       GAMMA HEADING ALT      LAT LONG
+                          :       :       :     :       :        :   :
+
+              [Allow entry conditions as variables here some day?]
+
+   V          Optimization variable value as seen by the optimizer;
+              see VSCALE
+   VSCALE     Scale factor for the optimization variable to keep it ~O(1);
+              V * VSCALE is the actual quantity used by Traj_opt & Traj
+   AITCH      Step size used for estimating the gradient of the objective
+              w.r.t. the variable by forward differencing (NNGRAD = 0, 2);
+              the actual perturbation used is AITCH * VSCALE;
+              AITCH is also used for forward derivatives of any nonlinear
+              constraints; see NNDIFF above for central differencing
+   BL         Lower bound on the design variable as seen by the optimizer;
+              BL = -999. means the variable has no lower bound, else
+              BL scaling should match that of the variable - e.g., for a
+              variable with VSCALE = 0.1, BL = -10. means the effective
+              values are >= -10.*0.1 = -1., consistent with AITCH usage
+   BU         Upper bound on the design variable as seen by the optimizer;
+              BU = 999. means the variable has no upper bound, else
+              BU scaling should match that of the variable
+
+              LINEAR CONSTRAINTS:
+
+   If LINCON = 0, just include two header lines.
+   If LINCON > 0, further linear constraint description lines should be
+   entered as indicated by the LINCON description above.
+   Now that use of perturbing shape functions for the initial alpha and
+   bank schedules has been eliminated, the only linear constraints are
+   on the alpha knots (to limit pitch rate) and/or the bank knots (to
+   limit roll rate).  Rather than requiring a constraint input for each
+   pair of adjacent control points, a single input line here activates
+   each TYPE of linear constraint.
+   If NDV_ALPHA = 0 but LINCON = 1 or 3, the PITCH inputs here will be
+   ignored; likewise for the NDV_BANK = 0 case.
+
+   #          Ordinal number of linear constraint type - not used
+   LCTYPE     6-character linear constraint type:
+
+              PITCH   Pitch rate applied to alpha control point pairs;
+                      both BL and BU are used (see below)
+              ROLL    Roll rate applied to bank control point pairs;
+                      BL is not used; see BU below
+             [Yaw rate constraints are not worth the bother.]
+
+   BL         Lower bound for linear constraint [type]; -999. = -BIGBND;
+              if LCTYPE = PITCH, BL and BU both apply (degrees per second)
+   BU         Upper bound for linear constraint [type];  999. =  BIGBND;
+              if LCTYPE = ROLL, BU is the upper bound on the roll rate
+              magnitude in degrees per second for all adjacent pairs of
+              bank control points; BL is ignored
+   TLCON      Time at which linear constraint applies (seconds);
+              if LCTYPE = PITCH or ROLL, TLCON is ignored
+   ILCON      Integer control for the linear constraint;
+              if LCTYPE = PITCH or ROLL, ILCON is ignored
+
+              NONLINEAR CONSTRAINTS:
+
+   If NCNLN = 0, just include two header lines.
+
+   #          Ordinal number of nonlinear constraint - not used
+   NLCTYPE    6-character nonlinear constraint type of name:
+
+              ACCEL   Peak acceleration magnitude; use XNLCON to specify
+                      the desired upper bound (Gs);
+                      BU should be zero; BL is either zero (for exact
+                      peak G) or -XNLCON value if lower is OK, e.g., -3.
+              CRANGE  Cross range <degrees latitude for now>
+              DRANGE  Down  range (surface arc, km)
+              DYN_PR  Dynamic pressure; use XNLCON to specify the desired
+                      upper bound (pascals, e.g., 23940. for 500 psf);
+                      BU should be zero; BL is either zero (for exact
+                      peak Q) or -XNLCON value if lower is OK
+              ENDALP  Ending alpha (deg)
+              ENDALT  Ending altitude (km)
+              ENDBNK  Ending bank angle (deg)
+              ENDFPA  Ending flight path angle (gamma, degrees)
+              ENDHED  Ending heading angle (psi, degrees; 0 = N, 90 = E)
+              ENDLAT  Ending latitude (deg) ! ENDLAT & ENDLON seem to do
+              ENDLON  Ending longitude  "   ! better than ENDIST
+              ENDVEL  Ending velocity (km/sec, relative)
+              ENDIST  Ending distance from (TARGET_LATITUDE, -_LONGITUDE)
+                      degrees (not deg ** 2); use zero for both bounds
+              HEATLD  Integrated heat load over multiple surface points
+              H_LOAD  Stagnation point heat load (joules/cm^2)
+              H_FLUX  Peak total heat flux at stagnation pt. (watts/cm^2)
+              QALPHA  Dynamic pressure * alpha;
+                      use XNLCON (psf * degrees) for the upper bound;
+                      15,000 is a likely value; set BU = 0. & BL = -XNLCON
+              STG_PR  Peak stagnation pressure (pascals)
+              W_TEMP  Peak wall temperature at stagnation pt. (deg K)
+
+              DESCNT  Descent rate at end of trajectory, probably for
+                      ascent abort trajectories (km/sec)
+              PK_ALT  Peak altitude (km); use XNLCON for the upper bound
+                      (km); if this is lower than the entry altitude,
+                      start measuring from where it first drops below the
+                      bound; set BU = 0. and BL = -XNLCON
+
+              APOAPS  Target apoapsis for aero-capture (km from planet CG)
+              ECCENT  Ending orbital eccentricity, probably for aero-
+                      capture
+              INCLIN  Ending orbital inclination (degrees), probably for
+                      aero-capture:  0 = equatorial due East; 90 = polar
+
+              APC     Aerothermal performance constraint:
+                      file "apc.dat" should contain points as follows:
+
+                         Title
+                         n      ! # points
+                         V1  H1 ! High to low, km/sec and km;
+                         V2  H2 ! Traj_opt reverses the order if necessary
+                         ::  ::
+                         Vn  Hn
+
+                      The constraint tends to force the minimum of
+                      "current altitude minus interpolated APC altitude"
+                      to be >= BL = 0;
+                      set BU = max. likely altitude difference
+
+              UPPERC  Upper corridor constraint analogous to the APC,
+                      forming an upper boundary in (velocity, altitude)
+                      space (probably corresponding to Q = 10 psf).
+                      File "upper_corridor.dat" should match the APC file
+                      format.  Program CONSTANT_Q is available for
+                      constructing the initial curve, which may need
+                      padding via spline interpolation.  The suggested
+                      choice is 478.8 pascals (10 psf).  The abscissas
+                      should be redistributed ~ uniformly to 50 - 100
+                      points in the range ~ 0 - 12 km/sec;
+                      set BU = zero and BL ~ -50.
+
+              OSCILL  An upper bound of 0. means any increase in altitude
+                      during reentry is penalized; oscillations may thus
+                      be damped; severe skipping may also be overcome.
+                      (All altitude increases at each step in the journal
+                      history are summed; try scale = 1 & BL = -10.)
+
+              SURF1   Distributed heating constraint type 1 (temperature):
+                      the total violation of the temperature limits over
+                      all surface points is constrained to the upper bound
+                      of 0.  Use BL ~ -1000. (largest likely undershoot in
+                      degrees K).  See further description above.
+              SURF1R  Variant of SURF1 using temperatures derived from
+                      interpolated heat RATEs.  This requires surface
+                      emissivities in place of the upper bounds on the
+                      heat rates in 'traj_opt.surface_bounds'.  See
+                      the NOTE above where file formats are described.
+              SURF2   Distributed heating constraint type 2 (heat flux):
+                      the total violation of heat rate limits over all
+                      surface points is constrained to BU = 0.
+
+              TRIM    The time integral of the square of the instantaneous
+                      pitching moment (or possibly flap deflection) dev-
+                      iation from TARGET_TRIM.  Choose BL = 0., BU > 0.
+                      according to the estimated value of the integral
+                      at convergence for the indicated TARGET_TRIM.
+                      Use of a RHO_TRIM contribution to the objective is
+                      probably better than using this constraint.
+
+
+   BL         Lower bound on nonlinear constraint value; -999. = -BIGBND
+   BU         Upper bound on nonlinear constraint value;  999. =  BIGBND
+              N.B.:  these bounds should be in the same units as the
+              quantities being bounded, which is sometimes an "area" or
+              "distance", not the intended constraint quantity, for which
+              (as in the case of ACCEL) XNLCON is used to enter the upper
+              limit; the bounds and XNLCON (if used) are entered in real
+              space units; SNLCON will be applied by Traj_opt to the given
+              BL and BU; this is in contrast to the bounds on the optimiz-
+              ation variables themselves, which (as for their finite diff-
+              erencing intervals) refer to the scaled variables
+   XNLCON     Real quantity needed (or not) by the nonlinear constraint;
+              used for entering the simple bound imposed on a quantity
+              such as acceleration for which all violations are integrated
+              w.r.t. time and forced to the lower bound of zero
+   INLCON     First  index needed (or not) by the nonlinear constraint;
+              [Unused so far.]
+   JNLCON     Second index needed (or not) by the nonlinear constraint;
+              [Unused so far.]
+   SNLCON     Scale factor used to provide the optimizer with nonlinear
+              constraint derivatives comparable to those of the objective
+              and of other constraints - preferably O(1)
+
+              OPTIONAL INPUTS FOR NPOPT/SNOPT:
+
+   Traj_opt generates a run-time "specs" file for NPOPT.  It also
+   provides a namelist, $NPOPTIONS, for entering further options via
+   traj_opt.inp.  Remember to start each line in column 2.  Sample:
+
+    $NPOPTIONS
+    LEVELVER=-1, MAJORPL=1, MINORPL=0, MINORIL=2000, NPRFREQ=100,
+    TOLLIN=1.E-6, TOLNLIN=1.E-2, TOLOPT=1.E-2,
+    PENPARAM=0., STEPLIM=0.01, TIGHTEN=0.1,
+    $END
+
+   Note:  If NNDIFF /= 3 and 0. < TIGHTEN < 1., Traj_opt will reset
+          NNDIFF to 3, scale TOLNLIN, TOLOPT, and STEPLIM by TIGHTEN
+          upon return from NPOPT, and call it again for a warm start.
+          Central differencing offers some hope of satisfying the tighter
+          tolerances where forward differencing normally does not.
+          Starting with looser tolerances and 2-point differencing allows
+          switching to more accurate gradients once the problem has been
+          largely solved, and may reduce excessive numbers of major
+          iterations.  However, there is no easy way of terminating when
+          the solution is clearly "good enough" for practical purposes.
+          TIGHTEN = 0. (the default) suppresses the warm restart option.
+
+   See the NPSOL or SNOPT User Guides for descriptions of the other
+   namelist parameters.
+
+   Also:  File npopt.specs may be used to override further defaults
+          not addressed by the namelist.  This file is optional
+          (need not be present).
+
+
+HISTORY:
+
+   02/11/00  DAS  Initial framework adapted from SYN87-SB.
+   02/28/00   "   Faked alpha/beta data; minimized "arc" length (in time).
+   04/04/00   "   Installed further quantities compatible with the new
+                  trajectory.c interface to Traj.
+   05/02/00   "   Implemented nonlinear constraints on peak quantities.
+   05/08/00   "   Trajectory.c interface now determines the numbers of
+                  bank and alpha maneuvers during initialization.
+   05/09/00   "   Implemented linear constraints on alpha and bank angles.
+   05/15/00   "   NNGRAD = 2 or 3 allows CONFUN to provide OBJFUN results.
+   05/18/00   "   Arranged to pass Traj_opt command-line arguments into
+                  the Traj package (possibly SGI/IRIX-specific).
+   05/24/00   "   Added NNTIME option, and MAX_TIMES.
+   06/01/00   "   NNVAR option allows use of spline knots as variables,
+                  but kludging is required until Traj can use them too.
+   06/12/00   "   Incorporated an APC constraint option.
+   06/19/00   "   Variable scaling for spline knots case: leave STEPMX,
+                  H_ANGLES, and BU_ALPHA in degrees.
+   06/20/00   "   Introduced KNOT1_A and -B.
+   07/11/00   "   NNDIFF = 3 allows central differencing.
+   07/21/00   "   Traj now interpolates alpha and bank at every time step,
+                  so we no longer interract with its maneuvering script.
+   08/25/00   "   Introduced target (latitude, longitude) option, and
+                  maximum ending-altitude option.
+   08/30/00   "   Eliminated sine bump-type perturbing variables;
+                  introduced TABORT optimization variable and nonlinear
+                  constraints for ending latitude and longitude.
+   09/07/00   "   Added ENDIST constraint option.
+   04/19/01   "   Accessed Traj's orbital parameters for possible use
+                  in aero-capture calculations; inclination may be
+                  constrained.
+   04/24/01   "   Orbital eccentricity may be minimized for aero-capture;
+                  Roman Jits pointed out the need for a target apoapsis.
+   04/27/01   "   Bounds on the alpha and bank variables are now inputs.
+   05/08/01   "   ECCENT constraint allows aero-capture calculations to
+                  seek a low but not necessarily minimum eccentricity.
+   06/02/01   "   Added Step Limit to optional NPOPT inputs.
+   07/17/01   "   Added a PK_ALT constraint, but it may not stop maximum
+                  down-range trajectories from skipping.
+   07/20/01   "   Started implementing distributed heating constraints.
+   08/02/01   "   Implemented the UPPERC constraint for max. down-range.
+   08/22/01   "   Finished implementing distributed heating constraints.
+   08/29/01   "   Dump the surface point histories at the end of the run.
+   09/07/01   "   Added descent-rate constraint (DESCNT) because some
+                  abort trajectories were plummeting at the end.
+   09/10/01 DS/JR Distributed surface constraints now integrate areas
+                  above the bounds for each point, rather than summing
+                  the peak violations.
+   09/19/01  DAS  Upgrade of Traj, which now captures end-point conditions
+                  precisely.  Traj's number of maximum values grew from
+                  10 to 11, but the 11th is currently ignored.
+   09/21/01 DS/JR Implemented pitch & roll rate constraint options.  James
+                  suggested the linear constraint approach as opposed
+                  to the nonlinear integrated-violations alternative.
+   10/14/01  DAS  Switched from (dense) NPOPT to SNOPT-based NPOPT, only
+                  in case the latest niceties help somewhat.
+   10/18/01   "   An optional "npopt.specs" file avoids hard-coding new
+                  optional control parameters used by NPOPT/SNOPT.
+   11/08/01   "   Larger numbers of surface heating points forced
+                  separate files for each data type ('.temperatures',
+                  '.fluxes', ...).  Summing the temperature undershoots
+                  for a constraint value was bad - pick the smallest
+                  undershoot instead.
+   12/09/01   "   Introduced CURVE_VIOLATIONS in anticipation of using
+                  time histories rather than just peaks for G load and
+                  other possible constraints; used it in place of the
+                  original APC and upper corridor implementations, and
+                  for the DYN_PR and (new) QALPHA constraints.
+   03/20/02   "   ACCEL constraint now uses the time history, which
+                  had to be added to what trajectory.c returns.
+   04/08/02   "   RHO_TRIM or TRIM constraint, along with TARGET_TRIM,
+                  provide for minimizing the flap deflections over time
+                  (or possibly the pitching moment coefficient).  Used
+                  for a Crew Escape Module application, but beware:
+                  we don't want to push CM towards second zeros of the
+                  CM vs. Alpha curves for given Mach numbers.
+   04/23/02   "   Added RHO_ALPHA_TVD and RHO_BANK_TVD after observing
+                  that oscillations in both Alpha and bank can be smoothed
+                  (by hand) with negligible effect on abort trajectories,
+                  an indication of flat objective functions with poorly-
+                  defined minima.  These might help define the optimum
+                  better.
+   04/25/02   "   Switched from integral of |Alpha(i+1) - Alpha(i)| w.r.t.
+                  time to (Sum dAlpha**2) / time(n_alpha) for TVD idea.
+   05/02/02   "   Check for bad aero. database dimensions (count lines).
+                  Traj set-up really should return these dimensions.
+   05/07/02   "   PERCENT_LOVERD input allows for scaling drag and hence
+                  estimate sensitivities to L/D; termination constraints
+                  ENDVEL and ENDFPA have been added belatedly.
+   06/12/02   "   Renamed "CONSTQ" constraint as "UPPERC[orridor]", etc.
+   06/19/02   "   Avoided integrating w.r.t. index number for APC and
+                  UPPERC by passing time steps as well as vel. & alt.;
+                  suppressed trajectory calcs. for gradient elements
+                  corresponding to Alpha & bank controls "off the end";
+                  printed objective gradient in parallel with Jacobian.
+   06/21/02   "   Added option to minimize the trajectory duration.
+   06/25/02   "   Added ENDALP, ENDBNK, and ENDHED constraints.
+   07/11/02   "   Added step-function mode (MODE_VAR = 3, 4), requiring
+                  set-up and reading of "traj.alp" and "traj.bnk" from
+                  "traj_opt.steps".
+   07/23/02   "   Arranged for switching to central differencing via a
+                  warm restart.  See discussion above.
+   07/26/02   "   Removed QNMDIF2 option.
+   08/16/02   "   Warm restarts can be problematic.  Introduced the
+                  TIGHTEN namelist parameter for more control, and
+                  tightened STEPLIM as well when it is used.
+                  CPU time for gradients shouldn't be printed from SOLVE.
+   09/10/02   "   SURF1R constraint introduced to reduce trilinear
+                  interpolation errors in temperature by deriving
+                  temperature from interpolated heat flux.
+   01/22/03   "   Exercised aero. database sensitivity mode and made the
+                  outputs more readable.  Left CENDIF2's inappropriate
+                  printout alone for this unusual application.
+   02/07/03   "   Safeguarded the case of a trajectory not overlapping
+                  an APC at all: no good action, so stop with a message
+                  to remove the APC.  See CURVE_VIOLATIONS.
+   03/05/03   "   Option to match a target trajectory forced changes in
+                  trajectory.c as well as introducing RHO_LST_SQRS.
+   05/15/03   "   Added sideslip capability (MODE_VAR = 5) and option
+                  to optimize CL, CD, CY w.r.t. time (MODE_VAR = 6).
+                  Cleaned out unconstrained option (QNMDIF2), but CENDIF2
+                  is still employed by MODE_VAR = 0 case.
+   05/16/03   "   CL, CD, CY need smoothing options, so RHO_BETA_TVD has
+                  been added; the same 3 inputs work for MODE_VAR = 5 & 6
+   04/14/07   "   A capsule case required 180 - alpha data, making alpha
+                  descending in the aerodynamic and aerothermal tables.
+                  Only the aerothermal table interpolation needed a fix.
+   10/14/10   "   The LCTYPE array was too short for MODE_VAR = 3 or 4.
+   10/20/10   "   PERCENT_LOVERD is now used to scale CL instead of CD.
+
+SPONSOR:
+
+   Aerothermodynamics Branch (TSA), especially James Reuther
+   NASA Ames Research Center
+   Moffett Field, CA
+
+SOFTWARE AUTHORS:
+
+   David Saunders,  ELORET Corporation/ERC, Inc., NASA Ames (Traj_opt)
+   Gary Allen, Jr., ELORET Corporation/ERC, Inc., NASA Ames (Traj)

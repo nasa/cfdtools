@@ -1,0 +1,12 @@
+THIN_GRID_2D Description:
+
+   THIN_GRID_2D extracts every nth and mth point from all blocks of a 2D
+   multiblock grid in PLOT2D form.
+
+History:
+
+   08/28/12  D.A.Saunders  Adaptation of THIN_FLOW (easier than THIN_GRID
+                           which has the option to do different things to
+                           different blocks).
+
+Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA.

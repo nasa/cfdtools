@@ -1,0 +1,28 @@
+BUMP_FACTORS was prompted by an urgent request at 7:30 am PST on July 31,
+following the July 26 Return to Flight launch of Space Shuttle Discovery,
+STS-114.  Some damage to a thermal blanket warranted closer CFD analysis.
+(The initial SURFACE_INTERP program was also written that same Sunday.)
+
+From the program BUMP_FACTORS header:
+
+Map each point of a damaged surface flow solution to the smooth surface,
+and convert the damaged flow quantities to ratios of damaged to undamaged
+values by locating the smooth interpolated point nearest to each damaged
+point.
+
+Sample control file (standard input):
+
+   BUMP_FACTORS control file
+   3      ! Function in damage data to be converted to bump factor
+   3      ! Function in smooth data to divide by
+   0      ! 1 = flip y of damage data
+   1.0000 ! Scale applied to damage function
+          ! Damage file first, smooth file 2nd, output 3rd
+   140-02_CASE6_surface-008.dat
+   case6-rtf_221_surface.dat
+   140-02_CASE6_surface-008_BF.dat  ! Use *.plt to get binary output
+
+07/31/05  David Saunders  Initial implementation for Shuttle mission STS-114.
+08/10/06     "     "      Extended as a test vehicle for Tecplot 360 I/O.
+08/12/13     "     "      All ADT variants are now in one module with generic
+                          build_adt and search_adt interfaces.

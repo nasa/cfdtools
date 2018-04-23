@@ -1,0 +1,103 @@
+LINES_OF_SIGHT Description:
+
+   For a list of surface points (grid indices or (x,y,z) coordinates) and
+   the associated volume grid, generate lines of sight - i.e., straight
+   lines normal to the surface and extending to the outer boundary with
+   point distributions close to those of the local radial grid lines.
+   The results are saved in PLOT3D multiblock form (one line of sight per
+   block) compatible with the earlier FLOW_INTERP, which can perform the
+   flow interpolations and tabulations that are normally what are really
+   desired for application to hypersonic flows.
+
+   This version can also read a structured surface grid for the target pts.
+   to simplify using a thinned form of the relevant volume grid's surface.
+
+   This version has the option to produce lines parallel to Ox rather than
+   normal to the wall.  Most recently, it also has the option to produce
+   lines normal to the outer shock boundary, which may be the best choice
+   for tangent-slab radiation calculations.
+
+   For the Ox-parallel option, the targets are assumed to be in list form.
+
+   It is understood that body pts. will normally be confined to forebodies,
+   since aft-body points are unlikely to have solutions in the usual sense.
+
+Assumptions (probably generalizable, but they may never need to be):
+
+   o  The structured volume grid contains one layer of blocks, with k = 1
+      at the wall.  This simplifies determination of the inner and outer
+      boundary patches.  (To overcome these restrictions, one could use the
+      boundary condition data employed by the relevant flow solver.)
+
+Strategy:
+
+   o  Prompt for all inputs (no control file).
+
+   o  Read the entire volume grid and extract the inner & outer boundaries
+      as multiblock surface grids.
+
+   o  For all lines of sight, search the inner boundary and save the
+      relevant patch number and cell indices.
+
+   o  Build a new search tree from the outer boundary.
+
+   o  For each line of sight:
+
+        If body-normal:
+
+          > Construct a 2-point line normal to the wall with length that of
+            a local radial line.  This should be at least as long as the
+            straight line distance to the outer boundary.  (Actually, it
+            may need to be longer off the shoulder of a capsule.)
+
+          > Intersect the line with the outer boundary and transform the
+            point distribution of the radial grid line to the relevant
+            portion of the straight line.
+
+        If shock-normal:
+
+          > Simply apply the ADT search utility to each body point and the
+            outer grid boundary: this finds the closest point on the shock
+            boundary, and the associated line is orthogonal to it.
+
+          > Discretize the 2-point line very simply.
+
+        If parallel to Ox:
+
+          > Adjust body-normal method to work with unit vector (-1,0,0)'
+            instead of the unit normal at the body point, and perform the
+            same intersection calculation and discretization.
+
+Input surface point format (read to EOF):
+
+   Either                            or                          or
+
+   n   i   j                         x   y   z             nb
+   n   i   j                         x   y   z             ni  nj  1
+   n   i   j                         x   y   z             ni  nj  1
+   :   :   :                         :   :   :             :   :   :
+                                                           x11 x12 x13 ...
+   where n = block number and k = 1 is implied.            ...............
+
+History:
+
+   10/07/05  D.A.Saunders  Initial design.
+   11/14/05    "     "     Fixed a bug in allocating radial_lines(ib).
+   11/22/05    "     "     Expanded the range of t for INTSEC6 to 2, not
+                           1.1; added the option to read a structured
+                           surface grid rather than a list of indices or
+                           coordinates.
+   08/21/09    "     "     If a point entered via patch indices were at an
+                           upper index boundary, the surface normal utility
+                           was not being given the lower-left cell indices.
+   07/11/13    "     "     Dinesh Prabhu proposed making the lines of sight
+                           orthogonal to the shock as the proper thing to
+                           do for tangent-slab radiation calculations.  The
+                           earlier body-normal and Ox-parallel options have
+                           been retained.
+   08/06/13    "     "     All ADT variants have been combined into a
+                           module for distribution reasons (generic build
+                           & search calls).
+
+Author:  David Saunders, ELORET/NASA Ames Research Center, CA
+                         Now with ERC, Inc. at ARC.

@@ -1,0 +1,4 @@
+COMPARE_BLOCKS reads two PLOT3D volume grids and locates the
+largest point difference in the specified subscript range(s).
+The grids are assumed to be /3D, /MGRID and /FORMATTED or /IEEE_D.
+See also the earlier COMPARE_PATCHES.

@@ -1,0 +1,34 @@
+
+Program REFLECT_BLOCKS_2D Description:
+
+   This is the 2D analogue of REFLECT_BLOCKS, from which it is adapted.
+
+   REFLECT_BLOCKS_2D reflects the blocks of a multiblock grid in the plane
+specified.  An optional function file may also be reflected.  Either both
+halves or just the reflected half may be output.  An option to force
+exact zeros at the symmetry plane is provided.  If a function file is
+present, one or more quantities may have the sign changed as part of the
+reflection.  Normally this would be just one velocity component.
+
+   The function file may represent either a vertex- or cell-centered
+solution, with or without halo cells.  (Only the number of blocks is
+required to match that of the grid.)
+
+Procedures:
+
+   XYQ_IO package  I/O utilities for PLOT3D grid and function files
+   RDLIST          Utility for reading an indefinite list of integers
+
+History:
+
+   02/23/06  D.A.Saunders  REFLECT_BLOCKS from which this is adapted.
+   03/25/15    "     "     REFLECT_BLOCKS_2D is prompted by a Comet Sample
+                           Return capsule for which some body-normal lines
+                           of sight cross the X-axis, causing trouble with
+                           line/surface intersections unless the whole
+                           volume grid is present, not just the top half.
+   04/12/15    "     "     Preserving handedness by reordering j caused
+                           another problem: we want j = 1 at the surface.
+                           Therefore, reverse the i indices instead.
+
+Author:  David Saunders, ELORET/NASA Ames Research Cntr, Moffett Field, CA

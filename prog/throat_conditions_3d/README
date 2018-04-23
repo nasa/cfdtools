@@ -1,0 +1,438 @@
+THROAT_CONDITIONS_3D Description:
+=================================
+
+   Calculate boundary conditions at an arc-jet nozzle throat corresponding
+   to a choice of distributions of two real gas flow variables over the 2-D
+   cross-section, which may be rectangular, circular, or semi-elliptic.
+   Results are output in the form of a pointwise boundary condition for the
+   DPLR 3-D flow solver.  This is a generalization of the earlier utility,
+   NOZZLE_THROAT_CONDITIONS, which applies to axisymmetric flow within
+   circular nozzles. The flow is still considered to be uni-directional
+   (u,0,0) at any throat point.
+
+Approach:
+=========
+
+   The equilibrium gas compositions are calculated with a C implementation
+   of the relevant portions of the CEA program by Gordon and McBride dated
+   May 20, 1998.  Gary Allen wrote the C package at NASA Ames Research Ctr.
+   and continues to maintain it. Initially, a C driving program was invoked
+   here via a system call whenever a gas composition was required. This has
+   now been streamlined with a C interface routine (equilibrium_gas.c) even
+   though its inefficiency was not much of an issue.
+
+Extension to a Bidirectional Boundary:
+
+   1-D profiles of the specified variables V1, V2 are named in the control
+   file for each of the major (horizontal) and minor (vertical) axes of the
+   nozzle cross-section, on the indicated uniform grids. The outer boundary
+   inputs are derived by linear interpolations w.r.t. arc length. (They are
+   probably constant on the outer edge, but need not be.)  Interior uniform
+   grid point values of V1 & V2 are derived from the edge values via inter-
+   polation. The specified calculation for the complete in-flow may then be
+   applied to every point (i,j) of the uniform grid.  Point (1,1) at the
+   nozzle center uses a starting guess algorithm.  Further points (i,j) are
+   started from the (i-1,j) point solution except that the (1,j) solution
+   is started from the (1,j-1) solution.
+
+   If economy mode is specified (as recommended), only the axis grid points
+   are solved for by the full method.  Interior points are determined by
+   interpolation, with an extra call to the equilibrium compostion routine
+   to ensure valid flow states.  Note that this adjustment affects results
+   slightly when the option to specify bulk flow quantities is used, but
+   the final difference between the requested and achieved bulk quantities
+   is quite insignificant given the uncertainties in arc-jet operations.
+
+   Three choices are available for the interim uniform grid, for historical
+   reasons that are associated with the 3 choices for interpolation from
+   flow profiles on the major and minor axes to the interior points.  Some
+   combinations are no longer recommended, but have been retained.
+
+   Recommended choices:
+
+      Nozzle Type          Grid Topology           Interpolation Method
+
+      Rectangular          Rectangular             Cartesian product
+      Circular             Polar                   TFI or Cartesian product
+      Semi-ellipse         Specialized algebraic   Scaling of minor profile
+
+   Programmer note:
+
+   Before Cartesian product interpolation was implemented, TFI was found to
+   behave poorly enough for the rectangle case (yet well for the ellipse)
+   that a polar form of grid was implemented for the rectangle nozzle case.
+   This option treats the rectangle just as for the semi-ellipse initially,
+   with a slight adjustment to ensure that one of the polar angles passes a
+   spoke through the outer corner of the associated rectangle.  Then the
+   polar grid (no longer quite uniform in general) is replaced by another
+   grid with the spokes extrapolated to the desired rectangle.  (Slight
+   concavity in flat top surfaces formed by total enthalpy, say, appear
+   unavoidable with TFI on the simple rectangular grid.  However, Cartesian
+   product interpolation has since been found to behave well.)
+
+   If a target grid is specified, bidirectional interpolation within the
+   preliminary uniform grid is performed.  The boundaries of the two grids
+   should match for sensible results.
+
+Flow Specification Options (one pair for each axis):
+===========================
+
+   Gary provides 6 options for the given pair of flow specifications. These
+   are preserved as options here but normal usage is likely to specify the
+   total enthalpy/mass flux combination.
+
+   Option   Flow variables specified          Units
+
+   Ht_MF    total stagnation enthalpy         J/kg
+            mass flux                         kg/(m^2.s)
+            (safeguarded Newton iteration)
+   Rho_T    density                           kg/m^3
+            temperature                       K
+   Rho_H    density                           kg/m^3
+            mixture enthalpy                  J/kg
+   Rho_S    density                           kg/m^3
+            mixture entropy                   J/kg-mole
+   P_T      pressure                          Pa
+            temperature                       K
+   P_H      pressure                          Pa
+            mixture enthalpy                  J/kg
+   P_S      pressure                          Pa
+            mixture entropy                   J/kg-mole
+
+   Ht_MF Algorithm:
+   ----------------
+
+   This option determines throat conditions at the indicated frozen Mach #
+   (not necessarily 1) for given total stagnation (reservoir) enthalpy and
+   mass flow rate per unit area.  Two nonlinear equations are solved via a
+   safeguarded two-variable Newton iteration with central difference deriv-
+   atives.
+
+   The equations at a point r from the centerline are:
+
+      f(1)  =  ho(r)  -  t1 Cpbar T  -  evbar(T)  -  sum (ci hfi)  =  0
+
+      f(2)  =  rho u(r)  -  P Mf sqrt (gamf / (Rbar T))            =  0
+
+   where, at point r, the frozen flow variables are:
+
+      ho      =  mixture total stagnation enthalpy  =  0.5 u**2 +  h
+      h       =  mixture enthalpy per unit mass     =  P / rho  +  e
+      rho     =  mixture density
+      P       =  mixture pressure
+      T       =  mixture temp. (translational T = vibrational temp. Tv)
+      e       =  mixture internal energy per unit mass (H is per unit vol.)
+      Mf      =  frozen Mach number (not necessarily 1)
+      af      =  frozen speed of sound
+      u       =  Mf af  =  Mf sqrt (gamf Rbar T)
+      t1      =  1  +  0.5 (gamf - 1) Mf**2
+      ci      =  mass fraction of species i
+      hfi     =  reference enthalpy at O K for species i
+      Mi      =  molecular weight for species i
+      gamf    =  Cpbar / Cvbar
+      Cpbar   =  mixture specific heat at const. pr.  =  Rbar  +  Cvbar
+      Cvbar   =  mixture specific heat at const. vol. =  sum (ci (Cvi^/Mi))
+      Rbar    =  mixture gas constant                 =  sum (ci  R^ / Mi)
+      evbar   =  mixture vibrational energy           =  sum (ci (evi^/Mi))
+      evi^    =  R^ (thetavi / (exp (thetavi / Tv) - 1))
+      thetavi =  characteristic temp. for species i vibrational energy
+      Cvi^    =  1.5 R^ or 2.5 R^ for atomic or diatomic species resp.
+      R^      =  universal gas constant
+
+   The two variables to be solved for are P and T, with the mass fractions
+   essentially converging as well during the iterative solution.
+
+   Ht_MF Starting Guesses (for a Profile from the 2-D case):
+   ---------------------------------------------------------
+
+   For a specified mass fraction of argon (say 10%), fractions for N2 and
+   O2 are readily derived from the values 0.767 & 0.233 for pure air, with
+   other mass fractions set to 0.
+
+   For the current point in space, the previous solution serves as a good
+   starting guess.  For the first point r in space, starting guesses for P
+   and T are implemented as follows:
+
+      P  =  C (1 / t1) ^ (gamf / (gamf - 1)) rho u (r) ho(r)^n
+      T  =    (1 / t1) * To
+
+   where
+
+      C     =  3.41831 (SI units)
+      n     =  0.397
+      gamf  =  1.15 - 1.18  (lower for higher ho)
+      To    =  6500 K  if  ho  <  15 MJ/kg  else
+            =  7000 K  if  ho  <  20 MJ/kg  else
+            =  7500 K  if  ho  >  20 MJ/kg
+
+Sample control file (standard input):
+=====================================
+
+   ========================================================================
+   Control file for THROAT_CONDITIONS_3D (2 flow variables prescribed)
+   ========================================================================
+   Rectangular   ! Nozzle type: Rectangular|Circular|Semi-Elliptic|Polar
+   Ht_MF         ! V1_V2 spec: Ht_MF, Rho_T, Rho_H, Rho_S, P_T, P_H, or P_S
+   Economy       ! Fill mode: Full|Economy (Axes + Interpoln.)|Quick look
+   Cartesian     ! Interpolation method: TFI|Cartesian[ Product]|Scaling
+   1.0           ! Frozen Mach number
+   ------------------------------------------------------------------------
+   Iteration controls
+   ------------------------------------------------------------------------
+   1             ! Iterate for target bulk enthalpy?   0 = no | 1 = yes
+   2.9E+07       ! Target bulk enthalpy, J/kg
+   1             ! Iterate for target bulk mass flow rate?  0 | 1
+   90.           ! Target bulk mass flow rate, kg/s
+   ------------------------------------------------------------------------
+   V_1 specifications, Horizontal Axis
+   ------------------------------------------------------------------------
+   Linear        ! Uniform, Linear, Parabolic, Nthdegree, Sinusoid, ...
+   0.   3.E+07   ! (r, V1) at nozzle center-line
+   1.   3.E+07   ! (r, V1) at nozzle wall
+   999.   999.   ! "Width" (several profiles) or Width+Steepness (Sigmoid)
+   none          ! Dataset file name (if relevant)
+   ------------------------------------------------------------------------
+   V_2 specifications, Horizontal Axis
+   ------------------------------------------------------------------------
+   Sinusoid      ! Shape (..., Mthdegree, Sigmoid, Gaussian, Lorentz, ...)
+   0.   250.     ! (r, V2) at nozzle center-line
+   1.   300.     ! (r, V2) at nozzle wall
+   2.     999.   ! "Width" or "Steepness"
+   none          ! Dataset file name
+   ------------------------------------------------------------------------
+   V_1 specifications, Vertical Axis
+   ------------------------------------------------------------------------
+   Linear        ! Shape:  Uniform, Linear, Parabolic, Sinusoid, Dataset ..
+   0.   3.E+07   ! (r, V1) at nozzle center-line
+   0.5  3.E+07   ! (r, V1) at nozzle wall
+   999.   999.   ! "Width" and "Steepness"
+   none          ! Dataset file name (if relevant)
+   ------------------------------------------------------------------------
+   V_2 specifications, Vertical Axis
+   ------------------------------------------------------------------------
+   Sinusoid      ! Shape
+   0.   250.     ! (r, V2) at nozzle center-line
+   0.5  300.     ! (r, V2) at nozzle wall
+   2.     999.   ! "Width" and "Steepness"
+   none          ! Dataset file name
+   ------------------------------------------------------------------------
+   Mixture specifications
+   ------------------------------------------------------------------------
+   13            ! # species
+   N2   0.6903   ! Species names (DPLR) and mass fraction starting guesses
+   O2   0.2097
+   NO   0.0
+   N    0.0
+   O    0.0
+   Ar   0.1000
+   Ar+  0.0
+   N2+  0.0
+   O2+  0.0
+   NO+  0.0
+   N+   0.0
+   O+   0.0
+   e    0.0
+   ------------------------------------------------------------------------
+   Output specifications
+   ------------------------------------------------------------------------
+   33 17          ! # initial uniform (i,j) pts.; ni < 0 for diagnostics
+   grid.g         ! File containing target grid for interpolating to | none
+   61             ! DPLR's input profile BC code:  60 | 61 | 62
+   conditions.f   ! File name for output throat conditions (*.f | *.pbca)
+   conditions.dat ! Plottable data (Tecplot ASCII)
+   2.             ! Controls blending of polar grids for the rectangle case
+   0 0 1          ! Converts flow solver xyz convention to internal order
+   0 1 0          ! In this example, the flow solver x is downstream, y is
+   1 0 0          ! up, and z is spanwise (right-handed)
+
+Output format (portion of DPLR *.pbca file):
+============================================
+
+   Unless the file extension for the output throat conditions is 'pbca', we
+   simply write a PLOT3D function file that can be checked by plotting.
+   Otherwise, some editing is avoided because this program inserts the
+   lines expected between blocks, but the partial pbca file is not plot-
+   able.
+
+Further Usage Notes:
+====================
+
+   (0) Run the code like this:   throat_conditions_3d < xxx.inp > xxx.log
+
+   (1) Internal units have x spanwise/horizontal and y vertically up. Since
+       z is assumed to be constant, it is not relevant except when the
+       interim uniform-grid results are to be interpolated to a CFD grid.
+       The permutation matrix input should convert from the flow solver xyz
+       convention to make +spanwise <-> +x & +vertical <-> +y . The 3rd CFD
+       coordinate is then used as the constant z during the 3-space flow
+       interpolations to the CFD grid block face at the throat.
+       Since the working uniform grid has z = 0, it makes sense for the
+       target grid to match that (after any permutation), although the pro-
+       jection process will tolerate permuted z = any reasonable constant.
+       The plottable output interpolations contain just [permuted] x and y.
+
+   (2) The plain uniform rectangle grid was initially abandoned when it
+       produced disappointing (non-convex) TFI results.  The rectangle was
+       temporarily treated as an ellipse via a polar grid.  However, when
+       Cartesian products were provided as an alternative to TFI, the
+       plain rectangle grid option was restored.  Now, the nozzle type and
+       the interpolation type are independent controls, with 'R' meaning
+       the plain rectangular uniform grid and 'P' (polar) meaning the
+       polar form of grid for rectangular nozzles (no longer recommended).
+
+   (3) When rectangular nozzles are treated on an interim polar grid with
+       elliptic outer boundary (to exploit the better behavior of TFI on
+       such boundaries), that interim grid is converted to the desired
+       rectangle shape by stretching the spokes.  It remains a polar grid.
+       The plain rectangle form (uniform radial spacing) is blended /w the
+       interim elliptic form in order to moderate cell skewness, for all
+       values of control input rectangle_power = p, which is applied to
+       the ratio (i - 1)/(ni - 1) at radial point i.
+
+           0 < p <= 1. = more of plain uniform rectangle grid
+               p >  1. = more of interim elliptic grid
+
+   (4) The semi-ellipse case with a wall at the major axis needs a vertical
+       profile between center and upper wall that decays at both ends.  Use
+       the MTHDEGREE option in this case (where the "center" control value
+       now applies to midway between r_center and r_wall).  The NTHDEGREE
+       option has the peak at r_center.
+
+   (5) The polar grid that appears natural for the semi-ellipse proves to
+       be inferior to the specialized grid introduced later, consisting of
+       a family of i-lines arranged to  be normal to the flat and outer
+       boundaries at both ends.  The vertical center-line flow profile is
+       simply scaled to fill the interior flow.
+
+   (6) Use of fill_mode = 'economy' means full calculations are performed
+       along the major and minor axes only, followed by interpolations
+       for the interior points.  Results appear almost indistinguishable
+       from the full calculations in the examples compared, although the
+       interpolated flow values are adjusted with equilibrium_composition
+       calls to be sure they satisfy the equations of state.
+
+   (7) For a quick look at the input distributions of V1 & V2, use option
+       fill_mode = 'quick_look'.  The program saves these distributions in
+       plottable form then stops.  See (8).
+
+   (8) Before invoking the bulk flow iteration, perform a "quick-look" run
+       to see what the integrated quantities are, so that reasonable target
+       bulk values can be attained knowing that the problem achieves them
+       by scaling the input wall values of the axis profiles.  The range
+       that is searched by the zero-finder is [.5, 2.] for each multiplier.
+
+   (9) The integrated bulk quantities displayed are adjusted to refer to
+       the entire nozzle cross-section.  Enter target values accordingly.
+
+  (10) Excessive "step-halving iteration failure" messages usually mean
+       unreasonable conditions are being sought. Use of scaled variables &
+       scaled residuals makes it very unlikely that the Newton iterations
+       will fail.  They can be displayed by entering -ni_uniform for the
+       first dimension of the desired uniform internal grid.
+
+  (11) The Lorentz profile tends toward 0. less rapidly than the Gaussian,
+       and is more peaky at r = 0 for the same "width" parameter.
+
+History:
+========
+
+   06/09/04  DKP/DAS  Earlier THROAT_CONDITIONS: Dinesh Prabhu/D. Saunders.
+   12/19/05  TG /DAS  Initial NOZZE_THROAT_CONDITIONS (Ht_Ru option).
+   12/20/05  TG /DAS  Added the Ht_MF alternative (Newton iteration) to
+                      the Ht_Ru option (non-derivative zero finder).
+                      Newton wins.
+   11/28/06  DKP/DAS  Lowered the convergence tolerance: 1.e-5 --> 1.e-6.
+   11/29/06   "   "   Put the tolerance back to 1.e-5.  It seems the "Gary"
+                      part of the scheme can give different results for
+                      different initial estimates of the mass fractions.
+                      This needs to be investigated.
+   02/21/07-   DAS    THROAT_CONDITIONS_3D derived fr. NOZZLE_THROAT_CONDS.
+   02/28/07           for rectangular or semi-elliptic nozzles.
+   03/05/07  TG /DAS  Economy mode for the 'Ht_MF' option (semi-axes
+                      followed by TFI of interior P & T, etc.).
+   03/06/07   "   "   Added nth deg. polynomial choice to get flatter tops.
+   03/07/07    DAS    Tried to overcome concavity in rectangle flow by
+                      morphing to a Cartesian grid with elliptic outer
+                      boundary, but if anything it's slightly poorer.
+   03/08/07     "     Try a polar grid for the rectangle case: use an
+                      interim elliptic grid first, then stretch the spokes
+                      to form the desired rectangle.
+   03/10/07     "     Option to blend the stretched rectangle with the
+                      interim ellipse to soften the corner along the
+                      diagonal.
+   03/12/07     "     Interpolation to CFD block face(s) completed.
+     "  "    TG/DAS   Provision for frozen Mach number other than 1.
+     "  "     "  "    Belated realization that the semi-ellipse case with a
+                      wall at the major axis needs a new profile shape -
+                      introduced MTHDEGREE option.
+   03/13/07  D.Prabhu Dinesh suggested the sigmoid shape function, which
+               DAS    required another control dubbed "steepness".
+   03/16/07     "     Added the 'quick-look' option.  Implemented the
+                      Cartesian product option as an alternative to TFI
+                      to keep Tahir happy (with concavity predicted, at
+                      least on the plain rectangle grid).
+   03/21/07     "     The 'S' option, now distinct from 'E' for the semi-
+                      ellipse, introduces a better grid consisting of a
+                      family of i-lines normal to the major axis and the
+                      outer wall at both ends.  This appears the best
+                      choice, whether the minor profile peak is near the
+                      middle of the vertical axis (wall at the major axis)
+                      or not.
+   03/29/07     "     Incorporated the scaling found to overcome odd
+                      behavior with a low-pressure NOZZLE_THROAT_CONDITIONS
+                      case.
+   04/07/07     "     Bulk mass flow rate and bulk enthalpy options are
+                      functioning.
+   04/09/07     "     Introduced "Circular" as a nozzle-type, where semi-
+                      ellipse had seemed adequate earlier.  A plain polar
+                      grid is implied, while the semi-ellipse case now
+                      implies a solid wall along the major axis, and the
+                      minor axis profiles should be appropriate (MTHDEGREE
+                      or UNIFORM being about the only sensible choices).
+   04/11/07     "     The finite differencing needed more careful starting
+                      guesses for the mass fractions to reduce noise.
+   05/02/07     "     A uniform profile should work w/ the wall value, not
+                      the center value, because the bulk iterations adjust
+                      wall values.  Added the option to tailor the flow
+                      interpolated to the CFD grid to look more like a
+                      DPLR pbca file if the file name ends in pbca.
+                      Otherwise, it remains a plottable function file.
+   06/14/07     "     Added Gaussian profile option.
+   07/05/07     "     Added Lorentz  profile option.
+   10/31/08     "     Replaced system call in equilibrium_composition.f90
+                      to Gary's CEA driving program w/ a call to interface
+                      routine equilibrium_gas.c, without change here except
+                      to update the documentation and to control the extra
+                      printing to standard output.
+   03/25/10     "     Maria Pulsonetti needed CO2, CO, C species in the top
+                      level tables (already handled at the lower levels).
+                      WARNING:  Polyatomic species have more than one
+                      characteristic vibrational temp., so if there is
+                      any significant CO2 fraction, enthalpy & temperature
+                      calculations are only approximate.
+   09/14/11      "    Transcribed Tahir's more thorough handling of the
+                      CO2 and NCO triatomics with three vibrational modes
+                      as first done in NOZZLE_THROAT_CONDITIONS.
+                      Note that lewis.c does not handle NCO yet, though.
+
+                      Redirecting standard output (unit 6) has been seen to
+                      interact badly with singular matrix diagnostics from
+                      the lewis function.  Therefore, open a log file on
+                      unit 7 and write to that.  Any C code diagnostics
+                      still come to the screen.
+
+                      [Later:  This experience from the axisymmetric solver
+                      remains a mystery.  For now, we stay with unit 6, and
+                      diagnostics from both languages go to the same file
+                      or to the screen if std. output is not redirected.]
+
+                      Also, Gary points out that Ar+ should have been among
+                      the subset of species here all along (at least for
+                      high temperature cases).
+
+Authors:
+========
+
+   Analysis:          Tahir Gokcen,   ELORET Corp./NASA Ames Research Cntr.
+   Implementation:    David Saunders, ELORET Corp./NASA Ames Research Cntr.
+                                 now: ERC, Inc./NASA ARC

@@ -1,0 +1,232 @@
+FLOW_INTERP Description:
+
+   This program interpolates a flow field solution from one multiblock
+   structured grid to another.  The solution may be either cell-centered
+   or vertex-centered.  The same underlying geometry is assumed to be
+   represented by both grids, but the outer boundaries and/or block counts
+   and point distributions may differ.
+
+Intended application:
+
+   >  Ideally, all target grid cells will be contained by the grid
+      associated with the given flow solution.
+   >  For target cells outside the solution grid, the nearest solution
+      cell is used.  Thus, extrapolation is explicitly avoided.
+   >  The standard approach has long been to use the ADT (Alternating
+      Digital Tree) bounding-box-based technique to ensure efficiency no
+      matter how many of the target points are outside the solution grid.
+   >  Alternatively, KDTREE searches may be specified: these determine
+      just the nearest grid point (probably a cell centroid) much more
+      efficiently than determining the best point within or on a cell and
+      interpolation coefficients to go with it.  The search tree requires
+      less memory as well, which may make this the only option on very
+      large grids to be searched.
+   >  Most recently, a hybrid option may be specified: KDTREE searches
+      (not on the input grid vertices, but on the associated cell
+      centroids generated here) followed by refinement with one call per
+      search to find the nearest point to the target point that is not
+      outside the indicated closest-centroid cell.  This is an attempt to
+      combine the best features of the KDTREE and ADT methods.
+      Unfortunately, on typical hypersonic grids, the centroid closest to a
+      target point may not be that of the best cell that actually contains
+      the point.  (This appears to be possible for high-aspect-ratio cells
+      where the grid spacing in some direction is varying.)  This hybrid
+      method may still be the best compromise for interpolating within very
+      large grids.  Nearest-point (method 2) or refined-within-nearest-
+      centroid-cell (method 3) flow values may be adequate for starting new
+      flow solutions, but the best-possible interpolated values of the
+      standard ADT method are recommended for, say, line-of-sight interp-
+      olations intended for radiation calculations.
+   >  The refinements of the hybrid method 3 cost 2.5 - 3 times the cost of
+      the plain KDTREE method 2 results, while the ADT method 1 may be as
+      much as 100 times slower than plain KDTREE on large grids, and it
+      requires more memory.
+   >  Note that application to different geometries (even slightly
+      perturbed ones) is NOT appropriate:  boundary layer point
+      distributions are all-important, and the real-space interpolations
+      performed here will not preserve the boundary layer flow variables
+      (or gradients, especially) anywhere the two surface grids differ
+      more than infinitesimally.
+   >  Further, if the new grid points resolve surface curvature better
+      than the grid being searched, not even the ADT method can guarantee
+      properly varying boundary layer interpolations.  Only for local
+      problems (where the in-flow at interpolated boundaries has to become
+      a fixed boundary condition) should this be an issue, though;
+      otherwise, the flow solver should clean up the interpolated starting
+      guess.
+   >  For interpolating just surface solutions, see RADIAL_INTERP or
+      SURFACE_INTERP.  (RADIAL_INTERP does correct for added resolution at
+      the wall, but it assumes only one layer of grid blocks as is common
+      for atmospheric entry vehicles, while FLOW_INTERP makes no such
+      assumption.)
+   >  This version tabulates results for the special case of single-radial-
+      line target block(s), as needed for comparisons with wind tunnel
+      boundary layer measurements or lines of sight for radiation calc-
+      ulations.  Target ni = nj = 1 invokes this option.
+
+Assumptions:
+
+   >  All files are PLOT3D-type, multiblock, 3-D (not 2-D), formatted or
+      unformatted.
+   >  If the flow solution block dimensions match the grid block dimens.,
+      the solution is assumed to be vertex-centered.  If they differ by 1,
+      the solution must be cell-centered.  Any other finding means the
+      files are inconsistent.
+
+Clarification for DPLR Users:
+
+      DPLR-related usage normally involves cell-centered solutions with
+      "halo" cells included.  The associated grids should also be cell-
+      centered with halo cells, in which case there is no apparent
+      difference from vertex-centered data as far as FLOW_INTERP is
+      concerned.
+
+Algorithm:
+
+   >  If the option to attempt suppression of input flow blocks that won't
+      ever be needed is invoked, do the following pre processing.
+      (Otherwise, simply read the entire input flow solution.)
+
+      >  Read one block of the input flow grid at at time and determine
+         the data ranges.  Rewind the file.
+
+      >  Do likewise for the target grid block(s), and determine their
+         overall data range.  Rewind the file.
+
+      >  Determine which flow blocks to include in the search tree using a
+         small safety margin.  (The main worry is with target points that
+         might be outside the input flow grid.  The searching then produces
+         the point with the shortest orthogonal projected distance to an
+         outer boundary cell face.  We cannot be certain that a block
+         suppressed via data range information doesn't actually contain
+         the best choice of cell for an "orphan" point.)
+
+      >  Set up a "grid_type" array suited to the blocks to be included,
+         then read only those blocks.  The remaining steps are the same as
+         for the no-suppression case.
+
+   >  For each block in the target grid:
+
+      >  Read the target grid block.
+
+      >  If this is the first target block, perform some initialization:
+
+         >  If the solution is cell-centered but the grid is not,
+            interpolate it to the vertices of the solution grid (in-place).
+            (See the above clarification about halo cells.)
+
+         >  Build the solution grid search tree from all volume cells of
+            all (unsuppressed) blocks.  (Method 1 uses bounding box
+            techniques for the searching; method 2 builds its tree from
+            the input solution grid points and works with just distances,
+            while method 3 builds its tree from the centroids of the input
+            solution grid cells.)
+
+      >  For each point in the target block:
+
+         >  Locate the nearest solution cell point by searching the ADT,
+            or just the nearest grid point if KDTREE method 2 is specified,
+            or the nearest cell centroid if KDTREE method 3 is specified.
+            For method 3, refine the search by calculating the nearest
+            point of the closest-centroid cell to the target point (but
+            this cell may not be the best cell - working with cell
+            centroids is not bullet-proof the way the ADT method is).
+
+         >  Interpolate the flow solution to the current target point
+            using the solution cell found and the interpolation coef-
+            ficients produced by the search (unless method = 2, in which
+            case the flow associated with the nearest data point is simply
+            copied).
+
+            Note that the interpolations are "trilinear" within a single
+            cell, but this familiar formulation is not really linear
+            because it contains nonlinear terms, but the effect is (tri)
+            linear if the cell is perfectly rectangular.
+
+      >  If the input flow was cell-centered, meaning dimension differ-
+         ences of 1, convert the interpolated flow to be likewise.
+
+      >  Output the interpolated solution for the current block.
+
+
+Control file format ('flow_interp.inp')
+
+   FLOW_INTERP controls for case xxx
+   ------------- INPUT SOLUTION GRID -------------
+   baseline.xyz            Solution grid file name
+   T                       Formatted? [T|F]
+   ------------- INPUT FLOW SOLUTION -------------
+   baseline.f              Flow solution file name
+   T                       Formatted? [T|F]
+   ----------------- TARGET GRID -----------------
+   densified.xyz           Input target grid file name
+   T                       Formatted? [T|F]
+   ---------- INTERPOLATED FLOW SOLUTION ---------
+   densified.f             Output flow file name
+   T                       Formatted? [T|F]
+   ------------ MISCELLANEOUS CONTROLS -----------
+   0.0001                  Dist. tol. for target inside the grid or not
+   --------------- OPTIONAL CONTROLS -------------
+   T                       Suppress solution blocks if possible? [T|F]
+   3                       Method:  1 = plain ADT; 2 = plain KDTREE;
+                           3 = KDTREE + nearest-centroid-cell refinement
+
+History:
+
+   03/24/04  DAS  Initial implementation, styled after GRID_MORPH_1, with
+                  argument-driven INTERP_Q portion reusable.
+   03/29/04   "   Introduced face_type structure to help identify exterior
+                  faces of blocks.
+   04/04/04   "   Made use of xyzq_io package.
+   06/15/04   "   Replaced RIPPLE3D with a volume grid version of the
+                  Alternating Digital Tree package from Stanford.
+   02/01/05   "   Added special treatment of boundary layer profiles
+                  defined as single radial line(s) in the target block(s).
+   05/12/06   "   The profile tabulation format now handles any number of
+                  functions, not 6 or fewer.
+   08/07/08   "   Todd White suggested an option to suppress solution
+                  blocks in the hope of speeding things up in some cases.
+                  He also has parallelization in mind.
+   08/08/08   "   A case involving 1.5 million target points and 2 x 8.7
+                  million points from 2 x 47 blocks (full Shuttle) takes
+                  9.5 minutes the standard way and 8 minutes if only the
+                  relevant 21 blocks are searched.  This represents only
+                  a modest 16% reduction on a demanding case, so the
+                  standard approach has been quite efficient all along.
+                  The printout at the end of each k plane has been
+                  commented out now.
+   08/22/08   "   The format flag for the target file was being passed as
+                  that for the solution file.
+   06/06/10   "   The 08/08/08 history comment above had typos.  No other
+                  change was made.
+   06/24/13   "   Option to use KDTREE searches for nearest points
+                  (centroids) only.  This may be adequate for some purposes
+                  such as starting some flow solutions, and uses less
+                  memory.  It's about 2 orders of magnitude faster.
+   07/26/13   "   Hybrid method refines each KDTREE result by computing
+                  the best point (+ associated interpolation coefficients)
+                  within the indicated cell.  This is 2.5 - 3 x slower
+                  than plain KDTREE, but still much faster than plain ADT
+                  on large grids.  Note that, for DPLR applications, the
+                  input grid and flow are normally at cell centers, treated
+                  as vertices here.  But the hybrid KDTREE + refinement
+                  method requires the search to identify a best cell, not
+                  vertex, so we actually generate and search the centroids
+                  of the input grid cells.  This does take more memory, but
+                  not as much as the ADT search tree requires (which is 18
+                  reals + 8 integers per cell).
+   07/30/13   "   Replaced nearest_hex_point (intended for unstructured
+                  grids) with the analogous nearest_brick_point (suited to
+                  structured grids).  Clarified the potential imprecision
+                  of the hybrid method 3.  As explained above, the hybrid
+                  method is not guaranteed to find the best cell for each
+                  search - it merely finds the cell whose centroid is
+                  closest to the target, but some other cell(s) may
+                  actually contain the target.
+   08/05/13   "   All ADT variants have been combined into a module now for
+                  distribution reasons (generic build & search calls).
+
+Author:
+
+   David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+                   (now with ERC, Inc./NASA ARC).

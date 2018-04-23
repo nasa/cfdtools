@@ -1,0 +1,118 @@
+MERGE_TABLES outline:
+
+   From any number of tables of equal length but variable numbers of columns,
+   produce a new table by combining the indicated columns in the specified
+   order.  The intent is to be able to automate a lot of cutting and pasting.
+   The columns of a single table may also be reordered.
+
+Control Format (illustrated with an example that merges parts of 3 tables):
+
+   table1.dat
+   table2.dat
+   table3.dat
+   1  1  1  2  2  3
+   2  4  3  8 12  1
+   newtable.dat
+
+Usage:
+
+   merge_tables < merge.inp  (say)
+
+Notes:
+
+   o  If column headers are present in the first 1 or more lines, those lines
+      should contain as many tokens as there are (fully) numeric columns.
+      Otherwise, column headers cannot be carried along to the new table.
+   o  If this is true, the entire table could be non-numeric, but expected
+      usage is on numeric tables with column headers.
+   o  If it is not true, initially no attempt is made to ignore headers.
+      Therefore all lines of all tables are actually treated as text, not
+      partly text and partly numeric.
+   o  The first indefinite list of integers consists of table numbers.
+   o  The second indefinite list (same length) contains column numbers.
+      These two lists define the output columns.
+
+Sample Input Tables:
+
+   o  The idea is to combine certain columns from tables that could have
+      been extracted from (say) a trajectory time history as CFD points
+      analyzed by a flow solver, extracted from the resulting boundary
+      layer datasets (see EXTRACT_BLAYER_DATA), and "grep"ed from (say)
+      a radiative heating solver.  The result in this case is another
+      table from which certain columns can be curve fit to produce full
+      trajectory time histories at some body point for a material reponse
+      solver.  E.g., a "CFD point" table might look like this:
+
+  t,s   V,km/s p,Pa    rho,kg/m^3 T,K    pstag,Pa M  qconv,W/cm^2 qrad,W/cm^2
+  47.00 11.944 3.90e+00 1.18e-04  171.84 1.64e+04 56.4  395.8  311.5
+  50.00 11.740 1.60e+01 4.94e-04  169.06 6.61e+04 55.8  788.5 1268.2
+  52.10 11.309 4.12e+01 1.25e-03  172.21 1.55e+05 53.3 1126.1 1967.8
+  54.10 10.455 9.28e+01 2.70e-03  179.59 2.87e+05 48.3 1283.9 1208.2
+  56.60  8.679 2.15e+02 5.90e-03  190.54 4.33e+05 39.0  992.2  465.8
+  58.70  6.869 3.69e+02 9.72e-03  198.59 4.45e+05 30.3  508.9  133.5
+  61.00  5.064 5.70e+02 1.45e-02  206.07 3.62e+05 22.0  248.2   19.4
+
+   o  Note the single-token column headers.  There may be more than one
+      header line, but all tables being merged must contain the same total
+      number of lines.  Header and numeric lines are all treated the same
+      way, as text, and the numbers of each should match across tables.
+
+   o  Simply numbering the unwanted columns, as from a "grep", may serve
+      this purpose.  For instance, only the radiative heat flux column 5
+      in the following example needs to have a meaningful header:
+
+  1                                 2         3       4 qrad,W/cm^2  6
+  G12-t47.0/LINE-1/neqair.out:Total radiative heating = 2.099655E-01 W/cm2
+  G12-t50.0/LINE-1/neqair.out:Total radiative heating = 6.122821E-01 W/cm2
+  G12-t52.1/LINE-1/neqair.out:Total radiative heating = 1.643167E+00 W/cm2
+  G12-t54.1/LINE-1/neqair.out:Total radiative heating = 2.978185E+00 W/cm2
+  G12-t56.6/LINE-1/neqair.out:Total radiative heating = 4.252228E+00 W/cm2
+  G12-t58.7/LINE-1/neqair.out:Total radiative heating = 5.858140E+00 W/cm2
+  G12-t61.0/LINE-1/neqair.out:Total radiative heating = 6.259667E+00 W/cm2
+
+Merging Strategy:
+
+   o  Memory these days is plentiful, so we can work with a large limit on
+      the maximum size of any token, and we can store the input data as a
+      3-D array of all tokens from all columns of all tables.  This greatly
+      simplifies the merging, at the expense of allocating as much storage
+      for each table as is needed for the largest table.
+   o  If all tables are not of equal length (same number of rows), the
+      program aborts.  The same is true  if any input table does not have
+      the same number of columns in all of its rows.
+   o  Fortran 90 does not appear capable of allocating arrays of variable-
+      length strings.  This is why some upper limit on the maximum length of
+      a token is necessary.  (It can be larger than is ever likely needed.)
+   o  Upon allocation of enough storage, each table is reread line by line,
+      with each line tokenized as we go.  All tokens are treated as text.
+      There is no need to decode them as integers or reals.
+   o  The rest is now easy.  The output columns are no wider than the widest
+      token in each columm, separated by a single blank.
+
+History:
+
+   08/24/2014  D.A.Saunders  Initial design, as part of automating the
+                             preparation of flow solver data and radiation
+                             solver data in the form expected by a material
+                             response solver.  At NASA ARC, these are DPLR,
+                             NEQAIR, and FIAT respectively.  A trajectory
+                             solver (Traj at ARC) is also in the picture
+                             if time histories are being treated.
+   09/05/2014    "     "     Completed initial coding after a hiatus.
+   09/06/2014    "     "     TOKEN4 mishandles the = character here.
+                             Introduced a simpler TOKEN2L variant of TOKEN2
+                             to avoid the latter's uppercasing.
+   10/03/2014    "     "     Considered making use of the (later) table_io
+                             module, but its separate handling of header
+                             lines is problematic.  Requiring single-token
+                             headers matching the columns allows the column
+                             headers to be carried along into the merged
+                             table, while there is no good solution for
+                             arbitrary numbers of arbitrary header lines
+                             as handled by table_io, with its completely
+                             different data structure.  The table format
+                             expected here has been clarified with examples.
+                             See PREPARE_FIAT_DATA for a different table
+                             application that uses table_io effectively.
+
+Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA

@@ -1,0 +1,10 @@
+09/21/07
+
+HB_GRID was revived after 5 years of dormancy in the hope of treating MSL-like
+forebodies.  A tolerable grid was obtained for Alpha = 0, but nonzero Alpha
+appears difficult, with very little room to move during the shift/rotation.
+Chances are the theory applies to more slender bodies (only).
+
+With some persistence, the result may still be preferable to the oversized
+initial grid that hyperbolic growth from the surface produces, but considerable
+trial and error with the various fudge factors appears inevitable.

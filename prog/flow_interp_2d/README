@@ -1,0 +1,76 @@
+FLOW_INTERP_2D Description:
+
+   This program interpolates a 2-space flow field solution from one PLOT2D
+   multiblock grid to another.  The solution should be provided at all
+   vertices of the grid.  (Both files may in fact be cell-centered forms
+   of the underlying computational grid, but they are always treated as
+   though they are vertex-centered.)  The same underlying geometry is
+   assumed to be represented by both the solution grid and the target grid,
+   but the outer boundaries, block counts, and/or point distributions may
+   differ.
+ 
+   Lines of sight (perhaps from LINES_OF_SIGHT_2D) are likely to be the
+   target grid blocks (one 2-space line per block), as needed for radiative
+   heating calculations from axisymmetric solutions.  Tabulated forms of
+   the output are provided in this case (as determined by ni = 1 for all
+   target blocks).  Otherwise, the interpolated flow is output as a PLOT2D
+   function file.
+ 
+Further Notes Inherited From The Earlier 3-Space FLOW_INTERP:
+
+   >  Ideally, all target grid points will be contained by the grid
+      associated with the given flow solution.
+   >  For target points outside the solution grid, the nearest soln. cell
+      is used.  Thus, extrapolation is explicitly avoided.
+   >  The ADT (Alternating Digital Tree) technique used ensures efficiency
+      no matter how many of the target pts. are outside the searched grid.
+   >  Note that application to different geometries (even slightly
+      perturbed ones) is NOT appropriate:  boundary layer point
+      distributions are all-important, and the real-space interpolations
+      performed here will not preserve the boundary layer flow variables
+      (or gradients, especially) anywhere the two surface grids differ
+      more than infinitesimally.
+   >  See SURFACE_INTERP for interpolating 3-space surface datasets in
+      Tecplot form.
+
+Algorithm:
+
+   >  For each block in the target grid:
+      >  Read the target grid block.
+      >  If this is the first target block, perform some initialization:
+         >  Build the solution grid search tree from all cells of all
+            blocks.  This requires insertion of z = 0 in the solution
+            grid in order to use the 3-space structured surface form of
+            the ADT scheme.
+      >  For each point in the target block:
+         >  Locate the nearest solution cell by searching the ADT.
+         >  Interpolate the flow solution to the current target point using
+            the best solution cell found.  The interpolation is "bilinear"
+            within a single cell.  (This familiar formulation is not really
+            linear because it contains nonlinear terms, but the effect is
+            (bi)linear if the cell is perfectly rectangular.)
+      >  Output the interpolated solution.
+
+Control:
+
+   A few prompts suffice.
+   This version allows for adding further options requiring further
+   prompts.
+
+    First special option, prompted by shock-normal lines of sight:
+      Tabulate the component of velocity along each line of sight?
+
+History:
+
+   03/24/04-08/22/08  D.A.S.  3-space FLOW_INTERP evolution.
+   02/24/12-02/27/12    "     2-space adaptation as FLOW_INTERP_2D.
+   07/24/13             "     Meeting a requirement for V.n along lines
+                              of sight is best done here, but it calls
+                              for further prompts.  Todd suggested that
+                              we allow for other future possibilities
+                              with the initial new prompt.
+   08/06/2013           "     All ADT variants have been merged into a
+                              module with generic build & search calls.
+Author:
+
+   David Saunders, ERC, Inc./NASA Ames Research Center, Moffett Field, CA

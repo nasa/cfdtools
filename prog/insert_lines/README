@@ -1,0 +1,11 @@
+INSERT_LINES Description:
+
+Starting at a specified line, insert the lines from a specified file at a
+specified interval.
+
+02/02/09  David Saunders  Initial implementation, prompted by needing to
+                          convert a list of surface data points back to
+                          multiple structured patches as needed for
+                          Kriging interpolation at CFD grid points.
+
+Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA

@@ -1,0 +1,8 @@
+CH_GRID (C-H grid) is the stand-alone form of the automated wing/body
+volume grid generator employed by the shape optimization code, SYN87-SB
+(single-block/8 sub-block topology).  While that approach from the 1990s
+(with its option to approximate the effects of engine nacelles) has been
+superseded, this grid generator has seen reuse for modeling micro vehicles,
+and may yet find other uses.
+
+Please see the header of ch_grid.f for further details.

@@ -1,0 +1,60 @@
+EXTRACT_COLUMNS Description:
+
+PURPOSE:
+
+   Extract specified columns from a text file consisting of multiple
+   columns of floating point numbers, possibly needed scaling and/or
+   shifting.  The scaling is of the form x' <- scale * x + shift.
+
+   Enhancement:  This version performs the following transformation:
+
+      x' <- scale * (x ** power) + shift   where power is usually 1.
+
+   This version handles embedded text lines or lines with fewer than
+   the specified number of columns (possibly header lines of integers)
+   by either transmitting them intact or suppressing them as requested.
+
+   Converting to absolute values is done with a kludge:  use a negative
+   column number.
+
+SAMPLE CONTROL FILE             ! Control file name: 'extract_columns.inp'
+                                ! See footnote below.
+
+   INPUT FILE        OUTPUT FILE
+   traj.plt          SHARP-V7.trajectory
+
+   # COLUMNS INPUT   # COLUMNS OUTPUT   TRANSMIT ODD LINES?
+   26                4                  T
+
+   COLUMN NUMBERS TO EXTRACT
+   1  9  6           25
+
+   POWERS
+   1. 1. 1. 1.
+
+   SCALES
+   1. 1. 0.020885472 1.
+
+   SHIFTS
+   0. 0. 0.          0.
+
+   OUTPUT FORMAT                ! Exactly as for F90, with parens.
+   (F5.0, F9.5, 1P, E10.3, E15.7)
+
+HISTORY:
+
+   07/16/01  D.Saunders  Initial implementation for dealing with
+                         trajectory results from Traj.
+   08/23/01    "   "     Transmit or suppress text lines or lines that
+                         generate errors when read as "ncol_out" reals.
+   09/27/02    "   "     Mission outputs required 500+ chars/line and
+                         ~40 columns input.  Kludged a way of ignoring
+                         the output sign via a negative column input.
+   09/10/03    "   "     Introduced POWERS to enable conversion of
+                         temperatures (F) to heat fluxes (W/cm^2),
+                         albeit in two runs of this utility.
+FOOTNOTE:
+
+   If extract_columns.inp is not found, the program prompts for the simpler
+   option of grabbing any subset of columns in any order (with no option
+   for scaling or shifting or reformatting as originally intended).

@@ -1,0 +1,11 @@
+add_executable(update_grid
+  update_grid.f90
+)
+target_link_libraries(update_grid global)
+target_link_libraries(update_grid
+  progtools
+  geomlib
+  xyzq_io
+)
+install(FILES README DESTINATION doc RENAME update_grid)
+install(TARGETS update_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

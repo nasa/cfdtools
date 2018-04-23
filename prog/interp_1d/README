@@ -1,0 +1,46 @@
+INTERP_1D DESCRIPTION:
+
+   INTERP_1D provides for interactive interpolating/extrapolating
+within a monotonic set of data points (at least two points).   In
+particular,  it  answers the common case of interpolating a third
+point from a given pair of points,  since  using  a calculator is
+error-prone.
+
+   Both linear and local cubic spline interpolation are  provided
+here, possibly for comparison purposes.  64-bit arithmetic may be
+advisable (as for careful capture of the end of a trajectory).
+
+   Also calculated are the straight line slope and intercept  for
+the appropriate interval in the table,  along with the derivative
+from the spline fit.
+
+METHOD:
+
+   After the data file  ("table")  and spline method are entered,
+the inner loop over abscissas of interest prompts for each target
+abscissa and displays the interpolated (or extrapolated) results.
+
+DATA FORMAT:
+
+   (X, Y) data in two columns, read until EOF.
+
+PROCEDURES:
+
+   TABLE1    Linear interpolation table look-up utility which
+             returns the relevant interval - otherwise, we could
+             use the linear option in LCSFIT.
+   LCSFIT    Local cubic spline utility (4-point method).
+
+HISTORY:
+
+   DAS   10/21/83   Test program for TABLE1.
+   DAS   08/08/86   Slight clean up as INTERP1D.
+   DAS   04/07/87   More tidy up for publication.
+ DAS/RAK 03/04/88   Slope and intercept displayed now.
+   DAS   05/23/02   INTERP_1D version intended for higher precision
+                    data, prompted by Traj_opt gradient difficulties.
+                    Read the data from a file instead of prompting,
+                    but prompt for target abscissas.  See SMOOTH
+                    for much more complete handling of (X, Y) data.
+
+AUTHOR:  David Saunders, ELORET/NASA Ames Research Center.

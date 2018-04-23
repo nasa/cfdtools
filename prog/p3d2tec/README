@@ -1,0 +1,49 @@
+P3D2TEC Description:
+
+   Convert between PLOT3D and Tecplot file formats, in either direction.
+   Structured multiblock grids in 3-space with optional function files are
+   assumed.  File names are prompted for, and standard file extensions are
+   used to distinguish between formatted and unformatted files.  Note that
+   reading unformatted Tecplot files is not an option, though:
+
+      *.g[u] [and *.f[u]]  <-->  *.dat | *.plt   in BLOCK or POINT order
+
+   Blocks are processed one at a time (no need to store whole files).
+
+   This version looks for an optional 'p3d2tec.inp.2' file if Tecplot
+   output is implied.  This should contain the desired variable names
+   "" delimited:
+
+      "x, m"            [Just one per line]
+      "y, m"
+      "z, m"
+      "Cp"
+      "qw, W/cm^2"
+      "T, K"
+      "..."
+
+   If this file is not found, or the wrong number of names is found, the
+   function names default to "function 1", "function 2", ...
+
+Option to Insert Arc Lengths:
+
+   For the case of a flow solution interpolated along one or more lines of
+   sight normal to the geometry (see LINES_OF_SIGHT and FLOW_INTERP by the
+   present author, which work with PLOT3D files), it can be convenient to
+   plot such profiles against distance from the wall.  Therefore, if all
+   input blocks are found to be lines (only one dimension > 1), the user is
+   prompted about an option to insert cumulative arc lengths after the "z"
+   coordinate and before the first flow function variable.  The option is
+   suppressed by entering an empty name for arc length.  Otherwise, enter
+   something like "s, m" or "s, in".
+
+History:
+
+   11/22/06  D. A. Saunders  Initial implementation.
+   11/27/06  "  "  "  "  "   Added the option to supply variable names.
+                             The *.inp.2 file follows other utility usage.
+   08/22/08  "  "  "  "  "   Added the option to insert arc lengths if the
+                             input grid blocks all have only one dimension
+                             greater than 1.
+
+Author:  David Saunders, ELORET/NASA Ames Research Ctr., Moffett Field, CA

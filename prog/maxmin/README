@@ -1,0 +1,92 @@
+MAXMIN DESCIPTION:
+
+   MAXMIN drives a selection of methods of estimating derivative
+   information for one or more 1-D datasets ("curves").   It was
+   originally intended to test an algorithm for locating all  of
+   the maxima and minima contained in experimental measurements.
+   This searching for turning points is now optional  -  looking
+   at derivatives has become the main purpose, either to examine
+   algorithm behavior or to use the values elsewhere.
+
+   Results are presented in QPLOTable form.
+
+   This version concerns itself with 1st and 2nd derivatives.
+
+METHOD:
+
+   MAXMIN is basically SMOOTH (which fits curves to data points)
+   adapted to look at 1st and 2nd derivatives, with an option to
+   calculate the locations of turning points by  locating  zeros
+   in the 1st derivatives.
+
+   Dataset format:
+
+      TITLE        <Default for plot frame titles>
+      N            <No. of pts. for first curve>
+      X    F       <Coordinates for first curve;
+      X    F        X ought to be monotonically increasing,
+      X    F        even though some methods don't require this;
+      :    :        distinctions could be made if necessary.>
+      :    :
+      N            <No. of pts. for next curve>
+      X    F
+      X    F
+      :    :
+      :    :       <and so on>
+
+
+   Plotting considerations:
+
+      Plotting function values, derivatives, and locations of turning
+      points is problematic because of possible scaling conflicts.
+      Any of these may be suppressed in the saved results.  (The data
+      points and fitted function values are linked - either both are
+      shown or neither is shown.)  All quantities show up on the same
+      frame (with a new frame for each method, and results for all
+      curves in the dataset on the same frame).
+
+   Method outline:
+
+      Prompt for dataset and plot title.
+      Prompt for suppressing the turning-point estimations (meaning
+         look at derivatives only).
+      Prompt for choice of smoothing routine.
+      WHILE <valid method selected> DO
+         Prompt for such things as smoothing parameters.
+         Initialize QPLOT file.
+         Read no. of data points in first dataset (curve).
+         WHILE <not EOF> DO
+            Read a dataset.
+            Fit requested smoothing curve.
+            Generate uniformly-spaced abscissas in data range.
+            Evaluate curve at each of these.
+            Also evaluate first derivative of curve at each of these.
+            Write QPLOT info for up to five curves (data, smoothed curve,
+               first derivative curve, plus, if requested, any maxima
+               as one curve, and any minima as another).
+            Read no. of points for next dataset.
+         END WHILE
+         Rewind data file.
+         Prompt for another method.
+      END WHILE
+
+HISTORY:
+
+   D.A.Saunders  06/27/83  Added max/min code to SMOOTH
+   D.A.S.        07/09/83  Replaced FSCALC with FSCOEF
+   C.L.Hooper    08/15/83  Added FSARBU and FSARBE
+   D.A.S.        08/19/83  Added FSARBN
+   C.L.H.        08/24/83  Added IQHSCU
+   D.A.S.        06/10/87  Generalized for looking at derivatives (with
+                           max/mins optional)
+     "           06/12/87  Installed finite difference derivative option
+     "           06/16/87  Installed FSCALC and provided for 2nd derivs.
+     "           11/05/87  Installed MSFIT/CSDVAL
+     "           11/24/87  Installed LSFIT1/CSDVAL
+     "           08/26/88  Bug fix involving NFPP=0.  Linked display of
+                           data with display of fit so that both may be
+                           suppressed if f' and f" are the main interest.
+     "           07/12/89  FSARBE call needs B(0), not B(1) now.
+     "           03/13/90  Installed LCSFIT (no 2nd derivatives though).
+
+AUTHOR:  David Saunders, NASA Ames/Sterling Software, June/July 1983.

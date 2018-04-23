@@ -1,0 +1,26 @@
+Description:
+
+   REORDER_BLOCKS can reorder the blocks in a multiblock grid and an
+   optional PLOT3D-type function file.
+
+Control file ('reorder_blocks.inp'):
+
+   This should contain a list of integers representing the desired block
+   order. The list can span any number of lines except if the various short
+   forms handled by the RDLIST utility are employed, the list should be on
+   a single line.
+
+   1:99 104 103 102 100 101   (all on one line)   or
+
+   1 3 5 7 9 11 13 15
+   2 4 6 8 10 12 14           (any number of lines)
+
+Procedures:
+
+   XYZQ_IO package  I/O utilities for PLOT3D grid and function files
+
+History:
+
+   06/19/06  D. Saunders  Initial adaptation of EXTRACT_BLOCKS.
+
+Author:  David Saunders, ELORET/NASA Ames Research Ctr., Moffett Field, CA

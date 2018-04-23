@@ -1,0 +1,26 @@
+Description:
+
+   EXTRACT_BLOCKS extracts a list of blocks from a multiblock grid and an
+optional "q" file (or rather a PLOT3D-type function file).
+
+   This version can handle "iblanked" files at the cost of another prompt.
+
+Control file ('extract_blocks.inp'):
+
+   This should contain a list of ascending block numbers, one per line.
+E.g.:
+
+   1
+   3
+   7
+   :
+   15
+
+Procedures:
+
+   XYZQ_IO package  I/O utilities for PLOT3D grid and function files
+
+History:
+
+   04/06/04  D.A.Saunders  Initial adaptation of GRID_FACES.
+   07/02/10    "      "    Extended to handle OVERFLOW solutions.

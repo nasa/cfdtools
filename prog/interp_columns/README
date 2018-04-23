@@ -1,0 +1,24 @@
+INTERP_COLUMNS Description:
+
+PURPOSE:
+
+   Interpolate all columns of a dataset at a specified abscissa or set
+   of uniform abscissas (or arbitrary abscissas from an auxiliary file).
+   The column to treat as "x" is prompted for, and should be monotonically
+   increasing or decreasing.
+
+   Monotonic local cubic splines are used for the interpolations.
+   List-directed output to a buffer deals with problems involving output
+   record length and the number of significant digits.
+
+HISTORY:
+
+   10/03/01  DAS  Earlier REGULARIZE program (first column = "x" = Time).
+   06/12/07   "   Adaptation for something other than a time history.
+   06/20/07   "   Added the option to read abscissas from a file.
+   04/29/11   "   Formats changed from e15.6 to e16.8 (FIAT_Opt).
+   07/08/13   "   Dinesh Prabhu needed to interpolate BLAYER output (68
+                  columns): raised the buffer length from 500 to 2048.
+
+AUTHOR: David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+                        Now with ERC, Inc. at ARC.

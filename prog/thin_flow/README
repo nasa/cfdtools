@@ -1,0 +1,15 @@
+THIN_FLOW Description:
+
+   THIN_FLOW extracts a subset of points from all blocks of a multiblock
+   flow solution.
+
+Procedures:
+
+   XYZQ_IO package  I/O utilities for PLOT3D grid and function files
+
+History:
+
+   12/30/04  D. Saunders  Adaptation of THIN_GRID (easier than combining
+                          grid and/or flow cases).
+
+Author:  David Saunders, ELORET/NASA Ames, Moffett Field, CA.
