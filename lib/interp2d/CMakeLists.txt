@@ -28,6 +28,6 @@ add_library(interp2d
   tfif2d.f
   tpspln.f
 )
-target_link_libraries(interp2d PRIVATE global adt)
+target_link_libraries(interp2d PRIVATE global adt numodules)
 target_include_directories(interp2d PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME interp2d)

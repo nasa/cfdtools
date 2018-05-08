@@ -5,6 +5,9 @@ add_library(surface_patch_utilities
 target_link_libraries(surface_patch_utilities
   PRIVATE
     global
+    numodules
+    geomlib
+    linsys
   PUBLIC
     grid_block_structure
 )

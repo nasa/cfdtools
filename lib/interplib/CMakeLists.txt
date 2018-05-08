@@ -58,6 +58,6 @@ add_library(interplib
   vecfit.f
   wagfit.f
 )
-target_link_libraries(interplib PRIVATE global intrinsics)
+target_link_libraries(interplib PRIVATE global intrinsics numodules searchlib)
 target_include_directories(interplib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME interplib)

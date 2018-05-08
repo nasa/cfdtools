@@ -91,6 +91,8 @@ target_link_libraries(tecplot_gridlib
   PRIVATE
     global
     intrinsics
+    interplib
+    progtools
   PUBLIC
     # Link against Tecplot-customized verions of grid_block_structure
     tecplot_io

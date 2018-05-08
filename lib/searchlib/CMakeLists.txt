@@ -21,6 +21,6 @@ add_library(searchlib
   unique_ri.f90
   xsort.f
 )
-target_link_libraries(searchlib PRIVATE global)
+target_link_libraries(searchlib PRIVATE global interp2d interp3d)
 target_include_directories(searchlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME searchlib)

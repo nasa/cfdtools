@@ -81,6 +81,8 @@ target_link_libraries(gridlib
   PRIVATE
     global
     intrinsics
+    interplib
+    progtools
   PUBLIC
     grid_block_structure
 )

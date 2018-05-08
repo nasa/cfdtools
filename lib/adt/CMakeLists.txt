@@ -4,6 +4,7 @@ add_library(adt
 target_link_libraries(adt
   PRIVATE
     global
+    geomlib
   PUBLIC
     grid_block_structure
 )
