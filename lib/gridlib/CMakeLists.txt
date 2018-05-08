@@ -85,4 +85,4 @@ target_link_libraries(gridlib
     grid_block_structure
 )
 target_include_directories(gridlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME gridlib)

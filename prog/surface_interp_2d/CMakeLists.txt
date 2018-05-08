@@ -4,9 +4,9 @@ add_executable(surface_interp_2d
 target_link_libraries(surface_interp_2d global)
 target_link_libraries(surface_interp_2d
   progtools
-  adt
   linsys
   tecplot_io
+  tecplot_adt
   geomlib
 )
 install(FILES README DESTINATION doc RENAME surface_interp_2d)

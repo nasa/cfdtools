@@ -6,4 +6,4 @@ add_library(obsolete
 )
 target_link_libraries(obsolete PRIVATE global)
 target_include_directories(obsolete PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME obsolete)

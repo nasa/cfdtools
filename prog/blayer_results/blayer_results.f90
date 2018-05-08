@@ -357,6 +357,7 @@
    use grid_block_structure
    use tecplot_io_module
    use xyzq_io_module
+   use adt_utilities
 
    implicit none
 

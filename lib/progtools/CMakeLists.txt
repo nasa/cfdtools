@@ -60,4 +60,4 @@ add_library(progtools
 )
 target_link_libraries(progtools PRIVATE global)
 target_include_directories(progtools PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME progtools)

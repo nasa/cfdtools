@@ -52,8 +52,6 @@ C-----------------------------------------------------------------------
       LOGICAL     eof
       INTEGER     ifile , ioerr , ipos , itrunc , leading , n , status
 
-      EXTERNAL    accept_integer
-
       DATA        itrunc    / 72  /              ,
      >            leading   / 0 /                ,
      >            eof       / .FALSE. /          ,
@@ -83,8 +81,9 @@ C     -- Get input file name:
      >           ADVANCE = 'no'    ) 'Enter input file name: '
 
          READ  ( UNIT = sys_input  ,
-     >           FMT  = '(Q,A)'    ,
-     >           END  = 99         ) n , line( 1:n )
+     >           FMT  = '(A)'      ,
+     >           END  = 99         ) line
+      n = len_trim(line)
 
       END DO
 
@@ -94,17 +93,13 @@ C
 
 C     -- Get column # to truncate beyond:
 
-      CALL accept_integer
-     >  ( 'Enter column to truncate beyond (default=72): ',
-     >    46, itrunc )
+      CALL accept_integer( 'Enter column to truncate beyond (default=72): ', itrunc )
 
       IF ( itrunc.EQ.-1 ) itrunc = 72
 
 C     -- Get # of leading columns to remove:
 
-      CALL accept_integer
-     >   ('Enter number of leading columns to remove (default=0): ',
-     >     55, leading )
+      CALL accept_integer('Enter number of leading columns to remove (default=0): ', leading )
 
       IF ( leading.EQ.-1 ) leading = 0
       leading = leading+1
@@ -126,11 +121,10 @@ C     -- Input file name may or may not have version #. Either is OK:
       ifile = read_file
 
       ioerr = ioerr_open
-      OPEN ( UNIT     = read_file ,
-     >       NAME     = line(1:n) ,
-     >       TYPE     = 'old'     ,
-     >       READONLY             ,
-     >       ERR      = 20        )
+      OPEN ( UNIT   = read_file ,
+     >       FILE   = line(1:n) ,
+     >       STATUS = 'old'     ,
+     >       ERR    = 20        )
 
 C     -- Output file is to be the next version number.
 C     -- Ensure that any version number in the command is ignored:
@@ -146,19 +140,18 @@ C     -- Ensure that any version number in the command is ignored:
 C     -- Open output file:
 
       ifile = write_file
-      OPEN ( UNIT            = write_file ,
-     >       NAME            = line(1:n)  ,
-     >       TYPE            = 'new'      ,
-     >       CARRIAGECONTROL = 'list'     ,
-     >       ERR             = 20         )
+      OPEN ( UNIT   = write_file ,
+     >       FILE   = line(1:n)  ,
+     >       STATUS = 'new'      ,
+     >       ERR    = 20         )
 
 C     -- Process files line-by-line:
 
       DO WHILE ( .NOT. eof )
 
          READ  ( UNIT = read_file ,
-     >           FMT  = '(Q,A)'   ,
-     >           IOSTAT = status  ) n , line(1:n)
+     >           FMT  = '(A)'   ,
+     >           IOSTAT = status  ) line
 
          IF ( status .EQ. 0 )
 
@@ -166,7 +159,7 @@ C     -- Process files line-by-line:
 
 C              -- Suppress trailing blanks:
 
-               n = min ( n , itrunc )
+               n = min ( len_trim(line) , itrunc )
                DO WHILE ( n .GT. 0  .AND. line(n:n) .EQ. ' ' )
                   n = n - 1
                END DO
@@ -222,7 +215,7 @@ C                    buffer length - but try to die gracefully anyway:
       END
 C+----------------------------------------------------------------------
 C
-      SUBROUTINE accept_integer( message, nchar, integer_variable )
+      SUBROUTINE accept_integer( message, integer_variable )
 C
 C     This routine reads in a character string and converts
 C     it to an integer. The integer must be in the range of
@@ -237,7 +230,8 @@ C-----------------------------------------------------------------------
       INTEGER   successful_conversion , sys_input ,
      >          sys_output            , status
 
-      CHARACTER buffer*80 , integer_format*4 , null*1, message*60
+      CHARACTER buffer*80 , integer_format*4 , null*1
+      CHARACTER(len=*) message
 
       LOGICAL   conversion_error
 
@@ -259,7 +253,7 @@ C     -- to an integer or an end of file is read:
 
          WRITE ( UNIT = sys_output ,
      >           FMT  = '(A)'      )
-     >           message( 1:nchar )
+     >           message
 
          READ ( UNIT = sys_input ,
      >          FMT  = '(A)'     ,

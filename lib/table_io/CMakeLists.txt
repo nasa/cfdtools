@@ -4,4 +4,4 @@ add_library(table_io
 )
 target_link_libraries(table_io PRIVATE global)
 target_include_directories(table_io PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME table_io)

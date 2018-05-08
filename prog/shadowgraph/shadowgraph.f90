@@ -24,7 +24,7 @@
 !     1              ! Image type    1|2|3 = shadowgraph|schlieren|interferogram
 !     1              ! Grid type 1|2|3|4|5 = P3D|P3D/iblnk|DPLR ovrst|FUN3D|VTK
 !     3              ! Dimensions      2|3 = 2D/(x,z)|3D/(x,y,z)
-!     mygrid.gu      ! Grid file name|FUN3D/US3D file name|@name -> FUN3D list 
+!     mygrid.gu      ! Grid file name|FUN3D/US3D file name|@name -> FUN3D list
 !     F              ! Formatted?      T|F = ASCII|unformatted
 !     myflow.fu      ! Flow data file name (mixture density or blank, density)
 !     F              ! Formatted?      T|F = ASCII|unformatted
@@ -225,7 +225,7 @@
 
    type (unstructured_type) :: &           ! For US3D's VTK unstructured grid
       VTK_us_grid                          ! format
-      
+
 !  Execution:
 !  ----------
 
@@ -476,6 +476,7 @@
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+      use trigd
       implicit none
 
 !     Local constants:

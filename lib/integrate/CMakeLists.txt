@@ -13,4 +13,4 @@ add_library(integrate
 )
 target_link_libraries(integrate PRIVATE global table_io)
 target_include_directories(integrate PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME integrate)

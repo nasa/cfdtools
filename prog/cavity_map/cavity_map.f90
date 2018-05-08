@@ -2156,6 +2156,8 @@
 
 !     --------------------------------------------------------------------------
 
+      use trigd
+
       real, parameter :: half  = 0.5, one = 1.0, zero = 0.0, large = 1.e+10,   &
                          ratio = 0.6  ! For in-between reference pt.
 

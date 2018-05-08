@@ -4,9 +4,9 @@ add_executable(surface_diffs
 target_link_libraries(surface_diffs global)
 target_link_libraries(surface_diffs
   progtools
-  adt
   linsys
   tecplot_io
+  tecplot_adt
   geomlib
 )
 install(FILES README DESTINATION doc RENAME surface_diffs)

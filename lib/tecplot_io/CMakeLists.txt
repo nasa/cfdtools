@@ -5,4 +5,4 @@ add_library(tecplot_io
 )
 target_link_libraries(tecplot_io PRIVATE global)
 target_include_directories(tecplot_io PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME tecplot_io)

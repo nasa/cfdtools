@@ -13,4 +13,4 @@ add_library(forsythe
 )
 target_link_libraries(forsythe PRIVATE global)
 target_include_directories(forsythe PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME forsythe)

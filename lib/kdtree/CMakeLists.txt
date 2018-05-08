@@ -5,4 +5,4 @@ add_library(kdtree
 )
 target_link_libraries(kdtree PRIVATE global)
 target_include_directories(kdtree PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME kdtree)

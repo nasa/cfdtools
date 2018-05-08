@@ -3,11 +3,11 @@ add_executable(surface_curvature
 )
 target_link_libraries(surface_curvature global)
 target_link_libraries(surface_curvature
-  xyzq_io
   numodules
   progtools
   tecplot_io
-  gridlib
+  tecplot_gridlib
+  tecplot_xyzq_io
   geomlib
 )
 install(FILES README DESTINATION doc RENAME surface_curvature)

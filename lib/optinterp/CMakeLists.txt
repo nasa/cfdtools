@@ -3,4 +3,4 @@ add_library(optinterp
 )
 target_link_libraries(optinterp PRIVATE global)
 target_include_directories(optinterp PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME optinterp)

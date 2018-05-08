@@ -20,4 +20,4 @@ add_library(aa_nurbs
 )
 target_link_libraries(aa_nurbs PRIVATE global)
 target_include_directories(aa_nurbs PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME aa_nurbs)

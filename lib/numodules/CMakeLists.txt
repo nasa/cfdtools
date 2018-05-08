@@ -40,4 +40,4 @@ add_library(numodules
 )
 target_link_libraries(numodules PRIVATE global)
 target_include_directories(numodules PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME numodules)

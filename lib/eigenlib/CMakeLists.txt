@@ -8,4 +8,4 @@ add_library(eigenlib
 )
 target_link_libraries(eigenlib PRIVATE global)
 target_include_directories(eigenlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME eigenlib)

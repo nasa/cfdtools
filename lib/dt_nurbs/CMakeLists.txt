@@ -367,4 +367,4 @@ add_library(dt_nurbs
 )
 target_link_libraries(dt_nurbs PRIVATE global)
 target_include_directories(dt_nurbs PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME dt_nurbs)

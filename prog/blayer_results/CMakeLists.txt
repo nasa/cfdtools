@@ -1,5 +1,20 @@
 add_executable(blayer_results
   blayer_results.f90
 )
-target_link_libraries(blayer_results global)
+target_link_libraries(blayer_results
+  global
+  geomlib
+  integrate
+  interplib
+  linsys
+  numodules
+  progtools
+  searchlib
+  optlib
+  tecplot_gridlib
+  tecplot_adt
+  tecplot_io
+  tecplot_xyzq_io
+  tile_triangulation
+)
 install(TARGETS blayer_results DESTINATION ${CMAKE_INSTALL_BINDIR})

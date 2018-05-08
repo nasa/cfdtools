@@ -3,12 +3,13 @@ add_executable(cross_sections
 )
 target_link_libraries(cross_sections global)
 target_link_libraries(cross_sections
-  xyzq_io
   interplib
   integrate
+  intrinsics
   numodules
   progtools
   tecplot_io
+  tecplot_xyzq_io
   ugridlib
   geomlib
   searchlib

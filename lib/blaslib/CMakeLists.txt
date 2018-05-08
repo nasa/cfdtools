@@ -4,4 +4,4 @@ add_library(blaslib
 )
 target_link_libraries(blaslib PRIVATE global)
 target_include_directories(blaslib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME blaslib)

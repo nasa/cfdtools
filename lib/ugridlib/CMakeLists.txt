@@ -22,4 +22,4 @@ add_library(ugridlib
 )
 target_link_libraries(ugridlib PRIVATE global intrinsics triangulation_io)
 target_include_directories(ugridlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME ugridlib)

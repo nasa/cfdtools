@@ -61,4 +61,4 @@ add_library(geomlib
 )
 target_link_libraries(geomlib PRIVATE global linsys intrinsics)
 target_include_directories(geomlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME geomlib)

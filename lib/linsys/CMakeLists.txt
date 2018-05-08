@@ -31,4 +31,4 @@ add_library(linsys
 )
 target_link_libraries(linsys PRIVATE global)
 target_include_directories(linsys PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME linsys)

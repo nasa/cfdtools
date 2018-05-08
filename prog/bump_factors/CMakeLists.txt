@@ -3,12 +3,12 @@ add_executable(bump_factors
 )
 target_link_libraries(bump_factors global)
 target_link_libraries(bump_factors
-  numodules
-  progtools
-  adt
-  linsys
-  tecplot_io
   geomlib
+  linsys
+  progtools
+  numodules
+  tecplot_adt
+  tecplot_io
 )
 install(FILES README DESTINATION doc RENAME bump_factors)
 install(TARGETS bump_factors DESTINATION ${CMAKE_INSTALL_BINDIR})

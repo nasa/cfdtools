@@ -30,4 +30,4 @@ add_library(interp2d
 )
 target_link_libraries(interp2d PRIVATE global adt)
 target_include_directories(interp2d PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME interp2d)

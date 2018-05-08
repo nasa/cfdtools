@@ -17,4 +17,4 @@ add_library(optlib
 )
 target_link_libraries(optlib PRIVATE global)
 target_include_directories(optlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME optlib)

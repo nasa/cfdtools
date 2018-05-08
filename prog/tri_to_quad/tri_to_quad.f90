@@ -100,12 +100,13 @@
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
 !                           Now with ERC Incorporated/NASA ARC.
-!  
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !  Modules:
 
    use grid_block_structure  ! Must be the tecplot_io_module version
+   use grid_header_structure
    use tecplot_io_module     ! Tecplot file I/O (structured data)
    use tri_header_structure  ! Part of triangulation_io.f90
    use tri_zone_structure    ! Likewise
@@ -147,7 +148,7 @@
       filename * 80, filename2 * 80, title_out * 80
 
    real, allocatable, dimension (:) :: &
-      area_total, tri_area
+      total_areas, areas
 
    real, allocatable, dimension (:,:) :: &
       fnode
@@ -156,6 +157,8 @@
 
    type (grid_type), pointer, dimension (:) :: &
       xyzf_interp
+
+   type (grid_header) :: tec_header
 
    type (tri_header_type) :: &
       tri_header
@@ -259,17 +262,17 @@
          nnode = tri_xyzf(iz)%nnodes
          ntri  = tri_xyzf(iz)%nelements
 
-         allocate (tri_area(ntri), area_total(nnode))
+         allocate (areas(ntri), total_areas(nnode))
 
          call tri_areas (nnode, ntri, tri_xyzf(iz)%xyz, tri_xyzf(iz)%conn,     &
-                         tri_area, area_total)
+                         areas, total_areas)
 
          allocate (fnode(nf,nnode))
 
-         call tri_centers_to_vertices (nnode, ntri, nf, tri_area, area_total,  &
+         call tri_centers_to_vertices (nnode, ntri, nf, areas, total_areas,  &
                                        tri_xyzf(iz)%conn, tri_xyzf(iz)%f, fnode)
 
-         deallocate (tri_area, area_total)
+         deallocate (areas, total_areas)
 
          deallocate (tri_xyzf(iz)%f);  allocate (tri_xyzf(iz)%f(nf,nnode))
 
@@ -308,9 +311,14 @@
    end do
 
    if (Tecplot_out) then
-
-      call Tec_header_write (lunout1, filename, formatted_out, 2, title_out,   &
-                             nf, tri_header%varname, ios)
+      tec_header%filename  = filename
+      tec_header%formatted = formatted_out
+      tec_header%ndim      = 2
+      tec_header%numq      = nf
+      tec_header%nblocks   = nblocks
+      tec_header%title     = title_out
+      tec_header%varname   = tri_header%varname
+      call Tec_header_write (lunout1, tec_header, ios)
       if (ios /= 0) then
          write (luncrt, '(/, a)') ' Trouble writing Tecplot file header.'
          go to 99
@@ -411,7 +419,7 @@
             davg = davg + dist
 
             if (dist < dtol) then     ! The best triangle found was within the
-               ninside = ninside + 1  ! distance tolerance 
+               ninside = ninside + 1  ! distance tolerance
             else
                nout = nout + 1
             end if
@@ -437,9 +445,8 @@
 
       if (Tecplot_out) then
 
-         call Tec_block_write (lunout1, formatted_out, 2, title_out, ni, nj, 1,&
-                               nf, xyzf_interp(ib)%x, xyzf_interp(ib)%y,       &
-                               xyzf_interp(ib)%z, xyzf_interp(ib)%q, ios)
+         call Tec_block_write (lunout1, tec_header, xyzf_interp(ib), ios)
+
          if (ios /= 0) then
             write (luncrt, '(/, a, i4)') ' Trouble writing Tecplot block #', ib
             go to 99

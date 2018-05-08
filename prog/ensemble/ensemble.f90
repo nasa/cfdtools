@@ -127,9 +127,12 @@
 
 !  Modules:
 
+   use adt_utilities
    use grid_block_structure    ! Must be the Tecplot_io version
+   use grid_header_structure
    use surface_patch_utilities
    use tecplot_io_module
+   use trigd
 
    implicit none
 
@@ -149,7 +152,7 @@
    real, parameter :: &
       one  = 1.0,     &
       zero = 0.0
- 
+
    character, parameter :: &
       blank  * 1  = ' ',   &
       format * 11 = 'unformatted'
@@ -161,7 +164,7 @@
 !  Variables:
 
    integer :: &
-      datapacking, i, i_bump_var_in, i_bump_var_out, i_topology, ib, ic,       &
+      i, i_bump_var_in, i_bump_var_out, i_topology, ib, ic,       &
       ifile, ios, iquad, j, jc, n, nb_out, nblocks, nfiles, ni, ninside, nj,   &
       noutside, nquad, numf_in, numf_out
 
@@ -192,7 +195,7 @@
 
    character :: &
       buffer * 132, &
-      filename_in * 80, filename_out * 80, title_in * 80, title_out * 80
+      filename_in * 80, filename_out * 80, title_out * 80
 
    character, pointer, dimension (:) :: &
       names_in  * (name_limit),         &
@@ -205,10 +208,7 @@
       xyzq_out,    &  ! means and standard deviations, normalized standard grid
       xyzq_target, &  ! standardized patches on current CFD surface grid
       interp_surf     ! actual interpolated surface points found by ADT searches
-
-!  Amtec Tecplot function:
-
-   integer :: TecEnd
+   type (grid_header) :: header_in, header_out
 
 !  Data:
 
@@ -297,11 +297,17 @@
 
       write (luncrt, '(/, 2a, /)') ' Reading flow solution ', filename_in(1:j)
 
-      call Tecplot_read (lun_in, filename_in, true, datapacking, title_in,     &
-                         nblocks, numf_in, names_in, xyzq_in, ios)
+      ! Use new API
+      !call Tecplot_read (lun_in, filename_in, true, datapacking, title_in,     &
+      !                   nblocks, numf_in, names_in, xyzq_in, ios)
+      call Tecplot_read (lun_in, header_in, xyzq_in, ios)
+      nblocks  = header_in%nblocks
+      numf_in  = header_in%numq
+      names_in = header_in%varname
+
       if (ios /= 0) then
          write (luncrt, '(/, 2a)') ' Trouble reading Tecplot file ', &
-            trim (filename_in)
+            trim (header_in%filename)
          go to 99
       end if
 
@@ -589,19 +595,21 @@
    title_out = trim (filename_out)
    write (luncrt, '(a, a)') ' Writing Tecplot file ', title_out
 
-   call Tecplot_write (lun_out, filename_out, formatted, 2, title_out,         &
-                       nb_out, numf_out, names_out, xyzq_out, ios)
+   ! Use new API
+   !call Tecplot_write (lun_out, filename_out, formatted, 2, title_out,         &
+   !                    nb_out, numf_out, names_out, xyzq_out, ios)
+   header_out%filename  = filename_out
+   header_out%formatted = formatted
+   header_out%ndim      = 2
+   header_out%nblocks   = nb_out
+   header_out%numq      = numf_out
+   header_out%title     = title_out
+   header_out%varname   = names_out
+   call Tecplot_write(lun_out, header_out, xyzq_out, ios)
+
    if (ios /= 0) then
       write (luncrt, '(/, a)') ' Trouble writing the output Tecplot file.'
       go to 99
-   end if
-
-!  This should be in Tecplot_write:
-
-   if (formatted) then
-      close (lun_out)
-   else
-      ios = TecEnd ()
    end if
 
 99 continue
@@ -805,7 +813,7 @@
 
          if (diagnostics) then
             open  (50, file='rotation2.p3da', status='unknown')
-            write (50, '(i3)') nb 
+            write (50, '(i3)') nb
             write (50, '(3i4)') (g(i)%ni, g(i)%nj, 1, i = 1, nb)
             do i = 1, nb
                write (50, '(1p, 6e19.11)') g(i)%x, g(i)%y, g(i)%z
@@ -1032,7 +1040,7 @@
       end if
 
       do i = 1, nb_out
-         g(i)%nk = 1;  call Tec_block_allocate (g(i), nf, ier)
+         g(i)%nk = 1;  call Tec_block_allocate (g(i), 3, nf, ier)
       end do
 
 !     Half-cavity grid point distributions:

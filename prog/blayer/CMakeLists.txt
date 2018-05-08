@@ -1,15 +1,14 @@
 add_executable(blayer
   blayer.f90
-  extract_blayer_data.f90
 )
 target_link_libraries(blayer global)
 target_link_libraries(blayer
-  xyzq_io
   interplib
   integrate
   numodules
   progtools
   tecplot_io
+  tecplot_xyzq_io
   linsys
   optlib
   gridlib

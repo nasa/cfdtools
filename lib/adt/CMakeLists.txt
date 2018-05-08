@@ -8,4 +8,4 @@ target_link_libraries(adt
     grid_block_structure
 )
 target_include_directories(adt PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME adt)

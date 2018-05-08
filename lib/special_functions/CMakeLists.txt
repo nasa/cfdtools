@@ -5,4 +5,4 @@ add_library(special_functions
 )
 target_link_libraries(special_functions PRIVATE global)
 target_include_directories(special_functions PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME special_functions)

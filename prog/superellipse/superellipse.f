@@ -7,7 +7,7 @@ C
 C        SUPERELLIPSE generates planform and thickness data for Oblique All-
 C     Wing transport (OAW) designs, with MODIFIED elliptic variation of the
 C     chord and thickness outboard of the specified span stations.
-C     
+C
 C        Parameter POW is the exponent in the sub/super-ellipse formula, here
 C     assumed to be the same for both axes. Values less than 2.0 are "sharper"
 C     than an ellipse; greater than 2.0 "blunter." Note that the exact formula
@@ -89,6 +89,7 @@ C        03/19/93      "         Taper the tip thickness parabolically now
 C                                since elliptic is too blunt.
 C-------------------------------------------------------------------------------
 
+      USE TRIGD
       IMPLICIT NONE
 
 C     Constants defining the planform:
@@ -238,14 +239,10 @@ C     R22OPT suffers with too small a tip chord.
       CALL READI (LUNCRT, 'Pick one.  [2]: ',
      >   LUNKBD, IVARY, CR, EOF)
 
-      OPEN (UNIT=LUNOUT, FILE=OUTFILE, STATUS='NEW',
-     >      CARRIAGECONTROL='LIST')
-      OPEN (UNIT=LUNCTL, FILE=CTLFILE, STATUS='NEW',
-     >      CARRIAGECONTROL='LIST')
-      OPEN (UNIT=LUNRND, FILE=RNDFILE, STATUS='NEW',
-     >      CARRIAGECONTROL='LIST')
-      OPEN (UNIT=LUNSQR, FILE=SQRFILE, STATUS='NEW',
-     >      CARRIAGECONTROL='LIST')
+      OPEN (UNIT=LUNOUT, FILE=OUTFILE, STATUS='NEW')
+      OPEN (UNIT=LUNCTL, FILE=CTLFILE, STATUS='NEW')
+      OPEN (UNIT=LUNRND, FILE=RNDFILE, STATUS='NEW')
+      OPEN (UNIT=LUNSQR, FILE=SQRFILE, STATUS='NEW')
 
       WRITE (LUNCRT, '(A)')
      >   '0Enter ^Z to terminate the following trial-and-error loop.',
@@ -333,7 +330,7 @@ C     Right outer tip, Z2 to ZT (same as above, but DZ differs):
 
       DZ = (ZT - Z2) / NCAP
       DO K = NZ - NCAP + 1, NZ
-         Z (K) = (K - (NZ - NCAP)) * DZ + Z2 
+         Z (K) = (K - (NZ - NCAP)) * DZ + Z2
 
          IF (IVARY .EQ. 1) THEN
             POWC = LINEAR  (Z1, POWC1, CHSLOPE, Z (K))
@@ -428,9 +425,9 @@ C     Left half of wing:
          THICK (KL) = THICK (K)
          TOVERC (KL) = TOVERC (K)
       END DO
-         
+
       XLE1 = XLE (1)       ! Needed below if left tip is to be semi-square
-      
+
 C     Wing area and volume:
 
       CALL LCSQUAD (NZ, Z, CHORD, -ZT, ZT, 'B', PLAN)
@@ -465,7 +462,7 @@ C     Print numbers like  "12,345"  rather than  12345.
 
 C     Log the results:
 
-      CALL DATE (DAY)
+      CALL DATE_AND_TIME(DAY)
 
       WRITE (LUNOUT, '(A, 20X, A)')
      >  'Modified Elliptic OAW Planform Design', DAY
@@ -754,7 +751,7 @@ C     Left half of wing:
          THICK (KL) = THICK (K)
          TOVERC (KL) = TOVERC (K)
       END DO
-         
+
 
 C     Semi-elliptic left tip instead of fully-rounded?
 
@@ -809,7 +806,7 @@ C     Wing area and volume:
       WRITE (AREATXT (5:7), '(I3.3)') IPLAN2
       WRITE (VOLUMETXT (1:3), '(I3)') IVOL1
       WRITE (VOLUMETXT (5:7), '(I3.3)') IVOL2
-      
+
       WRITE (LUNCRT, '(/, (6X, 2A))')
      >   'Round-tip planform area:  ', AREATXT,
      >   'Volume:                   ', VOLUMETXT

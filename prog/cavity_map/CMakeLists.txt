@@ -6,15 +6,16 @@ target_link_libraries(cavity_map global)
 target_link_libraries(cavity_map
   interp3d
   interplib
+  intrinsics
   numodules
   progtools
-  adt
+  tecplot_adt
   tecplot_io
+  tecplot_gridlib
+  tecplot_surface_patch_utilities
   linsys
   eigenlib
-  surface_patch_utilities
   optlib
-  gridlib
   geomlib
   searchlib
 )

@@ -23,4 +23,4 @@ add_library(searchlib
 )
 target_link_libraries(searchlib PRIVATE global)
 target_include_directories(searchlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc)
+install(FILES README DESTINATION doc RENAME searchlib)
