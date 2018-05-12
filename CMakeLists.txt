@@ -1,4 +1,4 @@
-
+#------------------------------------------------------------------------------
 # Preamble
 #------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.3)
@@ -37,6 +37,13 @@ endif()
 include(compile_options) # After set CMAKE_BUILD_TYPE
 add_library(global INTERFACE)
 target_compile_options(global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
+
+
+#------------------------------------------------------------------------------
+# Configure Modulefile
+#------------------------------------------------------------------------------
+configure_file(cmake/modulefile.in modulefile)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/modulefile DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 
 #------------------------------------------------------------------------------

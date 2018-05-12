@@ -1,0 +1,22 @@
+#%Module1.0
+module-whatis Adds CFDTOOLS @CFDTOOLS_VERSION@ programs to environment
+
+conflict cfdtools
+
+# Get path where module file is installed, taking into consideration
+# the fact that we might accessing it via a symlink.
+if {[catch {file readlink $ModulesCurrentModulefile}]} {
+    # mfile not a symlink; use as is
+    set mfile $ModulesCurrentModulefile
+} else {
+    # mfile is symlink; dereference and cannonicalize
+    set mfile [file readlink $ModulesCurrentModulefile]
+    cd [file dirname $ModulesCurrentModulefile]
+    set mfile [file normalize $mfile]
+}
+set root [file dirname $mfile]
+
+# Configure the environment
+setenv        CFDTOOLS_ROOT     $root
+setenv        CFDTOOLS_VERSION  @CFDTOOLS_VERSION@
+prepend-path  PATH              $root/bin
