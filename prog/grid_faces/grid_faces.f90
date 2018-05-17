@@ -4,13 +4,13 @@
 !
 !     Description:
 !
-!        GRID_FACES extracts the indicated block faces from the input grid 
+!        GRID_FACES extracts the indicated block faces from the input grid
 !     and/or function file.  All files are 3-space PLOT3D multiblock type.
 !
 !     Control file:
 !
 !        'grid_faces.inp' should contain the input and output file specs.
-!     followed by a list of (block, face) pairs, where faces 1 - 6 mean 
+!     followed by a list of (block, face) pairs, where faces 1 - 6 mean
 !     imin, imax, jmin, jmax, kmin, kmax respectively.  E.g.:
 !
 !     GRID_FACES control file
@@ -28,7 +28,7 @@
 !     T          ! Formatted? [T|F]
 !     ---------- Block/face list ----------
 !        171 3   ! Read one per line to EOF
-!        172 3  
+!        172 3
 !        173 3
 !         :  :
 !        229 5
@@ -83,7 +83,7 @@
          FUNC, GRID
 
       CHARACTER :: &
-         FILENAME * 80
+         FILENAME * 256
 
       INTEGER, ALLOCATABLE, DIMENSION (:) :: &
          IBLOCK, IFACE
@@ -467,7 +467,7 @@
       END DO
 
   999 CONTINUE
- 
+
 ! *** STOP ! Avoid system dependencies.
 
       END PROGRAM GRID_FACES
