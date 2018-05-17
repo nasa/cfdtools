@@ -80,6 +80,7 @@
 !  Control Inputs (namelist(s) via standard input; all lines start in column 2):
 !
 !     $FOREBODY_INPUTS
+!     verbose = F,                 ! T turns on lots of pt. distribution output
 !     aft_body_too = T,            ! Option to suppress the aft body
 !     units_in_inches = F,         ! Option suited to arc-jets in the US of A
 !     geometric_scale = 1.,        ! Option to scale the indicated geometry
@@ -572,6 +573,36 @@
 !                               Therefore, do similar to the generatrix, using
 !                               ni_regrid_aft_body and a heuristic number of
 !                               uniform points at the end.
+!     04/05/2018    "    "      An indexing error was found in the above uniform
+!                               redistribution of the aft generatrix end.
+!     05/11/2018    "    "      No change at this level, but some heuristics in
+!                               detect_flatness and detect_vertices (geomlib)
+!                               and verbose output to help interpret the
+!                               curvature adjustments (see also handle_flatness)
+!                               has been made permanent at the cost of bulky
+!                               log files.  User control of the heuristics has
+!                               not been provided (yet); change some parameter
+!                               constants in the above if needed (sorry!).
+!                               The original CURVDIS (gridlib) has also been
+!                               translated to Fortran 90.  Example issue:
+!                               A Mars Sample Return Lander turned out to have
+!                               normalized curvatures on the spherical-section
+!                               heat shield that oscillated between ~0.49 and
+!                               ~0.51 (from a CAD generatrix). The "flatmax"
+!                               constant in detect_flatness happened to be 0.5.
+!                               The heat shield needs to be treated as for the
+!                               zero-curvature aft-body conical sections, in
+!                               order to force more grid points forward of the
+!                               shoulder for better blending.  Similarly, the
+!                               "spike" constant in detect_vertices needed to
+!                               be lowered for the cusp at the shoulder/cone
+!                               juncture to be treated as for a vertex.
+!     05/12/2018    "    "      Added "verbose" to the namelist to allow
+!                               suppression of lots of log file output from the
+!                               curvature-based point distribution (an aid to
+!                               understanding artificial broadening of spikes in
+!                               the shape function at generatrix vertices and
+!                               spreading onto flat segments).
 !  Author:
 !
 !     David Saunders, ERC, Inc. at NASA Ames Research Center, Moffett Field, CA
@@ -624,7 +655,7 @@
 
    integer :: &
       i0_umbrella, i1_umbrella, i2_umbrella, ib, ier, imatch, ios, &
-      ismooth_aft, ismooth_fore, &
+      ismooth_aft, ismooth_fore, lunprint, &
       nb, nblocks, ncones, nedges, ng_split, ni_outer, ni_regrid, &
       ni_regrid_aft_body, ni_regrid_forebody, ni_template, ntoroids, ni_spoke, &
       nj_quarter, nj_semi, nj_spoke, nj_template, numi, numi_aft_body, &
@@ -645,7 +676,8 @@
       aft_body_too, analytic, cell_centered, collapsed, &
       flat_blend_aft, flat_blend_fore, &
       resolve_the_ridges, ripple_case, round_the_ridges, spherecone, &
-      sting_case, umbrella_case, units_in_inches, use_input_generatrix
+      sting_case, umbrella_case, units_in_inches, use_input_generatrix, &
+      verbose
 
    character :: &
       input_generatrix*80, nose_patch_file_name*80, output_generatrix*80, &
@@ -679,15 +711,15 @@
       template                  ! Normalized quarter circle grid, with x = 0.
 
    namelist /FOREBODY_INPUTS/ &
-      aft_body_too, units_in_inches, geometric_scale, input_generatrix, &
-      spherecone, numi_forebody, numj, x_nose, r_nose, radius_nose, &
-      radius_base, radius_shoulder, radius_vertex, half_cone_angle, &
-      half_cone_angle_fore, half_cone_angle_aft, radius_cone_juncture, &
-      skirt_angle, skirt_length, nose_patch_file_name, output_generatrix, &
-      surface_grid_file_name, flat_blend_fore, power_fore, ni_regrid_forebody, &
-      ripple_case, ntoroids, peak_ripple, umbrella_case, nedges, &
-      peak_deflection, rib_deflection, frustum_radius, resolve_the_ridges, &
-      rib_thickness, round_the_ridges
+      verbose, aft_body_too, units_in_inches, geometric_scale, &
+      input_generatrix, spherecone, numi_forebody, numj, x_nose, r_nose, &
+      radius_nose, radius_base, radius_shoulder, radius_vertex, &
+      half_cone_angle, half_cone_angle_fore, half_cone_angle_aft, &
+      radius_cone_juncture, skirt_angle, skirt_length, nose_patch_file_name, &
+      output_generatrix, surface_grid_file_name, flat_blend_fore, power_fore, &
+      ni_regrid_forebody, ripple_case, ntoroids, peak_ripple, umbrella_case, &
+      nedges, peak_deflection, rib_deflection, frustum_radius, &
+      resolve_the_ridges, rib_thickness, round_the_ridges
 
    namelist /AFT_BODY_INPUTS/ &
       sting_case, numi_aft_body, ncones, flat_blend_aft, power_aft, ng_split, &
@@ -738,6 +770,7 @@
 !     Default the namelist inputs:
 
 !     $FOREBODY_INPUTS
+      verbose = false              ! T sheds light on some CURVDIS heuristics
       aft_body_too = false         ! Option to suppress the aft body
       units_in_inches = false      ! Option suited to arc-jets in the US of A
       geometric_scale = one        ! Option to scale the indicated geometry
@@ -781,6 +814,8 @@
       read (lunstdin, nml=forebody_inputs)
       write (luncrt,  nml=forebody_inputs)
 
+      lunprint      = -luncrt
+      if (verbose) lunprint = luncrt
       analytic      = trim (input_generatrix) == 'none'
       ismooth_aft   = 3  ! Both types of CURVDIS smoothings; no added blending
       if (flat_blend_fore) ismooth_fore = -3  ! Allow added blending
@@ -1059,7 +1094,7 @@
          power = power_fore  ! CURVDIS2 now tries lower powers until success
 
          call curvdis2 (numi_internal, xfore, rfore, numi_forebody, power, &
-                        ismooth_fore, luncrt, false, xgen, rgen, ier)
+                        ismooth_fore, lunprint, false, xgen, rgen, ier)
          if (ier /= 0) then
             write (luncrt, '(a, i3, f5.1, /, a)') &
                'CURVDIS2 trouble (forebody).  IER, POWER:', ier, power, &
@@ -1404,7 +1439,7 @@
             else if (ng_split < 0) then  ! Option to redistribute as one piece
 
                call curvdis2 (ng, xg, rg, numi_generatrix, power, &
-                              ismooth_fore, luncrt, false, xgen, rgen, ier)
+                              ismooth_fore, lunprint, false, xgen, rgen, ier)
                if (ier /= 0) then
                   write (luncrt, '(a, i3, f5.1, /, a)') &
                'CURVDIS2 trouble (input generatrix, full-body).  IER, POWER:', &
@@ -1421,7 +1456,7 @@
 !        Forebody gridding:
 
          call curvdis2 (ng_fore, xg, rg, numi_forebody, power, &
-                        ismooth_fore, luncrt, false, xgen, rgen, ier)
+                        ismooth_fore, lunprint, false, xgen, rgen, ier)
          if (ier /= 0) then
             write (luncrt, '(a, i3, f5.1, /, a)') &
                'CURVDIS2 trouble (input generatrix, forebody).  IER, POWER:', &
@@ -1435,7 +1470,7 @@
             power = power_aft
 
             call curvdis2 (ng_aft, xg(ng_fore), rg(ng_fore), numi_aft_body, &
-                           power, ismooth_aft, luncrt, false, &
+                           power, ismooth_aft, lunprint, false, &
                            xgen(numi_forebody), rgen(numi_forebody), ier)
             if (ier /= 0) then
                write (luncrt, '(a, i3, f5.1, /, a)') &
@@ -2048,7 +2083,7 @@
       power = power_aft
 
       call curvdis2 (new_n, xgen_new, rgen_new, numi, power, ismooth_aft, &
-                     luncrt, false, xgen, rgen, ier)
+                     lunprint, false, xgen, rgen, ier)
       if (ier /= 0) then
          write (luncrt, '(a, i3, f5.1, /, a)') &
             'CURVDIS2 trouble (aft body).  IER, POWER:', ier, power, 'Aborting.'
@@ -2273,17 +2308,16 @@
 
 !     Local variables:
 
-      integer :: i1, i2, iu, ier, ni, nv
+      integer :: i1, i2, iu, ier, ni
       real    :: ds2, dsu, total
       real, allocatable :: chords(:), snew(:), vnew(:), vnewp(:)
 
 !     Execution:
 
       ni = min (ni_regrid_aft_body, 3*nu)
-      i1 = numi - ni + 1
-      i2 = numi - nu + 1
+      i1 = numi_generatrix - ni + 1
+      i2 = numi_generatrix - nu + 1
       iu = ni   - nu + 1
-      nv = i2   - i1 + 1
 
       allocate (chords(ni), snew(ni), vnew(ni), vnewp(ni))
 
