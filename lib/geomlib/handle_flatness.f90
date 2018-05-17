@@ -1,6 +1,6 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
-   subroutine handle_flatness (n, s, curvature, nfl, ifl, ifr)
+   subroutine handle_flatness (lunout, n, s, curvature, nfl, ifl, ifr)
 !
 !  Purpose:
 !
@@ -24,6 +24,8 @@
 !                             broadened!  We need to limit such situations to no
 !                             more than half the segment if the other end may be
 !                             broadened as well.
+!     05/11/18    "     "     Added lunout argument to allow a verbose mode in
+!                             CURVDIS.
 !
 !  Author: David Saunders, AMA, Inc./NASA Ames Research Center, Moffett Fld., CA
 !
@@ -33,6 +35,7 @@
 
 !  Arguments:
 
+   integer, intent (in)    :: lunout        ! lunout > 0 produces diagnostics
    integer, intent (in)    :: n             ! # data pts. in s(:) & curvature(:)
    real,    intent (in)    :: s(n)          ! Arc length along the curve
    real,    intent (inout) :: curvature(n)  ! Curvature before and after the
@@ -78,11 +81,15 @@
                snorm(i) = (s(i) - s(ie))/w
             end do
             call beval ('COSL', 2, p, add, ir-ie, snorm(ie), blend(ie))
-!!          write (6, '(a, i2, a)') 'Flat region', iregion, ', left'
-!!          write (6, '(i3, 2es16.8)') (i, curvature(i), blend(i), i = ie, ir-1)
+            if (lunout > 0) then
+               write (lunout, '(a, i2, a)') 'Flat region', iregion, ', left'
+               write (lunout, '(i4, 2es16.8)') &
+                  (i, curvature(i), blend(i), i = ie, ir-1)
+            end if
             curvature(ie:ir-1) =  curvature(ie:ir-1) + blend(ie:ir-1)
             curvature(ie-1)    = (curvature(ie-2) + curvature(ie))*half
-!!          write (6, '(i3, es16.8)') (i, curvature(i), i = ie-2, ir)
+            if (lunout > 0) &
+               write (*, '(i4, es16.8)') (i, curvature(i), i = ie-2, ir)
          end if
       end if
 
@@ -106,13 +113,19 @@
          snorm(i) = (s(i) - s(il))/w
       end do
       call beval ('COSR', 2, p, add, ie-il, snorm(il+1), blend(il+1))
-!!    write (6, '(a, i2, a)') 'Flat region', iregion, ', right'
-!!    write (6, '(i3, 2es16.8)') (i, curvature(i), blend(i), i = il+1, ie)
+      if (lunout > 0) then
+         write (lunout, '(a, i2, a)') 'Flat region', iregion, ', right'
+         write (lunout, '(i4, 2es16.8)') &
+            (i, curvature(i), blend(i), i = il+1, ie)
+      end if
       curvature(il+1:ie) =  curvature(il+1:ie) + blend(il+1:ie)
       curvature(ie+1)    = (curvature(ie) + curvature(ie+2))*half
-!!    write (6, '(i3, es16.8)') (i, curvature(i), i = il, ie+2)
+      if (lunout > 0) write (*, '(i4, es16.8)') (i, curvature(i), i = il, ie+2)
    end do
 
-!! write (6, '(i3, 2es16.8)') (i, s(i), curvature(i), i = 1, n)
+   if (lunout > 0) then
+      write (lunout, '(a)') ' HANDLE_FLATNESS:  Arc length + adjusted curvature'
+      write (lunout, '(i4, 2es16.8)') (i, s(i), curvature(i), i = 1, n)
+   end if
 
    end subroutine handle_flatness

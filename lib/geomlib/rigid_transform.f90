@@ -24,6 +24,7 @@
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   use trigd
    implicit none
 
 !  Arguments:
@@ -38,7 +39,6 @@
 
    integer :: i
    real    :: shift(3), theta, xa(3), v1(3), v2(3), v3(3)
-   real, parameter :: r2d = 180.0 / acos(-1.0)
 
 !  Execution:
 
@@ -58,7 +58,7 @@
 
 !  tan (angle between v1 and v2) = |v1 x v2| / v1.v2:
 
-   theta = atan (sqrt (dot_product (v3, v3)) / dot_product (v1, v2)) * r2d
+   theta = atand (sqrt (dot_product (v3, v3)) / dot_product (v1, v2))
 
 !  This angle is in [-p1/2, +p1/2]; it's not clear if that's an issue.
 

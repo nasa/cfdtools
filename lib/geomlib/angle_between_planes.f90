@@ -17,8 +17,11 @@
 !  two vertices identical, meaning the angle is undefined).
 !
 !  10/27/2014  D.A.Saunders  Adaptation of tri_normal_and_area utility.
+!  05/05/2018    "     "     The arc cosine needs to be protected against
+!                            arguments slightly outside +/-1.
 !
 !  Author:  David Saunders, ERC, Inc./NASA Ames Research Center, Moffett Field.
+!                  Now with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -44,6 +47,7 @@
    integer, save    :: conn(3,ntri)      ! Pointers to 3 vertices per triangle
    real,    save    :: tri_xyz(3,nnode)  ! Coordinates for 2 x 3 vertices
    real             :: areap, areaq      ! Unneeded triangle areas
+   real             :: cosine            ! Must be in [-1., 1.]
    real,    save    :: upsq              ! |uq|**2
    real,    save    :: up(3)             ! Unit normal for triangle p
    real             :: uq(3)             ! Unit normal for triangle q
@@ -72,6 +76,8 @@
 
    call tri_normal_and_area (nnode, ntri, tri_xyz, conn, 2, areaq, uq)
 
-   angle = acosd (dot_product (up, uq) / sqrt (upsq * dot_product (uq, uq)))
+   cosine = max (-1., min (1., dot_product (up, uq) / &
+                  sqrt (upsq * dot_product (uq, uq))))
+   angle  = acosd (cosine)
 
    end subroutine angle_between_planes
