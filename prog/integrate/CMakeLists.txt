@@ -1,10 +1,15 @@
-add_executable(combine
-  combine.f
+add_executable(integrate
+  integrate.f
 )
-target_link_libraries(combine
+target_link_libraries(integrate
   global
-  interplib
-  searchlib
+  geomlib
+  integrate1d
+  linsys
+  progtools
   numodules
+  obsolete
+  searchlib
+  table_io
 )
-install(TARGETS combine DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS integrate DESTINATION ${CMAKE_INSTALL_BINDIR})
