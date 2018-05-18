@@ -6,7 +6,7 @@ C     PURPOSE:
 C
 C        INTEGRATE drives a choice of numerical integration routines.
 C     Originally, selected methods were applied to one or more sets of data
-C     read from one file (stored by rows or by columns in free format). 
+C     read from one file (stored by rows or by columns in free format).
 C     Now, one dataset is treated, and it is read using the much newer
 C     table_io module at the expense of some mostly-unused features.
 C
@@ -118,8 +118,12 @@ C                         of spline method for LCSQUAD as for LCSAREAS.
 C        DAS   01/10/16   Dinesh Prabhu needed tens of thousands of data points.
 C        DAS   11/13/16   Made use of the table_io module.  Changes are kept
 C                         to a minimum by copying data to the original arrays.
+C        DAS   05/17/18   A file with nearly 2 million wavelengths required more
+C                         digits for printing NROWS.  Why does LCSQUAD give
+C                         NaN for the total integral?
 C
 C     AUTHOR:  Ronald Langhi, Informatics General Corp., Palo Alto, CA
+C              David Saunders, AMA, Inc. at NASA Ames Research Center.
 C
 C-------------------------------------------------------------------------------
 
@@ -151,7 +155,7 @@ C     Variables:
       REAL      :: AREA, CENTER, MOMENT, RANGE(0:3), TWOPI, XA, XB
 
 CCC   REAL      :: A(0:MXPTS/2), B(0:MXPTS/2), AREAS(MXPTS),
-CCC  +          :: COEFS(MXPTS,3), 
+CCC  +          :: COEFS(MXPTS,3),
 CCC  +          :: X(MXPTS+1), XNORM(MXPTS), Y(MXPTS+1), YMOM(MXPTS)
 
       REAL, ALLOCATABLE, DIMENSION (:) ::
@@ -210,7 +214,7 @@ C  *  Prompt for, read and store the input data:
             GO TO 70
          END IF
 
-      WRITE (LUNCRT, '(3X, A, I3)')
+      WRITE (LUNCRT, '(3X, A, I9)')
      +   'NHEADER:', TABLE%NHEADER,
      +   '# ROWS: ', TABLE%NROWS,
      +   '# COLS: ', TABLE%NCOLS
@@ -400,8 +404,16 @@ C  *              Prompt for the spline end conditions:
                CALL LCSAREAS (NX, X, Y, METHOD, ZERO, AREAS)
                AREA = AREAS(NX)
 
-               WRITE (LUNCRT, '(3ES16.7)')
-     +            (X(I), Y(I), AREAS(I), I = 1, NX)
+               IF (NX < 200) THEN
+                  WRITE (LUNCRT, '(3ES16.7)')
+     +               (X(I), Y(I), AREAS(I), I = 1, NX)
+               ELSE
+                  WRITE (LUNCRT, '(3ES16.7)')
+     +               (X(I), Y(I), AREAS(I), I = 1, 10)
+                  WRITE (Luncrt, '(A)') ':::::::::::::::::::::::::::::'
+                  WRITE (LUNCRT, '(3ES16.7)')
+     +               (X(I), Y(I), AREAS(I), I = NX-10, NX)
+               END IF
 
                IF (YESMOM) THEN
                   CALL LCSAREAS (NX, X, YMOM, METHOD, ZERO, AREAS)
