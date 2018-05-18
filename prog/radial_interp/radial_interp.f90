@@ -89,7 +89,7 @@
 !
 !     The assumptions allow use of surface searches (and possibly radial line searches) in place of volume searches, although
 !     the more general option (ii) for flow field interpolation still uses 3-D searches along the new radial lines.
-! 
+!
 !     >  Read the full original volume (or surface) grid and associated flow solution if present.
 !
 !     >  If an output grid is implied, read the full new surface grid (vertex-centered) and establish common edge info.
@@ -267,7 +267,7 @@
       initialize, input_f, output_f, output_g, recenter_f, recenter_g
 
    character :: &
-      filename * 80, filename_target * 80
+      filename * 200, filename_target * 200
 
    type (edge_type), allocatable, dimension(:) :: &
       new_edges
@@ -506,7 +506,7 @@
             new_grid(ib)%ni = new_grid(ib)%ni + 1 ! Cell-centered with halos
             new_grid(ib)%nj = new_grid(ib)%nj + 1
          end do
-      end if 
+      end if
 
       new_grid(:)%nk = nk  ! Same as "old" grid when just a new surface is provided
 
@@ -976,7 +976,7 @@
 !  08/07/13   "   All ADT variants are now in a single module with generic build_adt and search_adt interfaces.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, CA  (now ERC, Inc./ARC)
-!  
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !  Modules:
@@ -1631,7 +1631,7 @@
          case (1) ! Centers -> vertices
 
             allocate (t(num_q,ni,nj,nk))
- 
+
             do k = 1, nk
                ka = max (1, k - 1);  kb = min (k, mk)
                do j = 1, nj
