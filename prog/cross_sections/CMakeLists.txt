@@ -4,7 +4,7 @@ add_executable(cross_sections
 target_link_libraries(cross_sections global)
 target_link_libraries(cross_sections
   interplib
-  integrate
+  integrate1d
   intrinsics
   numodules
   progtools

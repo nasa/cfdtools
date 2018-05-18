@@ -4,7 +4,7 @@ add_executable(wingsections
 target_link_libraries(wingsections global)
 target_link_libraries(wingsections
   interplib
-  integrate
+  integrate1d
   progtools
   dt_nurbs
   optlib

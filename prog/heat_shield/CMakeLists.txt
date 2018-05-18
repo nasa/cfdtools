@@ -5,7 +5,7 @@ add_executable(heat_shield
 )
 target_link_libraries(heat_shield
   global
-  integrate
+  integrate1d
   interplib
   gridlib
   geomlib

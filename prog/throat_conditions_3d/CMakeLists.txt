@@ -9,7 +9,7 @@ target_link_libraries(throat_conditions_3d
   interplib
   interp2d
   interp3d
-  integrate
+  integrate1d
   intrinsics
   lewis
   linsys

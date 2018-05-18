@@ -4,7 +4,7 @@ add_executable(blayer_results
 target_link_libraries(blayer_results
   global
   geomlib
-  integrate
+  integrate1d
   interplib
   linsys
   numodules

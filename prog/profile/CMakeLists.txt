@@ -6,7 +6,7 @@ target_link_libraries(profile
   interp3d
   interplib
   numodules
-  integrate
+  integrate1d
   progtools
   interp2d
   linsys
