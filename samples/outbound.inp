@@ -1,0 +1,49 @@
+OUTBOUND controls for Shuttle case
+---------------------- INPUT VOLUME GRID ---------------------------------
+cell-Re.gu      Initial grid
+F               Formatted? [T|F]
+--------------------- INPUT FUNCTION FILE --------------------------------
+cell-Re-fix.fu  Flow quantity(s): [rho, a, mu,] M | p | rho;  use zb-fix!
+F               Formatted? [T|F]
+4               Index of function to be used for tailoring
+--------------- INPUT DPLR CONTROL FILE WITH BCS -------------------------
+dplr.inputs     For ibc(6,nblocks)
+--------------------- TAILORED VOLUME GRID -------------------------------
+tailored.gu     Output volume grid
+F               Formatted? [T|F]
+
+--------------- OUTER BOUNDARY TAILORING CONTROLS ------------------------
+1               Shock edge method|0; 1|4: Mach; 2: p,rho,T; 3: flow grad.
+0               # smoothing iters. applied to flow var. [method 3 only?]
+0.95            Freestrm. multiplier or tolerance; depends on edge method
+2.0             Multiple of local grid spacing for outer margin
+999999.         Multiple of local spacing for limiting smoothed changes
+10              # smoothing iterations for arc changes & wall spacings
+0.0             Added margin (times outermost spacing)
+0               nk_margin where plane nk - nk_margin is tailored to the shock
+
+--------------- RADIAL DISTRIBUTION CONTROLS -----------------------------
+1               1: Re_cell; 2: given ds1; 3 (method_edge = 0): use |dT/ds|
+0               nradial > 0 allows changing the no. of radial grid points
+
+............... Radial method 1 controls .................................
+6.              Nominal cell Reynolds # to impose at the wall
+1.e-6           Minimum wall spacing permitted (before smoothing)
+5.e-6           Maximum   "     "        "        "        "
+2               ng where pts. 1:ng are geometric; ng <= 2 => pure Vinokur
+1.05            Geometric growth rate if ng > 2
+0.15            Factor applied to 1-sided ds2 to give 2-sided ds2
+
+............... Radial method 2 controls .................................
+0.              ds1 to impose everywhere; 0. => existing initial deltas
+2               ng where pts. 1:ng are geometric; ng <= 2 => pure Vinokur
+1.05            Geometric growth rate if ng > 2
+0.25            Factor applied to 1-sided ds2 to give 2-sided ds2
+
+............... Radial method 3 controls .................................
+0.5  0.1  0.5   Outer and blend fractions of nk, and shape fn. exponent
+
+--------------------- PLOTTABLE PROFILE CONTROLS -------------------------
+1               Block number to extract radial profiles from
+ 31  31  8  8   Indices defining surface patch row(s)|column(s) to extract
+0.              Optional fr.strm. value overrides block 1; < 0. => local pk.

@@ -1,0 +1,11 @@
+Cavity_map control file
+Cavity04_CFD03_surf.dat ! CFD surface solution (Tecplot ASCII file)
+3                     ! Flow variable representing heating bump factor
+1 33 66               ! Patch # and (i, j) of reference pt. upstream
+3 33 66               ! Patch # and (i, j) of reference pt. downstream
+-82695.               ! Reference heating value
+List of CFD patches inside the cavity
+5:9
+CHT0700.dat           ! Idealized cavity grid (Tecplot ASCII file)
+2                     ! 1 = inner/outer envelope method; 2 = plain ADT
+-0.0254               ! Optional scale applied to CFD xyzs; -ve means divide

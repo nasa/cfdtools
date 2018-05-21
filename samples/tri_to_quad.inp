@@ -1,0 +1,10 @@
+TRI_TO_QUAD control file (standard input)
+Chun.dat        ! Surface triangulation and flow solution (Tecplot format)
+2               ! 1 = Tecplot, vertex-centered format; 2 = cell-centered
+structured.g    ! Target grid (PLOT3D multiblock)
+T               ! T = formatted; F = unformatted
+Chun-interp.dat ! Output file 1 (grid file if PLOT3D format)
+none            ! Output file 2 (function file if PLOT3D, else 'none')
+T               ! T = formatted; F = unformatted
+0.0001          ! Distance tolerance for target pt. inside solution grid
+0.5     999.    ! X & F to use for x > X

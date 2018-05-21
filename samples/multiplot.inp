@@ -1,0 +1,72 @@
+Ames 980608 vs. Ames 01-03
+F                    ! Formatted data?
+'/d2/u/cliff/syn107-mb/103-wbnd/980608.xsr' ! Current mb grid in single quotes
+'/d2/u/cliff/syn107-mb/103-wbnd/980608.wsr' ! Current mb Q file; 'none' is OK
+'Ames 980608 design' ! Legend for primary (current) solution
+1139.424 612000.0    ! Reference chord & area
+0.                   ! Reynolds number (999. = data value; 0. = inviscid)
+T                    ! Calculate section coefs.? (Z cuts only)
+T                    ! Save cut points for plotting elsewhere?
+
+1   T   T  -1.       ! Show current blocks? (I, SHOWX, SHOWF, +/-1.; I not used)
+2   T   T   1.       ! +/-1. can reverse the surface normal for forces/moments
+3   T   T   1.
+4   T   T   1.
+5   T   T   1.
+6   T   F   1.
+7   T   F   1.
+8   T   F   1.
+9   T   F   1.
+
+T                    ! Overlay a second solution? (Blocks are activated below.)
+'/d2/u/cliff/syn107-mb/103-wbnd/01-03.xsr' ! Overlay grid (inputs needed always)
+'/d2/u/cliff/syn107-mb/103-wbnd/01-03.wsr' ! Overlay Q file
+'Ames 01-03'         ! Legend for overlaid solution
+1139.424 612000.0    ! Reference chord & area for overlaid soln.
+0.                   ! Reynolds number (999. = data value; 0. = inviscid)
+T                    ! Calculate overlaid section coefs.? (Z cuts only)
+
+F     F              ! Target Cps?  Symbols?
+'target.cps'         ! Target Cp file name (input needed always)
+
+F                    ! Wind tunnel Cps for X cuts?
+'probably none'      ! Corresp. file name (single quotes, always needed)
+F                    ! Wind tunnel Cps for Z cuts?
+'wind-tunnel.dat'    ! Corresp. file name (single quotes, always needed)
+'Wind tunnel data'   ! ... and legend
+
+114                  ! Scalar plot quantity; 114 = Cp, etc. (PLOT3D fun. #)
+T                    ! Plot X cuts?
+T                    ! Plot Z cuts?
+
+3                    ! # X cuts
+13     2500.
+14     2600.
+15     2700.
+
+7                    ! # Z cuts
+1      100.          ! I & ZCUTS(I)
+5      180.
+8      240.
+11     300.
+14     360.
+20     480.
+26     600.
+
+T      T      T      ! XAXES, YAXES, ZAXES
+0.     1.    0.1     ! XLEFT, XRIGHT, XSTEP
+0.2  -0.2   -0.05    ! FBOT,  FTOP,   FSTEP  ("F" is probably Cp)
+0.    700.   100.    ! ZLEFT, ZRIGHT, ZSTEP
+100.                 ! YMIN (999. = default)
+1.1   1.             ! YSCALE vs. X  &  YSCALE vs. Z
+0.    5.5            ! XSHIFT & YSHIFT from default legend position
+
+1   T   T  -1.       ! Show overlaid blocks? (I, SHOWX, SHOWF, +/-1.)
+2   T   T   1.       ! Entered last because they may not be read at all
+3   T   T   1.
+4   T   T   1.
+5   T   T   1.
+6   T   F   1.
+7   T   F   1.
+8   T   F   1.
+9   T   F   1.

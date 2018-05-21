@@ -1,0 +1,18 @@
+FLOW_INTERP controls for xxx case
+------------- INPUT SOLUTION GRID --------------
+2018-222-ccenter.gu     Input solution grid file
+F                       Formatted? [T|F]
+------------- INPUT FLOW SOLUTION --------------
+2018-222-ccenter.fu     Input flow solution file
+F                       Formatted? [T|F]
+----------------- TARGET GRID ------------------
+2018-ccenter.gu         Input target grid file
+F                       Formatted? [T|F]
+---------- INTERPOLATED FLOW SOLUTION ----------
+2018-111-from-222-ccenter-KDTREE.fu     Output interpolated flow
+F                       Formatted? [T|F]
+------------- MISCELLANEOUS INPUTS -------------
+0.0001                  Distance tolerance for "in/out" diagnostics
+--------------- OPTIONAL INPUTS ----------------
+F                       Try to suppress solution blocks out of range?
+1                       1 = ADT method; 2 = plain KDTREE; 3 = KDTREE + best-cell-point refinement

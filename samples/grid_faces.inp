@@ -1,0 +1,22 @@
+GRID_FACES control file
+---------- Input grid file ----------
+volume.g   ! or none
+T          ! Formatted? [T|F]
+---------- Input function file ------
+volume.f   ! or none
+T          ! Formatted? [T|F]
+---------- Output grid file ---------
+surface.g  ! or none
+T          ! Formatted? [T|F]
+---------- Output function file -----
+surface.f  ! or none
+T          ! Formatted? [T|F]
+---------- Block/face list ----------
+55 5
+56 5
+57 5
+58 5
+59 5
+60 5
+61 5
+62 5

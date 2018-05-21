@@ -40,10 +40,11 @@ target_compile_options(global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
 
 
 #------------------------------------------------------------------------------
-# Configure Modulefile
+# Supporting File Installation
 #------------------------------------------------------------------------------
 configure_file(cmake/modulefile.in modulefile)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/modulefile DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 
 #------------------------------------------------------------------------------

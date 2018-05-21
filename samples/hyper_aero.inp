@@ -1,0 +1,28 @@
+INPUT SURFACE       QUADS/TRIS/STL?   NORMAL_FLAGS?   FORMATTED?
+full-cylinder.xyz   Q                        F              T
+
+OUTPUT TABULATION        OUTPUT TRIANGULATION    OUTPUT M, Alpha, Cp, Cp-shadow
+full-cylinder.coefs        full-cylinder.tris           full-cylinder.cps
+
+REF. LENGTH   REF. AREA   X_CG   Y_CG   Z_CG    GAMMA
+1.            1.          0.5    0.     0.5     1.3
+
+MACH1  MACH2  INCREMENT
+20.    20.    2.
+
+ALPHA1 ALPHA2 INCREMENT
+0.0    40.    5.
+
+BETA1  BETA2  INCREMENT
+0.     0.     1.
+
+PITCH/YAW/ROLL MOMENT SWITCHES
+-1.   1.   1.
+
+X/Y/Z CONVENTION SWITCHES (for conversion to Jameson flow solver convention)
+1 0 0
+0 1 0
+0 0 1
+
+IMPACT METHOD   SHADOW METHOD
+1               1

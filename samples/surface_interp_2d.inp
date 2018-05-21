@@ -1,0 +1,12 @@
+SURFACE_INTERP_2D control file
+bp.inp                 ! Target file name
+1                      ! Target format: 1 = list of points; 2 = Tecplot
+Subset of functions in output file(s):
+2 6
+cssr-fullbody-wall.dat ! File to be interpolated
+body_point_pw_qw.dat   ! Single-zone plottable results
+body_point_pw_qw.txt   ! Tabulated results
+8 1                    ! Target (zone, i) for debug output; 0s suppress
+POINT                  ! Not BLOCK output
+1.E10   0.             ! X & F for setting finterp if x > X
+1. 1.e-4               ! Scale factors applied to interpolated functions

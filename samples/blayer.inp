@@ -1,0 +1,17 @@
+BLAYER control file
+INPUT TECPLOT or PLOT3D (.g or .gu) FILE
+xxx.volume.dat
+OUTPUT TECPLOT FILE
+xxx.blayer.dat
+1                     ! 1 = DATAPACKING=POINT; 2 = DATAPACKING=BLOCK
+MISCELLANEOUS CONTROLS
+0                     ! Edge method: e < 90% => curvature-based method
+0.89                  ! Emissivity (0.89 = RCG everywhere)
+0.001524              ! Roughness height (meters) for Re-kk = 0.060"
+ 1  1  1              ! (Block,i,j):  save profile (1,1,1) if omitted
+5                     ! # species      [5 if omitted]
+1                     ! # temperatures [1 if these numbers are omitted]
+0                     ! # extra items  [0 "    "     "     "     "    ]
+0.                    ! Optional input for Hinf > 0. | blk. 1 1,1,nk value
+98.                   ! Optional %H/Hinf > 0. value for Hignore | 95%
+0.                    ! Optional Hshift if > 0. (e.g., Hform(0K) = 8932880. for CO2)

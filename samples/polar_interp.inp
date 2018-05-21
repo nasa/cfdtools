@@ -1,0 +1,4 @@
+sample.dat ! Input dataset name
+49 49      ! Output surface grid dimensions
+output.dat ! Output Tecplot ASCII dataset
+9          ! Spoke containing center point, or 0

@@ -1,0 +1,8 @@
+RECTIFY_GRID control file
+morphed_volume_recentered.g     Input grid
+F            Formatted?
+morphed_volume.q         Accompanying function file, or 'none'
+F
+morphed.p3da  Rectified grid
+T             Formatted?
+morphed.fa    Rectified function file

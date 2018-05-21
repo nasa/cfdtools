@@ -1,0 +1,7 @@
+ADSI2ADB control file for [describe the case]
+Shuttle_pt7_t=984.44s.adb ! Input ADB or Tecplot file containing the target triangulation
+shuttle-nose.adsi.out ! Input metadata file from ADSI (ASCII list of input files, etc.)
+shuttle-nose.adb ! Output ADB or Tecplot triangulated solution file
+1 2 3 4 5 10 9 12 13 14 11 6 7 8 15 16 17 ! Variable permutation, inc. xyz
+0.0001   ! Distance tolerance for monitoring surface quad. searches
+1 2 1    ! (i,j,k) for CBAERO table check soln. to be written, or 0 0 0

@@ -1,0 +1,20 @@
+INPUT FILE        OUTPUT FILE
+test.plt          test.out
+
+# COLUMNS INPUT   # COLUMNS OUTPUT   TRANSMIT ODD LINES?
+6                 4                  T
+
+COLUMN NUMBERS TO EXTRACT
+1  5  6   2
+
+POWERS
+1. 1. 1. 2.
+
+SCALES
+1. 1. 0.5 5
+
+SHIFTS
+0. 0. 0.  0.
+
+OUTPUT FORMAT                ! Exactly as for F90, with parens.
+(F5.0, F9.5, 1P, E10.3, E15.7)

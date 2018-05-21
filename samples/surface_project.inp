@@ -1,0 +1,6 @@
+SURFACE_PROJECT control file
+CFD-patches.dat      ! Target points to be projected     (Tecplot ASCII)
+sensor-grid.dat      ! Structured surface to be projected to ( "  " )
+0                    ! 0 = leave targets outside untouched; 1 -> best edge pt.
+projected_points.dat ! Plottable results (Tecplot ASCII, BLOCK order)
+2 107 20             ! Block and (i,j) for debug output; 0 suppresses

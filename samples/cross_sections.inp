@@ -1,0 +1,13 @@
+CROSS_SECTIONS Control File
+2                ! Analysis type:      1|2 = tabulation|Tecplotable slices
+3                ! Grid type:      1|2|3|4 = PLOT3D|PLOT3D/iblank|Tecplot|FUN3D
+3                ! Dimensions:         2|3 = 2D/(x,z)|3D/(x,y,z)
+whole-CEV-23m-Tecplot-2f.dat  ! Grid file name
+T                ! Formatted?          T|F = ASCII|unformatted
+none             ! Flow data file name
+T                ! Formatted?          T|F = ASCII|unformatted
+whole-CEV-angular-from-Tecplot-2f.dat  ! Output file
+'t'              ! slice coordinate:   X|Y|Z|T;  T[heta] => angular stations
+-5               ! Number of slices          (uniform for now)
+0. 1.e-5 1.e-5   ! Origin for clocking angle calculations
+T                ! Merge subslices?    T|F = 1|1+ tabulation lines/slice

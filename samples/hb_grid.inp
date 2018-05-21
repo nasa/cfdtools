@@ -1,0 +1,38 @@
+               ! HB_GRID control file
+'hb_geom.dat'  ! Input geometry file name
+'hb.grid.121x41.10%.R10.B4.S1.smooth.regrid.fmt'      ! Output grid name
+F              ! T = formatted output; F = unformatted output
+T              ! T = (x,y) only; F = (x,y,z) for Gridgen access
+10.            ! Intended Mach number
+20.            ! Intended angle of attack
+1.4            ! Gamma
+2.             ! RFUDGE applied to body radius at stagnation point
+1.0            ! BFUDGE applied to limiting shock angle
+1.0            ! AFUDGE allows reducing the Alpha-related rotation of the shock
+30.            ! THETA, effective body deflection angle
+10.            ! XC_DB = cut-off location of downstream boundary (% body length)
+0.1            ! XC_SB = distance of sonic bubble edges from stag.pt. (% length)
+121            ! NI_EU = I dimension of half of initial Euler-type grid; ...
+41             ! NJ_EU = J dimension in the radial direction
+0.000625       ! D1BODY = surface grid increment at stag. point and ...
+-0.025         ! D2BODY = ... aft boundary (fractions of active body arc length)
+0.001          ! D1SHOCK = corresponding spacings on outer boundary ...
+-0.025         ! D2SHOCK = ... (fractions of lower outer boundary arc length)
+4              ! NBLAYER = Euler value for boundary layer points
+1.2            ! RBLAYER =   "     "    "    "       "    growth rate
+0.0100         ! D1NOSE  = Euler-spacing of inner radial increment at nose ...
+0.0100         ! D1TAIL  = incr. at downstream boundary (fraction of length)
+-0.1500        ! D2NOSE  = Euler-spacing of outer radial increment at nose ...
+-0.1500        ! D2TAIL  = incr. at downstream boundary (fraction of length)
+T              ! T = perform elliptic smoothing of Euler-type grid
+T              ! T = show Newton-type & elliptic smoothing iterations
+F              ! T = redistribute in radial direction using NI_NS
+41             ! NJ_NS = radial dimension of N-S-type grid
+20             ! NBLAYERNS
+1.05           ! RBLAYERNS
+5.E-5          ! D1NOSENS
+1.E-3          ! D1TAILNS
+-0.05          ! D2NOSENS
+-0.08          ! D2TAILNS
+
+ $ELLIPTIC $END

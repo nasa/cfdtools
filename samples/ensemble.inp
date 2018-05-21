@@ -1,0 +1,6 @@
+Ensemble control file
+ensemble.dat         ! Output file name (Tecplot format)
+T                    ! T = formatted; F = unformatted
+One or more line pairs:  topology code and file name, 5 patch lists
+1  r150BW-HH-GEP.dat
+14  9    12 15     7 10    13  8 16 11    6 5 4 3 1 2

@@ -1,0 +1,30 @@
+BLAYER_RESULTS control file
+INPUT PLOT3D GRID OR TECPLOT FILE
+solution.dat             ! File name
+T                        ! T = formatted; F = unformatted
+2                        ! 1 = DATAPACKING=POINT; 2 = DATAPACKING=BLOCK
+INPUT PLOT3D FUNCTION FILE
+none                     ! File name (none for Tecplot input)
+F                        ! T = formatted; F = unformatted
+TILE CENTROID THICKNESS FILE and OML POLYGON VERTEX FILE
+OV104_tilethick.dat      ! Tile IDs and centroid thicknesses
+OV104_OML.dat            ! Tile IDs and OML polygon vertex (x,y,z)s
+0.0254                   ! Convert inches to meters
+0.   0.   0.             ! x,y,z shifts (meters)
+T                        ! Save the triangulation for plotting?
+T                        ! Print missing tile thickness diagnostics?
+OUTPUT PLOT3D GRID FILE OR TECPLOT FILE
+blayer.MKS.dat           ! File name
+T                        ! T = formatted; F = unformatted
+1                        ! 1 = DATAPACKING=POINT; 2 = DATAPACKING=BLOCK
+OUTPUT PLOT3D FUNCTION FILE
+none                     ! File name (none for Tecplot output)
+F                        ! T = formatted; F = unformatted
+OUTPUT TECPLOT FILE (English units or suppressed)
+English.dat              ! Tecplot outputs, English units (or none)
+T                        ! T = formatted; F = unformatted
+1                        ! 1 = DATAPACKING=POINT; 2 = DATAPACKING=BLOCK
+MISCELLANEOUS CONTROLS
+0.89                     ! Emissivity (0.89 = RCG everywhere)
+0.001524                 ! Roughness height (meters) for Re-kk = 0.060"
+3 55 58                  ! (Block,i,j):  save profile (1,1,1) if omitted

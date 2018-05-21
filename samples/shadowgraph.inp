@@ -1,0 +1,15 @@
+SHADOWGRAPH Control File
+1              ! Image type:        1|2|3 = shadowgraph|schlieren|interferogram
+2              ! Grid type:       1|2|3|4 = PLOT3D|P3D/iblank|DPLR overset|FUN3D
+3              ! Dimensions:          2|3 = 2D/(x,z)|3D/(x,y,z)
+blocks_all.igu ! Grid file name
+F              ! Formatted?           T|F = ASCII|unformatted
+blocks_all.fu  ! Flow data file name (mixture density | blank, density)
+F              ! Formatted?           T|F = ASCII|unformatted
+F              ! ASCII results?       T|F = ASCII|unformatted
+0.  1.  0.     ! Unit view vector;  0. 1. 0. => no rotation of CFD data
+3000 2000      ! Image pixel counts
+27.7 17.5      ! Image width, height; CFD units; 999. => grid bbox values
+1.2  0.   0.   ! Image center          "     "     "     "     "     "
+50.            ! Camera distance from exit window
+1.E+32         ! Clip image values beyond this # std. devs. from the mean

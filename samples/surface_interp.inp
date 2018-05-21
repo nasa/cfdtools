@@ -1,0 +1,11 @@
+SURFACE_INTERP control file
+m32-a33tsst7-11sp.BL.std.dat    ! Target file name
+2                   ! 1 = list of points; 2 = Tecplot ASCII
+Subset of functions in output file(s):
+1 2 3
+heating.dat         ! File to be searched (Tecplot ASCII)
+heating.interp.dat  ! Plottable results
+heating.interp.txt  ! Tabulated results (mode 1 only)
+1 1 1               ! Block, i, j for debug output; 0s suppress this
+BLOCK               ! BLOCK | POINT output order
+0.779347  0.        ! X & F to use for x > X

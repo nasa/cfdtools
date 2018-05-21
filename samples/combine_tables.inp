@@ -1,0 +1,19 @@
+Control file for "combine_tables" (merging of multiple 1-function tables from CBAERO)
+   3                               ! Number of independent variables (common to all tables)
+   1   3   2                       ! Permutation of input variables for reordering outputs
+Variable  Scale   Shift   Format   ! Name, conversion factors, and precision for output variables
+Mach        1.      0.     F4.1    ! Independent output variable 1
+Alpha       1.      0.     F6.1    ! ........................... 2
+Q      101325.      0.     F9.1    ! ........................... 3 (1 atmosphere = 101,325 pascals)
+   2                               ! Number of dependent variables (combined in output file)
+Function  Scale   Shift   Format   ! Name, conversion factors, and precision for output functions
+Temp        1.      0.     F9.2    ! Dependent variable 1 name and output format
+Qdot        1.      0.    F11.5    ! .................. 2 ......................
+   1                               ! Number of multi-function tables concatenated in output file
+HL-20.aerothermal.database         ! Output table file name
+hl20.TemperaturePoint.1.tbl        ! Input table for function 1, case 1
+hl20.HeatFluxPoint.1.tbl           ! ........................ 2, .... 1
+hl20.TemperaturePoint.2.tbl        ! ........................ 1, .... 2
+hl20.HeatFluxPoint.2.tbl           ! ........................ 2, .... 2
+hl20.TemperaturePoint.3.tbl        ! ........................ 1, .... 3
+hl20.HeatFluxPoint.3.tbl           ! ........................ 2, .... 3

@@ -1,0 +1,12 @@
+ADB2ADSI control file for Shuttle ADB
+Shuttle_pt7_t=984.44s.adb ! CBAERO ADB
+1                         ! 1|2 = ADB binary; 3|4 = Tecplot ASCII|binary
+shuttle-nose.p3d          ! Target grid (PLOT3D multiblock)
+1                         ! 1 = formatted; 2 = unformatted
+shuttle-nose              ! Ident for output interpolated solution file name(s)
+3                         ! 1|2 = PLOT3D formatted|unformatted; 3|4 = Tecplot ASCII|binary
+shuttle-nose.adsi.inp     ! Output control file for ADSI
+17                        ! 3 + # functions/triangle (should be in the ADB but isn't)
+1 2 3 4 5 10 9 12 13 14 11 6 7 8 15 16 17 ! Permutation passed to ADSI
+0.001                     ! Distance tolerance for monitoring triangulations searches
+0 1 1                     ! (i,j,k) of ADB table to save the triangulated soln. as a check, or 0 0 0

@@ -1,0 +1,21 @@
+Optimized Beech Configuration (SYN87-MB Coarse Mesh)
+T                    ! Formatted data?
+'beech-ns.xyz'       ! Multiblock grid file in single quotes
+1      F             ! Blank current surfaces? (I & BLANK(I), I not used)
+2      F
+3      F
+4      F
+5      F
+
+T                    ! Plot X cuts?
+T                    ! Plot Z cuts?
+
+3                    ! # X cuts
+1      300.          ! I & XCUTS(I) on each line (I not used)
+2      350.
+3      400.
+
+3                    ! # Z cuts
+1      50.           ! I & ZCUTS(I)
+2      100.
+3      150.

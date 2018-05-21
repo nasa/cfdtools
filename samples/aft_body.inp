@@ -1,0 +1,10 @@
+ $AFT_BODY_INPUTS
+ ncones = 1,
+ x_fore_aft_juncture = 0.14,
+ r_aft               = 0.17, 0.06,
+ cone_angle_aft      = 65.,
+ numi = 201,
+ numj = 101,
+ nose_patch_file_name = '/sde1-fs/saunders/HEAT_SHIELD/ApolloPatchGrid/NosePatch61B.p3da'
+ surface_grid_file_name = 'aft_body.g'
+ $END

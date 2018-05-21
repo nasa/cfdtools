@@ -1,0 +1,26 @@
+RADIAL_INTERP controls for simple test case
+------------ INPUT VOLUME (or SURFACE) GRID --------------
+3-D-solution.g          Initial grid
+T                       Formatted? [T|F]
+T                       Cell-centered? [T|F]
+----------- INPUT FLOW SOLUTION (IF PRESENT) -------------
+3-D-solution.f          Associated flow solution, or none.
+T                       Formatted? [T|F]
+T                       Cell-centered? [T|F]
+------------ TARGET SURFACE or VOLUME GRID ---------------
+3-D-target.g            Input new surface grid
+T                       Formatted? [T|F]
+-------------- INTERPOLATED SURFACE GRID -----------------
+interp-surface.g        Output surface grid (to check surface searches)
+T                       Formatted? [T|F]
+-------------- INTERPOLATED VOLUME GRID ------------------
+interp-vol-cc.gu        Output volume grid, or none.
+F                       Formatted? [T|F]
+------------- INTERPOLATED FLOW SOLUTION -----------------
+3-D-target-cc.fu        Output flow field, or none.
+F                       Formatted? [T|F]
+--------------- MISCELLANEOUS CONTROLS -------------------
+1                       Flow interpolation method: 1 assumes consistent radial lines; 2 relaxes this
+T                       T = allow surface cell extrapolation; F = force all surface (p,q)s into the unit square
+0.0001                  Distance tolerance for surface cell searches (grid units); dtol < 0. => decay mismatches to zero at k = nk
+0.  0.15                [Optional] ds1 & ds2fraction; if ds1 > 0., radial lines are redistributed as in OUTBOUND/DPLR grid alignment

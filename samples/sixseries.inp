@@ -1,0 +1,10 @@
+ $INPUTS
+ NAME   = 'NACA 63A409',
+ SERIET = '63A',
+ SERIEC = '63A',
+ TOC = .09,
+ CHD = 1.0,
+ CLI = 0.4,
+ A   = 0.8,
+ CMBNMR = 1.,
+ $END
