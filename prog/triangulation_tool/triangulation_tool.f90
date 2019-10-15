@@ -9,8 +9,14 @@
 !  file.  Initially, this serves as a driver for testing utilities added to the
 !  triangulation_io module for calculating geometric properties of surface
 !  datasets.  Now, it also drives the analogous utilities for volume datasets.
+!  Most operations are on the x/y/z coordinates only, but one option for a
+!  surface triangulation with cell-centered function values can interpolate
+!  the functions to the vertices (area-weighted averaging).  Another option
+!  merges multizone surfaces as one zone.  Both of these options are performed
+!  within the tri_read routine of triangulation_io, so certain restrictions
+!  apply (more than one operation in one run may be inappropriate).
 !
-!     The dataset may contain more than one zone (but probably doesn't).
+!     The dataset may contain more than one zone (but often doesn't).
 !
 !     No control file is needed - just some prompts.
 !
@@ -57,6 +63,9 @@
 !      3.756540120E-01 3.601163924E-01 3.451932967E-01 3.309260905E-01  ...
 !     ::::::::::::::::
 !
+!  WARNING: the second set of face neighbor pointers in this format is NOT
+!  handled and may be missing in any output file.
+!
 !  Format for a Tecplot unstructured volume file:
 !
 !      variables = x y z
@@ -91,8 +100,22 @@
 !                    needed for turning the Itokawa asteroid surface into a
 !                    more reasonable case for volume gridding).
 !     03/08/15   "   Added an option to write a NASTRAN file.
+!     07/26/18   "   Made use of a new triangulation_io option to convert cell-
+!                    centered function data to vertex-centered.  It also has an
+!                    option to merge multi-zone surface triangulations into a
+!                    single zone in new file header fields analogous to the
+!                    relevant fields of a zone.  Any subsequent manipulations
+!                    of x/y/z coordinates should be performed in a separate run.
+!                    A third option to interpolate vertex function values to
+!                    cell centroids has also been added.
+!     07/27/18   "   Arranged to visualize the cell areas of a triangulation,
+!                    which are needed for the CM and moments of inertia of menu
+!                    option 22.  An additional surface dataset is written with a
+!                    single function in favor of adding the areas to any
+!                    existing functions (which may not be cell-centered).
 !
 !  Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA
+!                Later with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -111,7 +134,7 @@
       lunout = 2,        &   ! Output Tecplot multizone triangulation, if any
       lunkbd = 5,        &   ! For keyboard entries
       luncrt = 6,        &   ! For prompts and diagnostics
-      mxmenu = 24 + 1,   &   ! The + 1 counts the 99/Done choice
+      mxmenu = 27 + 1,   &   ! The + 1 counts the 99/Done choice
       halfm  = (mxmenu + 4) / 2 ! 4 here allows for -2, -1, 0, and mxmenu + 1
 
    real, parameter ::    &
@@ -138,7 +161,7 @@
    type (tri_header_type) :: &
       header
    type (tri_type), pointer, dimension (:) :: &
-      xyzf
+      xyzarea, xyzf
 
 !  Storage:
 
@@ -170,6 +193,9 @@
       '  22: Calculate CM & inertia moments',  &
       '  23: Apply rotation matrix from (22)', &
       '  24: Smooth a 1-zone bumpy surface',   &
+      '  25: Multizone surface --> one zone',  &
+      '  26: Cell-centrd. surf. --> vertex-c.',&
+      '  27: Vertex-centrd. surf --> centrds.',&
       '  99: Done',                            &
       '                                   '/   ! Last ' ' eases display
                                                ! of menu as two columns.
@@ -192,6 +218,8 @@
       ' Any further zones are assumed to contain the same element type.'
 
    tri = header%nvertices == 3
+   header%combine_zones = tri  ! Do it during reading; may be all that is needed
+   header%centroids_to_vertices = .false. ! Reread the file if this is requested
 
    header%fileform = 1        ! Vertex-centered
    call readi (luncrt, &
@@ -275,12 +303,49 @@
          n = min (10, xyzf(1)%nnodes)
          write (luncrt, '(1x, 3es16.8)') xyzf(1)%xyz(:,1:n)
 
+      else if (choice == 25) then  ! "Multizone surface --> single zone"
+
+         go to 800 ! This has already been done during the read of all zones
+
+      else if (choice == 26) then  ! "Cell-centered fns. to vertex-centered."
+
+         if (.not. tri) then
+            write (luncrt, '(/, a)') &
+               ' This option has been implemented for triangulations only.'
+            go to 99
+         end if
+
+!        Reread the file with this option turned on:
+
+         header%centroids_to_vertices = .true.
+         call tri_read (lunin, header, xyzf, ios)
+         write (luncrt, '(a, i7)') ' # zones found:', header%nzones
+         header%fileform = 1
+         xyzf(:)%element_type = 'TRIANGLE'
+
+      else if (choice == 27) then  ! "Vertex-centered fns. --> centroids"
+
+         if (header%fileform == 2) then
+            write (luncrt, '(/, a)') ' The functions are already cell-centered.'
+            go to 210
+         end if
+
+         if (.not. tri) then
+            write (luncrt, '(/, a)') &
+               ' This option has been implemented for triangulations only.'
+            go to 99
+         end if
+
+         do iz = 1, header%nzones
+            call tri_zone_v2c (iz, header%numf, xyzf(iz))  ! Internal procedure
+         end do
+         header%fileform = 2
+
       else
 
 !        Process grid zones one at a time:
 
          do iz = 1, header%nzones
-
             n   = xyzf(iz)%nnodes
             cr  = .false. ! TRANSFORM may want to return to the menu
             eof = .false.
@@ -330,7 +395,23 @@
       if (tri) then
          if (nastran) then
             call nas_sf_tri_write (lunout, header, xyzf, ios)
-         else
+         else if (choice /= 25) then
+            call tri_write (lunout, header, xyzf, ios)
+         else  ! Choice = 25 is a special retrofitted case
+
+!           The merged zones are not in a tri_type data structure.  Kludge it:
+
+            call deallocate_tri_zones (1, header%nzones, header%numf, xyzf, ios)
+            header%nzones     = 1
+            xyzf(1)%nnodes    = header%nnodes
+            xyzf(1)%nelements = header%nelements
+            call tri_zone_allocate (header, xyzf(1), ios)
+            if (ios /=  0) go to 99
+
+            xyzf(1)%conn = header%conn
+            xyzf(1)%xyz  = header%xyz
+            xyzf(1)%f    = header%f
+            
             call tri_write (lunout, header, xyzf, ios)
          end if
       else
@@ -353,7 +434,7 @@
 
    contains
 
-!     Internal procedure for program TRIANGULATION_TOOL:
+!     Internal procedures for program TRIANGULATION_TOOL:
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -373,17 +454,19 @@
 
 !     Arguments:
 
-      integer, intent (in)    :: iz        ! Zone number (probably never > 1)
+      integer, intent (in)    :: iz        ! Zone number
       integer, intent (in)    :: n         ! # nodes in this zone
       real,    intent (inout) :: xyz(3,n)  ! Packed node coordinates, this zone
 
 !     Local variables:
 
-      integer    :: i, niter
+      integer    :: i, idp, iform, izone, l, niter, ne, nf, nn, nzones
       real       :: data_range, fwhm, percent_data_range, temp
       real, save :: angle, p, px, py, pz, q, qx, qy, qz, scale, shift
       logical    :: prompt
       real, allocatable, dimension (:) :: x, y, z
+      character (32) :: f1name           ! For saving triangle areas
+      character (80) :: header_filename  ! For temporary reuse of header
 
 !     Execution:
 
@@ -630,11 +713,65 @@
             end if
          end if
 
-      case (22)  ! "CM and Moments of Inertia"
+      case (22)  ! "CM and Moments of Inertia" + option to save triangle areas
 
          if (prompt) then
             if (tri) then
-               call tri_moments_of_inertia (header, xyzf)
+               call tri_moments_of_inertia (header, xyzf)  ! All zones are done
+
+!              Option to visualize the triangle areas:
+
+               yes = .true.
+               call ready (luncrt, &
+              'Save the triangle areas for visualization? [y|n; <cr> = yes] ', &
+                           lunkbd, yes, cr, eof)
+
+               if (yes) then  ! Least awkward to copy all zone info except f
+                  nzones = header%nzones
+                  allocate (xyzarea(nzones))
+                  do izone = 1, nzones
+                     xyzarea(izone)%zone_title   = xyzf(izone)%zone_title
+                     xyzarea(izone)%element_type = xyzf(izone)%element_type
+                     xyzarea(izone)%nelements    = xyzf(izone)%nelements
+                     xyzarea(izone)%nnodes       = xyzf(izone)%nnodes
+                     ne = xyzf(izone)%nelements
+                     nn = xyzf(izone)%nnodes
+                     allocate (xyzarea(izone)%conn(3,ne), &
+                               xyzarea(izone)%xyz(3,nn),  &
+                               xyzarea(izone)%f(1,ne))
+                     xyzarea(izone)%conn(:,:) = xyzf(izone)%conn(:,:)
+                     xyzarea(izone)%xyz(:,:)  = xyzf(izone)%xyz(:,:)
+                     xyzarea(izone)%f(1,:)    = xyzf(izone)%area(:)
+                  end do
+                  header_filename = header%filename
+                  l = len_trim (header_filename)
+                  header%filename = header_filename(1:l-3) // 'areas.dat'
+                  iform           = header%fileform
+                  header%fileform = 2  ! Cell-centered
+                  idp             = header%datapacking
+               header%datapacking = 1  ! Block order
+                  nf              = header%numf
+                  header%numf     = 1
+                  if (nf > 0) then
+                     f1name = header%varname(4)
+                  else
+                     deallocate (header%varname);  allocate (header%varname(4))
+                     header%varname(1) = 'x'
+                     header%varname(2) = 'y'
+                     header%varname(3) = 'z'
+                  end if
+                  header%varname(4) = 'Triangle area'
+
+                  call tri_write (lunout, header, xyzarea, ios)
+                  if (ios /= 0) write (luncrt, '(/, a)') &
+                     ' Trouble saving triangulation with cell areas.'
+
+                  header%filename = header_filename
+                  header%fileform = iform
+               header%datapacking = idp
+                  header%numf     = nf
+                  if (nf > 0) header%varname(4) = f1name
+               end if
             else
                call vol_moments_of_inertia (header, xyzf)
             end if
@@ -697,5 +834,45 @@
 999   return
 
       end subroutine transform
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      subroutine tri_zone_v2c (iz, nf, xyzf)  ! For one zone, f(vert.)-->f(cen.)
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!     Arguments:
+
+      integer,         intent (in)    :: iz    ! Zone number
+      integer,         intent (in)    :: nf    ! Number of functions
+      type (tri_type), intent (inout) :: xyzf  ! Zone iz data structure
+
+!     Local constants:
+
+      real, parameter :: third = 1./3.
+
+!     Local variables:
+
+      integer :: i1, i2, i3, ic, nc
+      real, allocatable :: fcentroid(:,:)
+
+!     Execution:
+
+      write (luncrt, '(a, i7)') ' Converting functions for zone', iz
+      nc = xyzf%nelements
+      allocate (fcentroid(nf,nc))
+
+      do ic = 1, nc
+         i1 = xyzf%conn(1,ic)
+         i2 = xyzf%conn(2,ic)
+         i3 = xyzf%conn(3,ic)
+         fcentroid(:,ic) = (xyzf%f(:,i1) + xyzf%f(:,i2) + xyzf%f(:,i3))*third
+      end do
+
+      deallocate (xyzf%f);  allocate (xyzf%f(nf,nc))
+      xyzf%f(:,:) = fcentroid(:,:)
+      deallocate (fcentroid)
+
+      end subroutine tri_zone_v2c
 
    end program triangulation_tool

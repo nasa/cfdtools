@@ -11,6 +11,8 @@
 !                            extracted as a chunk was wrong (not one record).
 !  07/08/16    "      "      Ryan provided a revised subroutine scale with an
 !                            option to vary the scaling with x.
+!  12/12/17    "      "      Ryan found that the handedness wasn't maintained
+!                            for the "swapijk" option.
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1372,22 +1374,22 @@
             do m = 1, mmax
                call iogrid (1, m)
                write (*, '(a, i5)') '   Writing block', m
-               select case (swapwhat)
+               select case (swapwhat)  ! Note preservation of handedness
                   case (1)
                      write (lun, '(4es19.11)') &
-                        (((x(i,j,k),j=1,jmax(m)),i=1,imax(m)),k=1,kmax(m)), &
-                        (((y(i,j,k),j=1,jmax(m)),i=1,imax(m)),k=1,kmax(m)), &
-                        (((z(i,j,k),j=1,jmax(m)),i=1,imax(m)),k=1,kmax(m))
+                        (((x(i,j,k),j=jmax(m),1,-1),i=1,imax(m)),k=1,kmax(m)), &
+                        (((y(i,j,k),j=jmax(m),1,-1),i=1,imax(m)),k=1,kmax(m)), &
+                        (((z(i,j,k),j=jmax(m),1,-1),i=1,imax(m)),k=1,kmax(m))
                   case (2)
                      write (lun, '(4es19.11)') &
-                        (((x(i,j,k),i=1,imax(m)),k=1,kmax(m)),j=1,jmax(m)), &
-                        (((y(i,j,k),i=1,imax(m)),k=1,kmax(m)),j=1,jmax(m)), &
-                        (((z(i,j,k),i=1,imax(m)),k=1,kmax(m)),j=1,jmax(m))
+                        (((x(i,j,k),i=imax(m),1,-1),k=1,kmax(m)),j=1,jmax(m)), &
+                        (((y(i,j,k),i=imax(m),1,-1),k=1,kmax(m)),j=1,jmax(m)), &
+                        (((z(i,j,k),i=imax(m),1,-1),k=1,kmax(m)),j=1,jmax(m))
                   case (3)
                      write (lun, '(4es19.11)') &
-                        (((x(i,j,k),k=1,kmax(m)),j=1,jmax(m)),i=1,imax(m)), &
-                        (((y(i,j,k),k=1,kmax(m)),j=1,jmax(m)),i=1,imax(m)), &
-                        (((z(i,j,k),k=1,kmax(m)),j=1,jmax(m)),i=1,imax(m))
+                        (((x(i,j,k),k=kmax(m),1,-1),j=1,jmax(m)),i=1,imax(m)), &
+                        (((y(i,j,k),k=kmax(m),1,-1),j=1,jmax(m)),i=1,imax(m)), &
+                        (((z(i,j,k),k=kmax(m),1,-1),j=1,jmax(m)),i=1,imax(m))
                end select
             end do
          else  ! Function file
@@ -1405,16 +1407,16 @@
             do m = 1, mmax
                call iogrid (1, m)
                write (*, '(a, i5)') '   Writing block', m
-               select case (swapwhat)
+               select case (swapwhat)   ! Note preservation of handedness
                   case (1)
                      write (lun, '(4es19.11)') &
-                 ((((q(i,j,k,l),j=1,jmax(m)),i=1,imax(m)),k=1,kmax(m)),l=1,qmax)
+              ((((q(i,j,k,l),j=jmax(m),1,-1),i=1,imax(m)),k=1,kmax(m)),l=1,qmax)
                   case (2)
                      write (lun, '(4es19.11)') &
-                 ((((q(i,j,k,l),i=1,imax(m)),k=1,kmax(m)),j=1,jmax(m)),l=1,qmax)
+              ((((q(i,j,k,l),i=imax(m),1,-1),k=1,kmax(m)),j=1,jmax(m)),l=1,qmax)
                   case (3)
                      write (lun, '(4es19.11)') &
-                 ((((q(i,j,k,l),k=1,kmax(m)),j=1,jmax(m)),i=1,imax(m)),l=1,qmax)
+              ((((q(i,j,k,l),k=kmax(m),1,-1),j=1,jmax(m)),i=1,imax(m)),l=1,qmax)
                end select
             end do
          end if
@@ -1437,19 +1439,19 @@
                select case (swapwhat)
                   case (1)
                      write (lun) &
-                        (((x(i,j,k),j=1,jmax(m)),i=1,imax(m)),k=1,kmax(m)), &
-                        (((y(i,j,k),j=1,jmax(m)),i=1,imax(m)),k=1,kmax(m)), &
-                        (((z(i,j,k),j=1,jmax(m)),i=1,imax(m)),k=1,kmax(m))
+                        (((x(i,j,k),j=jmax(m),1,-1),i=1,imax(m)),k=1,kmax(m)), &
+                        (((y(i,j,k),j=jmax(m),1,-1),i=1,imax(m)),k=1,kmax(m)), &
+                        (((z(i,j,k),j=jmax(m),1,-1),i=1,imax(m)),k=1,kmax(m))
                   case (2)
                      write (lun) &
-                        (((x(i,j,k),i=1,imax(m)),k=1,kmax(m)),j=1,jmax(m)), &
-                        (((y(i,j,k),i=1,imax(m)),k=1,kmax(m)),j=1,jmax(m)), &
-                        (((z(i,j,k),i=1,imax(m)),k=1,kmax(m)),j=1,jmax(m))
+                        (((x(i,j,k),i=imax(m),1,-1),k=1,kmax(m)),j=1,jmax(m)), &
+                        (((y(i,j,k),i=imax(m),1,-1),k=1,kmax(m)),j=1,jmax(m)), &
+                        (((z(i,j,k),i=imax(m),1,-1),k=1,kmax(m)),j=1,jmax(m))
                   case (3)
                      write (lun) &
-                        (((x(i,j,k),k=1,kmax(m)),j=1,jmax(m)),i=1,imax(m)), &
-                        (((y(i,j,k),k=1,kmax(m)),j=1,jmax(m)),i=1,imax(m)), &
-                        (((z(i,j,k),k=1,kmax(m)),j=1,jmax(m)),i=1,imax(m))
+                        (((x(i,j,k),k=kmax(m),1,-1),j=1,jmax(m)),i=1,imax(m)), &
+                        (((y(i,j,k),k=kmax(m),1,-1),j=1,jmax(m)),i=1,imax(m)), &
+                        (((z(i,j,k),k=kmax(m),1,-1),j=1,jmax(m)),i=1,imax(m))
                end select
             end do
          else  ! Function file
@@ -1470,13 +1472,13 @@
                select case (swapwhat)
                   case (1)
                      write (lun) &
-                 ((((q(i,j,k,l),j=1,jmax(m)),i=1,imax(m)),k=1,kmax(m)),l=1,qmax)
+              ((((q(i,j,k,l),j=jmax(m),1,-1),i=1,imax(m)),k=1,kmax(m)),l=1,qmax)
                   case (2)
                      write (lun) &
-                 ((((q(i,j,k,l),i=1,imax(m)),k=1,kmax(m)),j=1,jmax(m)),l=1,qmax)
+              ((((q(i,j,k,l),i=imax(m),1,-1),k=1,kmax(m)),j=1,jmax(m)),l=1,qmax)
                   case (3)
                      write (lun) &
-                 ((((q(i,j,k,l),k=1,kmax(m)),j=1,jmax(m)),i=1,imax(m)),l=1,qmax)
+              ((((q(i,j,k,l),k=kmax(m),1,-1),j=1,jmax(m)),i=1,imax(m)),l=1,qmax)
                end select
             end do
          end if

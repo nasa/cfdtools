@@ -5,6 +5,7 @@ add_library(interp3d
   intsec4.f
   intsec5.f
   intsec6.f90
+  intsec6_2pt.f90
   intsec8.f90
   lcsint3d.f
   line_surface.f90

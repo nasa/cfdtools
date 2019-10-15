@@ -5,7 +5,7 @@ add_executable(bsprofile
 target_link_libraries(bsprofile global)
 target_link_libraries(bsprofile
   interplib
-  integrate1d
+  integratelib
   numodules
   progtools
   dt_nurbs

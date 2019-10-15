@@ -41,6 +41,7 @@
 !                           number of columns, not just one.
 !     02/08/17      "       List-directed reading of tokens for multicolumn
 !                           extraction doesn't handle commas in header tokens.
+!     07/18/18      "       Handle bad file names properly.
 !
 !  Author:  David Saunders, Sterling Software/ELORET Corp./ERC, Inc.
 !                           NASA Ames Research Center, Moffett Field, CA
@@ -58,9 +59,9 @@
       lun1      = 1,     &  ! File to be modified
       lun2      = 2,     &  ! File providing an inserted/replaced column
       lunout    = 3,     &  ! Modified file
-      maxline   = 400,   &  ! Max. length of a line + 1
-      maxcolumn = 100,   &  ! Max. # columns handled
-      maxtoken  = 80        ! Max. width of any column (token)
+      maxline   = 512,   &  ! Max. length of a line + 1
+      maxcolumn = 200,   &  ! Max. # columns handled
+      maxtoken  = 200       ! Max. width of any column (token)
 
    character, parameter :: &
       blank*1 = ' '
@@ -80,9 +81,14 @@
    white(1:1) = blank  ! White space = blank or tab
    white(2:2) = char (9)
 
+   ios = 1
    write (luncrt, '(/, a)', advance='no') ' File to be processed: '
-   read  (lunkbd, '(a)') filename
-   open  (lun1, file=filename, status='old')
+   do while (ios /= 0)
+      read (lunkbd, '(a)', iostat=ios) filename
+      open (lun1, file=filename, status='old', iostat=ios)
+      if (ios < 0) go to 99  ! Quit
+      if (ios > 0) write (luncrt, '(a)') ' File not opened; try again.'
+   end do
 
 10 answer = 'E'
    call readc (luncrt, &
@@ -112,21 +118,50 @@
       go to 10
    end if
 
-   read (lunkbd, *, end=99) icol1
+   ios = 1
+   do while (ios /= 0)
+      read (lunkbd, *, iostat=ios) icol1
+      if (ios < 0) go to 99  ! Quit
+      if (ios > 0) write (luncrt, '(a)') ' Bad entry; try again.'
+   end do
 
    if (.not. (delete .or. extract)) then
       write (luncrt, '(a)', advance='no') ' File with desired new column: '
-      read  (lunkbd, '(a)', end=99) filename
-      open  (lun2, file=filename, status='old')
+      ios = 1
+      do while (ios /= 0)
+         read (lunkbd, '(a)', iostat=ios) filename
+         open (lun2, file=filename, status='old', iostat=ios)
+         if (ios < 0) go to 99
+         if (ios > 0) write (luncrt, '(a)') ' File not opened; try again.'
+      end do
 
       write (luncrt, '(a)', advance='no') ' Number of column to transcribe: '
-      read  (lunkbd, *, end=99) icol2
+      ios = 1
+      do while (ios /= 0)
+         read (lunkbd, *, iostat=ios) icol2
+         if (ios < 0) go to 99
+         if (ios > 0) write (luncrt, '(a)') ' Bad entry; try again.'
+      end do
    end if
 
+   ios = 1
    write (luncrt, '(a)', advance='no') ' Output file name: '
-   read  (lunkbd, '(a)', end=99) filename
-   open  (lunout, file=filename, status='new', iostat=ios)
-   if (ios /= 0) go to 75
+   do while (ios /= 0)
+      read (lunkbd, '(a)', iostat=ios) filename
+      open (lunout, file=filename, status='new', iostat=ios)
+      if (ios < 0) go to 99  ! Quit
+      if (ios > 0) then
+         write (luncrt, '(a)', advance='no') &
+            ' File already exists. Overwrite it? [y|n]: '
+         read (lunkbd, '(a)', iostat=ios) answer
+         if (ios < 0) go to 99  ! Quit
+         if (answer == 'y') then
+            open (lunout, file=filename, status='unknown')
+            exit
+         end if
+         ios = 1
+      end if
+   end do 
 
 !  Process file(s) line-by-line until we hit an EOF:
 
@@ -232,10 +267,6 @@
    write (luncrt, '(1x, a)') 'Offending line:', line1(1 : 131)
    go to 99
 
-75 write (luncrt, '(/, 2a)') &
-      ' Output file already exists: ', trim (filename)
-   go to 99
-
 80 write (luncrt, '(/, a, i7)') &
       ' Error reading from file 2 at line #', lineno
    write (luncrt, '(1x, a)') 'Offending line:', line2(1 : 131)
@@ -295,8 +326,8 @@
       rewind (lun1)
 
       write (luncrt, '(a)', advance='no') ' Output file name: '
-      read  (lunkbd, '(a)', end=99) filename
-      open  (lunout, file=filename, status='new', iostat=ios)
+      read (lunkbd, '(a)', end=99) filename
+      open (lunout, file=filename, status='new', iostat=ios)
       if (ios /= 0) then
          write (luncrt, '(/, 2a)') &
             ' Output file already exists: ', trim (filename)

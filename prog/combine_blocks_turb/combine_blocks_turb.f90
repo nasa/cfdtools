@@ -91,9 +91,11 @@
 !                            handled, so existing scripts should still be OK.
 !     08/06/13   "     "     All variants of the ADT routines have been merged
 !                            into a module (generic build & search calls).
+!     06/16/17   "     "     No real change: just print pscale as part of
+!                            finding a glitch in PREPARE_LOCAL_ANALYSIS.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
-!                           Now ERC, Inc. at NASA/ARC.
+!                           ERC, Inc. at NASA/ARC.  AMA, Inc. at NASA/ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -548,6 +550,8 @@
       write (*, '(a)', advance='no') &
          ' Scale factor for densities/pressure? [EOF => 0.1] '
       read (*, *, iostat=ios) pscale
+      write (*, '(a, f9.5)') &
+         ' Scaling cavity block species densities with:', pscale
 
 !     Count the surface patch quad. cells and allocate work-space for ADT pkg.:
 

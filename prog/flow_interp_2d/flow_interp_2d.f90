@@ -67,9 +67,12 @@
 !                                      with the initial new prompt.
 !     08/06/2013           "      "    All ADT variants have been merged into a
 !                                      module with generic build & search calls.
+!     05/07/2019           "      "    Added x and y to the special-case table
+!                                      output if each target block has ni = 1.
 !  Author:
 !
 !     David Saunders, ERC, Inc./NASA Ames Research Center, Moffett Field, CA
+!     Now with AMA, Inc., NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -473,7 +476,7 @@
    integer,   dimension (:,:), allocatable, save :: conn
    real,      save :: dtolsq
    logical,   save :: special
-   character, save :: pformat*39, pformat1*18
+   character, save :: pformat*40, pformat1*18
 
 !  Execution:
 !  !!!!!!!!!!
@@ -503,8 +506,8 @@
 
 !     Handle any number of functions in profile tabulations:
 
-      pformat = '(i9, 4x, 2i4, 2f12.8, es15.7, nfes12.4)'
-      write (pformat(31:32), '(i2)') numf
+      pformat = '(i9, 4x, 2i4, 2f12.8, 3es15.6, nfes12.4)'
+      write (pformat(32:33), '(i2)') numf
 
    end if        ! End of initialization
 
@@ -547,8 +550,8 @@
       select case (ispecial)
          case (0)  ! No special tabulation
             write (luncrt, '(/, a, i4, /, 2a)') '# Profile #:', ib,  &
-               '# Soln. block  ic  jc           p           q  Wall distance', &
-               '  Interpolated flow'
+               '# Soln. block  ic  jc           p           q              x', &
+               '              y  Wall distance  Interpolated flow'
          case (1)  ! V.n
             write (luncrt, '(/, a, i4, /, a)') '# Profile #:', ib,  &
                '# Wall distance  Interpolated flow'
@@ -615,8 +618,9 @@
                                  (wall_coords(2) - target_coords(2))**2)
            select case (ispecial)
               case (0)  ! No special tabulation
-                 write (luncrt, pformat) &
-                    n, ic, jc, p, q, wall_distance, target_block%q(:,1,j,1)
+                 write (luncrt, pformat) n, ic, jc, p, q, &
+                    target_block%x(1,j,1), target_block%y(1,j,1), &
+                    wall_distance, target_block%q(:,1,j,1)
               case (1)  ! V.n
                  V(:)  = target_block%q(iv:iv+1,1,j,1)
                  Vdotn = abs (dot_product (V, un))

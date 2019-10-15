@@ -4,9 +4,10 @@
 
 !  Description:
 !
-!     This is the 2D analogue of the the earlier LINES_OF_SIGHT 3-space utility.
-!     It can handle either an (x,y) dataset with z = 0 assumed or an (x,y,z)
-!     dataset with z assumed constant (and ignored).
+!     This is the 2D analogue of the earlier LINES_OF_SIGHT 3-space utility.
+!     It can handle either an (x,y) input dataset with z = 0 assumed or an
+!     (x,y,z) dataset with z assumed constant (and ignored).  See paragraph 4
+!     below for the most recent enhancement in this version.
 !
 !     For a list of surface points (grid indices or (x,y) coordinates) and the
 !     associated 2D volume grid, generate lines of sight - i.e., straight lines
@@ -18,9 +19,16 @@
 !     to hypersonic flows.
 !
 !     This version has the option to produce lines parallel to Ox rather than
-!     normal to the wall.  Most recently, it also has the option to produce
+!     normal to the wall.  More recently, it also has the option to produce
 !     lines normal to the outer shock boundary, which may or may not be the best
 !     choice for tangent-slab radiation calculations.
+!
+!     Most recently, radio signal attenuation analyses have called for the
+!     option to generate lines at arbitrary angles off the body (pointing from
+!     transmitter to receiving satellite at some instant in time during a
+!     spacecraft entry into an atmosphere).  In this case, the angle is taken
+!     to be with Ox (positive meaning pointing above Ox; negative meaning
+!     below Ox). The angle(s) should be entered in a third column: x, y, angle.
 !
 !     Always plot the results from LINES_OF_SIGHT[_2D] before proceeding with
 !     related computations, especially if the geometry includes an aft body.
@@ -43,7 +51,8 @@
 !
 !     o  Prompt for all inputs (no control file).
 !
-!     o  Read the entire 2D volume grid (ASCII|binary, 2D|3D; any zs ignored).
+!     o  Read the entire 2D volume grid (ASCII|binary, 2D|3D; any zs ignored
+!        unless they are really angles for the radio attenuation case).
 !
 !     o  For all lines of sight, search the inner boundary and save the relevant
 !        block number and cell indices if the body points are defined by (x,y)
@@ -82,14 +91,19 @@
 !              instead of the unit normal at the body point, and perform the
 !              same intersection calculation and discretization.
 !
+!          If radio-attenuation case:
+!
+!            > The angle in column three defines a direction vector, and the
+!              same intersection calculation and discretization is performed.
+!
 !  Input surface point format (ASCII, read to EOF):
 !
-!     Either                                      or
+!     Either     or        or (attenuation case)
 !
-!     n   i                                       x   y
-!     n   i                                       x   y
-!     n   i                                       x   y
-!     :   :                                       :   :
+!     n   i      x   y     x   y   angle
+!     n   i      x   y     x   y   angle
+!     n   i      x   y     x   y   angle
+!     :   :      :   :     :   :   :
 !
 !     where n = block number and j = 1 is implied.
 !
@@ -133,8 +147,11 @@
 !                             (INTSEC2D) and the shock-normal case (SEARCH_ADT).
 !                             The 2-space ADT method applied to the inner
 !                             boundary also replaces NEAREST_CURVE_POINT.
+!     05/07/19    "     "     Added the option to generate lines at any angle
+!                             w.r.t. Ox for radio attenuation applications.
 !
 !  Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
+!           Now with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -144,6 +161,7 @@
    use grid_block_structure  ! Employed by the XYZQ_IO package
    use xyzq_io_module        ! PLOT3D-type I/O package
    use adt_utilities         ! Search utilities, incl. 2-space curve variant
+   use trigd
 
    implicit none
 
@@ -171,10 +189,13 @@
       ios, nblocks, nlines
 
    logical :: &
-      body_normal, indices, parallel_to_Ox, shock_normal
+      any_angle, body_normal, indices, parallel_to_Ox, shock_normal
 
-   integer, allocatable :: &
-      n_and_i_target(:,:)   ! For (block,i) of results of surface searches
+   integer, allocatable, dimension (:,:) :: &
+      n_and_i_target        ! For (block,i) of results of surface searches
+
+   real, allocatable, dimension (:) :: &
+      direction             ! Direction towards receiving antenna, off Ox, deg.
 
    real, allocatable, dimension (:,:) :: &
       pq, xy_target         ! (p,q)s & (x,y)s of target surface points
@@ -229,11 +250,12 @@
 
       write (luncrt, '(/, 2a)', advance='no') &
          ' Make lines body-normal (b), shock-normal (s)', &
-         ' or parallel to -Ox (x)?: '
+         ' parallel to -Ox (x), or at given angles with Ox (a)?: '
       read (lunkbd, *) answer
       body_normal    = answer == 'b' .or. answer == 'B'
       shock_normal   = answer == 's' .or. answer == 'S'
       parallel_to_Ox = answer == 'x' .or. answer == 'X'
+      any_angle      = answer == 'a' .or. answer == 'A'
 
 !     Distinguish between a list of surface indices and a list of coordinates:
 
@@ -264,9 +286,14 @@
          do l = 1, nlines ! Allow for trailing comments
             read (lunpoints, *) n_and_i_target(:,l)
          end do
-      else
+      else if (.not. any_angle) then
          do l = 1, nlines  ! Avoid any z coordinates
             read (lunpoints, *) xy_target(:,l)
+         end do
+      else  ! Arbitrary angles from Ox
+         allocate (direction(nlines))
+         do l = 1, nlines  ! Avoid any trailing comments
+            read (lunpoints, *) xy_target(:,l), direction(l)
          end do
       end if
       close (lunpoints)
@@ -401,6 +428,10 @@
 !
 !     Simply adjust the unit vector of the body-normal method then proceed.
 !
+!     Arbitrary angle case:
+!
+!     The angle defines a different unit direction vector.
+!
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !     Local constants:
@@ -423,8 +454,8 @@
          conn(:,:)
 
       real :: &
-         dmax, dmean, dsqmin, dtol, dtolsq, p, q, t, teval, tint, total, &
-         xmin, xsmax, xy_interp(2), ymax, ymin
+         degrees, dmax, dmean, dsqmin, dtol, dtolsq, p, q, t, teval, tint, &
+         total, xmin, xsmax, xy_interp(2), ymax, ymin
 
       real, dimension (nl) :: &
          tl, xl, yl, zl          ! For 2-point lines passed to INTSEC2D
@@ -599,6 +630,12 @@
             un(1) = -one  ! Presumably not an aft body point
             un(2) = zero
 
+         else if (any_angle) then  ! Retrofitted option for angle from Ox
+
+            degrees = direction(l)
+            un(1)   = cosd (degrees)
+            un(2)   = sind (degrees)
+
          else if (body_normal) then
 
 !           Construct a unit normal to the wall at the body point.
@@ -629,7 +666,7 @@
             radial_lines(l)%x(1,:,1) = xl(1) + (xy_interp(1) - xl(1)) * tline(:)
             radial_lines(l)%y(1,:,1) = yl(1) + (xy_interp(2) - yl(1)) * tline(:)
 
-         else  ! Body-normal or Ox-parallel method
+         else  ! Body-normal, angle off Ox, or Ox-parallel method
 
 !           Set up a 2-point straight line that should cross the outer bndry.:
 

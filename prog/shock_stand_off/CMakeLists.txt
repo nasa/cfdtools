@@ -9,6 +9,7 @@ target_link_libraries(shock_stand_off
   adt
   linsys
   optlib
+  gridlib
   geomlib
   searchlib
 )

@@ -300,7 +300,7 @@
          call volume_check (mi, mj, mk, &
                             gridout(ib)%x, gridout(ib)%y, gridout(ib)%z)
       end if
-
+                         
       deallocate (gridout(ib)%x, gridout(ib)%y, gridout(ib)%z, stat=ios)
 
       if (nf > 0) then
@@ -540,7 +540,7 @@
       int_s = int (s)
 
       if (real (int_s) == s) then
-         nnew = int_s*(n-1) + 1
+         if (mod (n, 2) == 1) nnew = int_s*(n-1) + 1
       end if
 
       end subroutine scale_dimensions

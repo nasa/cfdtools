@@ -6,7 +6,7 @@ target_link_libraries(ch_grid global)
 target_link_libraries(ch_grid
   interp3d
   interplib
-  integrate1d
+  integratelib
   intrinsics
   numodules
   progtools

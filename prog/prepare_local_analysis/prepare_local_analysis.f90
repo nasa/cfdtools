@@ -151,9 +151,19 @@
 !     07/19/12   "   An extra prompt allows the decay/no-decay choice now.
 !     01/13/14   "   ADJUST_GRID is preferable to SCALE_GRID now, so the
 !                    option to convert inches to meters has been recoded.
+!     04/19/17   "   Dinesh Prabhu encountered a glitch with cavity blocks
+!                    that should have been encountered long ago: gridname
+!                    was used instead of nspecies in a READER prompt.
+!     06/16/17   "   Dinesh suffered from another glitch: the pscale prompt for
+!                    COMBINE_BLOCKS_TURB was missing, and the cavity flow was
+!                    coming out all zeros for the species densities.  It turns
+!                    out that an extra 'n' for the format of the combined flow
+!                    file (written here) was being read by COMBINE_BLOCKS_TURB
+!                    as pscale and coming out zero.  That 'n' should not be
+!                    there because the formatting of the combined grid is used.
 !
 !  Author:  David Saunders, ELORET Corp./NASA Ames Research Center, CA
-!                           Now ERC, Inc./NASA ARC.
+!                           ERC, Inc./NASA ARC in 2014; now with AMA, Inc.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -162,7 +172,7 @@
 !  Constants:
 
    integer, parameter :: &
-      lunin  = 1,        &  ! For checking if a file formatted o unformatted
+      lunin  = 1,        &  ! For checking if a file is formatted|unformatted
       lunout = 2,        &  ! Output control files
       lunsh  = 3,        &  ! For the output shell script
       lunctl = 4,        &  ! For the (optional) template.inp.2 control file
@@ -180,6 +190,9 @@
       y * 1     = 'y'
 
 !  Variables:
+
+   real :: &
+      pscale
 
    integer :: &
       i, ios, nspecies
@@ -306,7 +319,6 @@
 !     Check existence; allow for different formatting from the new surface.
 
       call determine_form (filename_cavity, lunin, formatted_volume, ios)
-
       if (ios /= 0) go to 99
 
    end if
@@ -619,6 +631,8 @@
          trim (filename_cavity),     &
          answer
 
+      write (luncrt, '(a)') ' N.B.: Unformatted output names should end in u.'
+
       gridname = 'combined.vertex.gu'
       call reads (luncrt, &
          'Name for the combined grid blocks   (<CR> = combined.vertex.gu): ',  &
@@ -648,7 +662,7 @@
       nspecies = 5
       call readi (luncrt, &
                   'Number of species in flow solution  (<CR> = 5): ',  &
-                  lunkbd, gridname, cr, eof)
+                  lunkbd, nspecies, cr, eof)
       if (eof) go to 99
 
       if (formatted_volume) then
@@ -687,9 +701,17 @@
          filename_flow = 'combined.center.fu'
       end if
 
+      pscale = 0.1
+      call readr (luncrt, &
+                  'Scale factor for densities/pressures  (<CR> = 0.1): ', &
+                  lunkbd, pscale, cr, eof)
+      if (eof) go to 99
+
       write (lunsh, '(a)')     &
-         trim (filename_flow), &
-         answer,               &
+         trim (filename_flow)  ! Formatting of output grid is reused
+      write (lunsh, '(f9.5)')  &
+         pscale
+      write (lunsh, '(a)')     &
          'COMBINE_BLOCKS_2',   &
          blank,                &
          'echo '' Combined flow starting guess is complete.''',                &
@@ -738,6 +760,9 @@
       'echo '' then run FCONVERT twice for the desired # CPUs.'''
 
    close (lunsh)
+
+   write (luncrt, '(a)') &
+      ' Enter "source local_analysis_script" to perform all steps.'
 
 99 continue
 

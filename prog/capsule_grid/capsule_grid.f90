@@ -603,6 +603,19 @@
 !                               understanding artificial broadening of spikes in
 !                               the shape function at generatrix vertices and
 !                               spreading onto flat segments).
+!     08/23/2018    "    "      The analytic aft body case's forcing of uniform
+!                               spacing away from the aft stag. point was not
+!                               right because x/rgen(:) was being reused for the
+!                               aft body (starting from 1, not numi_forebody).
+!     09/25/2019    "    "      Rerunning on the capsule-on-a-sting analytic
+!                               case gave troubling aft-body results, traced to
+!                               interference of the vertex-detection scheme in
+!                               CURVDIS with the (later) scheme for broadening
+!                               the curvature-based shape function on to flat or
+!                               low-curvature segments. Better blending on to
+!                               such segments (and either side of sharp corners)
+!                               is highly desirable, but fraught with potential
+!                               difficulties due to the unavoidable heuristics.
 !  Author:
 !
 !     David Saunders, ERC, Inc. at NASA Ames Research Center, Moffett Field, CA
@@ -1156,7 +1169,7 @@
          numi     = numi_aft_body
          x_aft(1) = xgen(j)
          r_aft(1) = rgen(j)
-         xgen(1)  = x_aft(1)
+         xgen(1)  = x_aft(1)  ! Note reuse of forebody computational grid arrays
          rgen(1)  = r_aft(1)
 
 !        Calculate the abscissas of the other vertices, fore to aft:
@@ -1255,7 +1268,10 @@
 
 !        Avoid stretching towards the symmetry axis at the aft end:
 
-         call uniform_aft_end ()
+!!!      write (6, '(a, i6)') 'numi_generatrix:', numi_generatrix
+!!!      write (6, '(i, 2es15.7)') (i, xgen(i), rgen(i), i = 1, numi)
+
+         call uniform_aft_end (numi)
 
 !        Append the aft-body generatrix to the forebody in the output files,
 !        omitting the common point:
@@ -1526,7 +1542,10 @@
 
 !        Avoid stretching towards the symmetry axis at the aft end:
 
-         if (aft_body_too) call uniform_aft_end ()
+!!!      write (6, '(a, i6)') 'At 95, numi_generatrix:', numi_generatrix
+!!!      write (6, '(i, 2es15.7)') (i, xgen(i), rgen(i), i = 1, numi_generatrix)
+
+         if (aft_body_too) call uniform_aft_end (numi_generatrix)
 
 !        Save the curvature-based generatrix in Tecplot form:
 
@@ -1831,15 +1850,20 @@
          close (lungen0)
          SRC_case = false
          go to 90
-      end if
+      end if  ! Else this file is written after the rounding
 
       radii = rounding_mode == 2  ! Else 1 => ds_round(:) = tangent lengths
 
-      allocate (sgen(numi), xgen_new(new_n), rgen_new(new_n), sgen_new(new_n))
-
+      allocate (sgen(numi))
       call chords2d (numi, xgen, rgen, false, total, sgen)
 
-!!    write (11, '(i3, 3es15.7)') (i, xgen(i), rgen(i), sgen(i), i = 1, numi)
+      if (verbose) then
+         write (luncrt, '(/, a)') 'Raw generatrix before vertex rounding: x,r,s'
+         write (luncrt, '(i4, 3es15.7)') &
+            (i, xgen(i), rgen(i), sgen(i), i = 1, numi)
+      end if
+
+      allocate (xgen_new(new_n), rgen_new(new_n), sgen_new(new_n))
       xgen_new(1:numi) = xgen(:)
       rgen_new(1:numi) = rgen(:)
       sgen_new(1:numi) = sgen(:)
@@ -2294,12 +2318,21 @@
       end subroutine match_forebody
 
 !     -----------------------------------------------------------------------
-      subroutine uniform_aft_end ()
+      subroutine uniform_aft_end (numi)
 
 !     Avoid stretching towards the symmetry axis at the aft end of the
 !     generatrix by imposing a heuristic number of uniformly spaced points
 !     there and redistributing the remaining points back to ni_regrid_aft...
 !     -----------------------------------------------------------------------
+
+!     Argument:
+
+      integer, intent (in) :: numi
+                       ! Index of the last point in the aft body generatrix.
+                       ! The analytic case reuses x/rgen(1:numi) for the aft
+                       ! body discretization, while the nonanalytic case has
+                       ! x/rgen(numi_generatrix) defined already.  This argu-
+                       ! ment is passed accordingly in each of two calls.
 
 !     Local constants:
 
@@ -2308,6 +2341,7 @@
 
 !     Local variables:
 
+      integer :: i
       integer :: i1, i2, iu, ier, ni
       real    :: ds2, dsu, total
       real, allocatable :: chords(:), snew(:), vnew(:), vnewp(:)
@@ -2315,20 +2349,39 @@
 !     Execution:
 
       ni = min (ni_regrid_aft_body, 3*nu)
-      i1 = numi_generatrix - ni + 1
-      i2 = numi_generatrix - nu + 1
+      i1 = numi - ni + 1
+      i2 = numi - nu + 1
       iu = ni   - nu + 1
+
+!!!   write (6, '(a, (a, i5))') 'Subroutine uniform_aft_end:', &
+!!!      'numi:', numi, &
+!!!      'nu:  ', nu, &
+!!!      'ni:  ', ni, &
+!!!      'i1:  ', i1, &
+!!!      'i2:  ', i2, &
+!!!      'iu:  ', iu
 
       allocate (chords(ni), snew(ni), vnew(ni), vnewp(ni))
 
+!!!   write (6, '(i5, 2es16.8)') (i, xgen(i), rgen(i), i = i1, numi)
+
       call chords2d (ni, xgen(i1), rgen(i1), false, total, chords)
 
+!!!   write (6, '(i5, 3es16.8)') (i, xgen(i), rgen(i), chords(i-i1+1), i = i1, numi)
+
       call xgrid (nu, 0, chords(iu), total, snew(iu))  ! Uniform
+
+!!!   write (6, '(i5, 2f12.7)') (i, snew(i-i1+1), rgen(i), i = i1, numi)
 
       dsu = total - snew(ni-1)
       snew(1) = zero;  snew(iu) = chords(iu)
 
+!!!   write (6, '(a, es15.8)') 'chords(2):', chords(2), 'dsu:', dsu
+
       call vinokur (1, iu, chords(2), dsu, snew, luncrt, ier)
+
+!!!   write (6, '(a, i5)') 'Vinokur ier:', ier
+!!!   write (6, '(i5, f12.7)') (i, snew(i), i = 1, ni)
 
       call lcsfit (ni, chords, xgen(i1), true, method, ni, snew, vnew, vnewp)
       xgen(i1:numi-1) = vnew(1:ni-1)

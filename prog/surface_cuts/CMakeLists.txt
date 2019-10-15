@@ -6,7 +6,7 @@ target_link_libraries(surface_cuts
   gridlib
   geomlib
   interplib
-  integrate1d
+  integratelib
   intrinsics
   numodules
   searchlib

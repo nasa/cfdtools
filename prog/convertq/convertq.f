@@ -40,7 +40,6 @@
 *          8  ! # Qs (bars)
 *        34.00251 ! Sref, m^2
 *        8.607552 ! Lref, m
-*          1  ! # multi-function tables
 *        Multi-function table  1
 *        Mach  Alpha  Q    CL       CD       CM
 *         0.3  0.0 0.005  -0.0244   0.0654   0.00642
@@ -91,6 +90,31 @@
 *                                     have been too small all along: GET_RE
 *                                     should be given feet, not meters, because
 *                                     it works with English units.
+*        01/26/18       "      "      Diagnostic output to unit 20 needed room
+*                                     for more digits.
+*        01/29/18       "      "      Replaced INTRP1 with (proven) LCSFIT in an
+*                                     effort to overcome what seem to be poor
+*                                     extrapolations.  Results were identical.
+*                                     Abandoned quadratic interpolation to the
+*                                     uniform values of log (Re) in favor of
+*                                     monotonic splines within the data range
+*                                     and linear extrapolation outside it.
+*                                     This improves results, but CD still goes
+*                                     negative because CD vs. log (Re) is so
+*                                     nonlinear at the higher Re values.
+*                                     Try limiting altitudes interpolated for
+*                                     given Q to the atmosphere table range.
+*                                     This makes all the difference.
+*                                     Print the altitudes found for each Q.
+*        01/30/18       "      "      Documentation was slightly wrong for the
+*                                     header of the input table: combined coefs.
+*                                     via COMBINE_TABLES with Sref & Lref added.
+*        02/22/18       "      "      Nasty gotcha with LCSFIT: if METHOD is
+*                                     changed (such as to L for extrapolation),
+*                                     then NEW should not be left as false
+*                                     because if the search interval doesn't
+*                                     change from the previous call then the
+*                                     previous coefficients will also be reused.
 *
 *     Origination:    NASA Ames Research Center, Moffett Field, CA
 *
@@ -117,9 +141,11 @@
 
 *     Local variables:
 
-      INTEGER   :: I, J, K, N, NUNI, IOUT1, IOUT2, LEFT
-      REAL      :: LENGTH, REFA, REFL, REMAX, REMIN, REYN
-      CHARACTER :: FILENAME * 64
+      INTEGER   :: I, J, K, L, N, NUNI, IOUT1, IOUT2, LEFT
+      REAL      :: LENGTH, REFA, REFL, REMAX, REMIN, REYN, UNUSED
+      REAL      :: ALTMAX, ALTMIN
+      LOGICAL   :: NEW
+      CHARACTER :: FILENAME*80, METHOD*1
 
       REAL, ALLOCATABLE, DIMENSION (:) ::
      >   ORIGINALRE, ORIGINALCF, UNIFORMRE, UNIFORMCF
@@ -129,6 +155,8 @@
 
 *     Execution:
 
+      WRITE (LUNCRT, '(/, A)')
+     >   ' Be sure that Sref & Lref appear in the following file.'
       WRITE (LUNCRT, '(/, A)', ADVANCE='NO')
      >   ' Input aero. database file: '
       READ (LUNKBD, '(A)') FILENAME
@@ -179,7 +207,11 @@ C     Read the aerodynamic database:
 
       LENGTH = REFL / 0.3048
       REMAX  = -30.
-      REMIN  =  30.
+      REMIN  = -REMAX
+      ALTMAX = -1.E6
+      ALTMIN = -ALTMAX
+
+      write (20, '(a)') 'Mach, Alpha, Q, Re, log(Re), altitude'
 
       DO K = 1, NPR
          DO J = 1, NAL
@@ -189,14 +221,18 @@ C     Read the aerodynamic database:
      >                      REYN, GAMMA, R, ALT(I,J,K))
 
                RE(I,J,K) = LOG10 (REYN)
-               REMAX = MAX (REMAX, RE(I,J,K))
-               REMIN = MIN (REMIN, RE(I,J,K))
+               REMAX  = MAX (REMAX, RE(I,J,K))
+               REMIN  = MIN (REMIN, RE(I,J,K))
+               ALTMAX = MAX (ALTMAX, ALT(I,J,K))
+               ALTMIN = MIN (ALTMIN, ALT(I,J,K))
 
-               write (20, '(3f10.6, 1p, 2e16.7)')
-     >            mach(i), alpha(j), pres(k), reyn, re(i,j,k)
+               write (20, '(3f13.6, 2es16.7, f10.2)')
+     >           mach(i), alpha(j), pres(k), reyn, re(i,j,k), alt(i,j,k)
             END DO 
          END DO
       END DO
+      write (20, '(a, f10.2, a, f10.2)')
+     >   'Min. data altitude:', ALTMIN, '   Max.:', ALTMAX
 
 *     Round off the extremes to the nearest 0.5:
 
@@ -220,56 +256,138 @@ C     Read the aerodynamic database:
 
 *     Interpolate CL, CD, CM, and Altitude at uniform log (Re) points:
 
-      DO J = 1, NAL
+*     DO J = 1, NAL
+*
+*        DO I = 1, NMA
+*
+*           ORIGINALRE = RE(I,J,1:NPR)
+*           ORIGINALCF = CL(I,J,1:NPR)
+*           LEFT = NPR ! Since Re is decreasing
+*
+*           CALL QINTERP (NPR, ORIGINALRE, ORIGINALCF,
+*    >                    NUNI, UNIFORMRE,  UNIFORMCF, LEFT)
+*
+*           CLU(I,J,1:NUNI) = UNIFORMCF
+*
+*           ORIGINALCF = CD(I,J,1:NPR)
+*           LEFT = NPR
+*
+*           CALL QINTERP (NPR, ORIGINALRE, ORIGINALCF,
+*    >                    NUNI, UNIFORMRE,  UNIFORMCF, LEFT)
+*
+*           CDU(I,J,1:NUNI) = UNIFORMCF
+*
+*           DO K = 1, NUNI ! For PLOT3D purposes
+*              CLOVERCD(I,J,K) = CLU(I,J,K) / CDU(I,J,K)
+*           END DO
+*
+*           ORIGINALCF = CM(I,J,1:NPR)
+*           LEFT = NPR
+*
+*           CALL QINTERP (NPR, ORIGINALRE, ORIGINALCF,
+*    >                    NUNI, UNIFORMRE,  UNIFORMCF, LEFT)
+*
+*           CMU(I,J,1:NUNI) = UNIFORMCF
+*
+*           ORIGINALCF = ALT(I,J,1:NPR)
+*           LEFT = NPR
+*
+*           CALL QINTERP (NPR, ORIGINALRE, ORIGINALCF,
+*    >                    NUNI, UNIFORMRE,  UNIFORMCF, LEFT)
+*
+*           ALTU(I,J,1:NUNI) = MAX (UNIFORMCF, -150000.)
+*
+*        END DO
+*
+*     END DO
 
+      DO J = 1, NAL
          DO I = 1, NMA
 
-            ORIGINALRE = RE(I,J,1:NPR)
-            ORIGINALCF = CL(I,J,1:NPR)
-            LEFT = NPR ! Since Re is decreasing
+            ORIGINALRE(:) = RE(I,J,1:NPR)
+            ORIGINALCF(:) = CL(I,J,1:NPR)
+            NEW = .TRUE.
+            DO K = 1, NUNI
+               METHOD = 'M'
+               IF (UNIFORMRE(K) < ORIGINALRE(1) .OR.
+     >             UNIFORMRE(K) > ORIGINALRE(NPR)) THEN
+                      METHOD = 'L'
+                      NEW = .TRUE.
+               END IF
 
-            CALL QINTERP (NPR, ORIGINALRE, ORIGINALCF,
-     >                    NUNI, UNIFORMRE,  UNIFORMCF, LEFT)
-
-            CLU(I,J,1:NUNI) = UNIFORMCF
-
-            ORIGINALCF = CD(I,J,1:NPR)
-            LEFT = NPR
-
-            CALL QINTERP (NPR, ORIGINALRE, ORIGINALCF,
-     >                    NUNI, UNIFORMRE,  UNIFORMCF, LEFT)
-
-            CDU(I,J,1:NUNI) = UNIFORMCF
-
-            DO K = 1, NUNI ! For PLOT3D purposes
-               CLOVERCD(I,J,K) = CLU(I,J,K) / CDU(I,J,K)
+               CALL LCSFIT (NPR, ORIGINALRE, ORIGINALCF, NEW,
+     >                      METHOD, 1, UNIFORMRE(K), UNIFORMCF(K),
+     >                      UNUSED)
+               CLU(I,J,K) = UNIFORMCF(K)
+               NEW = .FALSE.
             END DO
 
-            ORIGINALCF = CM(I,J,1:NPR)
-            LEFT = NPR
+            ORIGINALCF(:) = CD(I,J,1:NPR)
+            NEW = .TRUE.
+            DO K = 1, NUNI
+               METHOD = 'M'
+               IF (UNIFORMRE(K) < ORIGINALRE(1) .OR.
+     >             UNIFORMRE(K) > ORIGINALRE(NPR)) THEN
+                      METHOD = 'L'
+                      NEW = .TRUE.
+               END IF
 
-            CALL QINTERP (NPR, ORIGINALRE, ORIGINALCF,
-     >                    NUNI, UNIFORMRE,  UNIFORMCF, LEFT)
+               CALL LCSFIT (NPR, ORIGINALRE, ORIGINALCF, NEW,
+     >                      METHOD, 1, UNIFORMRE(K), UNIFORMCF(K),
+     >                      UNUSED)
+               CDU(I,J,K) = UNIFORMCF(K)
+               if (cdu(i,j,k) <= 0.) then
+                  write (21, '(a, 3i3, 2f11.6, 1x, a)')
+     >             'CD <= 0:', i,j,k, uniformre(k), uniformcf(k), method
+                  write (21, '(2f11.6)')
+     >               (originalre(l), originalcf(l), l = 1, npr)
+               end if
+               CLOVERCD(I,J,K) = CLU(I,J,K) / CDU(I,J,K)
+*              NEW = .FALSE.  ! Linear doesn't activate!
+            END DO
 
-            CMU(I,J,1:NUNI) = UNIFORMCF
+            ORIGINALCF(:) = CM(I,J,1:NPR)
+            NEW = .TRUE.
+            DO K = 1, NUNI
+               METHOD = 'M'
+               IF (UNIFORMRE(K) < ORIGINALRE(1) .OR.
+     >             UNIFORMRE(K) > ORIGINALRE(NPR)) THEN
+                      METHOD = 'L'
+                      NEW = .TRUE.
+               END IF
 
-            ORIGINALCF = ALT(I,J,1:NPR)
-            LEFT = NPR
+               CALL LCSFIT (NPR, ORIGINALRE, ORIGINALCF, NEW,
+     >                      METHOD, 1, UNIFORMRE(K), UNIFORMCF(K),
+     >                      UNUSED)
+               CMU(I,J,K) = UNIFORMCF(K)
+               NEW = .FALSE.
+            END DO
 
-            CALL QINTERP (NPR, ORIGINALRE, ORIGINALCF,
-     >                    NUNI, UNIFORMRE,  UNIFORMCF, LEFT)
+            ORIGINALCF(:) = ALT(I,J,1:NPR)
+            NEW = .TRUE.
+            DO K = 1, NUNI
+               METHOD = 'M'
+               IF (UNIFORMRE(K) < ORIGINALRE(1) .OR.
+     >             UNIFORMRE(K) > ORIGINALRE(NPR)) THEN
+                      METHOD = 'L'
+                      NEW = .TRUE.
+               END IF
 
-            ALTU(I,J,1:NUNI) = MAX (UNIFORMCF, -150000.)
+               CALL LCSFIT (NPR, ORIGINALRE, ORIGINALCF, NEW,
+     >                      METHOD, 1, UNIFORMRE(K), UNIFORMCF(K),
+     >                      UNUSED)
+               ALTU(I,J,K) = MAX (UNIFORMCF(K), -150000.)
+               NEW = .FALSE.
+            END DO
 
          END DO
-
       END DO
 
 *     Save results in Traj format:
 
       OPEN (UNIT = LOUT1, FILE = 'out1.dat',  STATUS='UNKNOWN')
 
-      WRITE (LOUT1, '(2F8.3, F6.2, 2F10.6, F11.6, F12.2)')
+      WRITE (LOUT1, '(2F8.3, F6.2, 3F11.6, F12.2)')
      >   (((MACH(I), ALPHA(J), UNIFORMRE(K),
      >      CLU(I,J,K), CDU(I,J,K), CMU(I,J,K), ALTU(I,J,K),
      >      I = 1, NMA), J = 1, NAL), K = 1, NUNI)
@@ -280,7 +398,7 @@ C     Read the aerodynamic database:
 
       OPEN (UNIT = LOUT2, FILE = 'out2.dat',  STATUS='UNKNOWN')
 
-      WRITE (LOUT2, '(3I5, 2F8.3, F6.2, 2F10.6, F11.6, F12.2)')
+      WRITE (LOUT2, '(3I5, 2F8.3, F6.2, 3F11.6, F12.2)')
      >   (((I, J, K,
      >      MACH(I), ALPHA(J), UNIFORMRE(K),
      >      CLU(I,J,K), CDU(I,J,K), CMU(I,J,K), ALTU(I,J,K),
@@ -290,47 +408,35 @@ C     Read the aerodynamic database:
 
 *     Save results in PLOT3D form:
 
-      OPEN (UNIT = LOUT1, FILE = 'aero-coefs.grid',    STATUS='UNKNOWN')
-      OPEN (UNIT = LOUT2, FILE = 'aero-coefs.plot3d',  STATUS='UNKNOWN')
+      OPEN (UNIT = LOUT1, FILE = 'aero-coefs.g', STATUS='UNKNOWN')
+      OPEN (UNIT = LOUT2, FILE = 'aero-coefs.f', STATUS='UNKNOWN')
 
       WRITE (LOUT1, '(I1, /, 3I5)') 1, NMA, NAL, NUNI
-      WRITE (LOUT1, '(1P, 5E15.7)')
+      WRITE (LOUT1, '(5ES15.7)')
      >   (( MACH,                      J = 1, NAL), K = 1, NUNI),
      >   (((ALPHA(J),     I = 1, NMA), J = 1, NAL), K = 1, NUNI),
      >   (((UNIFORMRE(K), I = 1, NMA), J = 1, NAL), K = 1, NUNI)
-
       CLOSE (LOUT1)
 
-      WRITE (LOUT2, '(I1, /, 3I5)') 1, NMA, NAL, NUNI
-      WRITE (LOUT2, '(4F3.0)')      1., 1., 1., 1.
-      WRITE (LOUT2, '(1P, 5E15.7)')
-     >   (((CLU(I,J,K),       I = 1, NMA), J = 1, NAL), K = 1, NUNI),
-     >   (((CDU(I,J,K),       I = 1, NMA), J = 1, NAL), K = 1, NUNI),
-     >   (((CMU(I,J,K),       I = 1, NMA), J = 1, NAL), K = 1, NUNI),
-     >   (((CLOVERCD(I,J,K),  I = 1, NMA), J = 1, NAL), K = 1, NUNI),
-     >   (((ALTU(I,J,K),      I = 1, NMA), J = 1, NAL), K = 1, NUNI)
-
+      WRITE (LOUT2, '(I1, /, 4I5)') 1, NMA, NAL, NUNI, 5
+      WRITE (LOUT2, '(5ES15.7)') CLU, CDU, CMU, CLOVERCD, ALTU
       CLOSE (LOUT2)
 
 *     Save original data in PLOT3D form also:
 
-      OPEN (LOUT1, FILE = 'MAlphaQ-coefs.grid',   STATUS='UNKNOWN')
-      OPEN (LOUT2, FILE = 'MAlphaQ-coefs.plot3d', STATUS='UNKNOWN')
+      OPEN (LOUT1, FILE = 'MAlphaQ-coefs.g', STATUS='UNKNOWN')
+      OPEN (LOUT2, FILE = 'MAlphaQ-coefs.f', STATUS='UNKNOWN')
 
       WRITE (LOUT1, '(I1, /, 3I5)') 1, NMA, NAL, NPR
-      WRITE (LOUT1, '(1P, 5E15.7)')
+      WRITE (LOUT1, '(5ES15.7)')
      >   (( MACH,                  J = 1, NAL), K = 1, NPR),
      >   (((ALPHA(J), I = 1, NMA), J = 1, NAL), K = 1, NPR),
      >   (((PRES(K),  I = 1, NMA), J = 1, NAL), K = 1, NPR)
+      CLOSE (LOUT1)
 
-      WRITE (LOUT2, '(I1, /, 3I5)') 1, NMA, NAL, NPR
-      WRITE (LOUT2, '(4F3.0)')      1., 1., 1., 1.
-      WRITE (LOUT2, '(1P, 5E15.7)')
-     >   (((CL(I,J,K),           I = 1, NMA), J = 1, NAL), K = 1, NPR),
-     >   (((CD(I,J,K),           I = 1, NMA), J = 1, NAL), K = 1, NPR),
-     >   (((CM(I,J,K),           I = 1, NMA), J = 1, NAL), K = 1, NPR),
-     >   (((CL(I,J,K)/CD(I,J,K), I = 1, NMA), J = 1, NAL), K = 1, NPR),
-     >   (((RE(I,J,K),           I = 1, NMA), J = 1, NAL), K = 1, NPR)
+      WRITE (LOUT2, '(I1, /, 4I5)') 1, NMA, NAL, NPR, 5
+      WRITE (LOUT2, '(5ES15.7)') CL, CD, CM, CL, RE
+      CLOSE (LOUT2)
 
       END PROGRAM CONVERTQ
 
@@ -360,6 +466,10 @@ C     Read the aerodynamic database:
 
       REAL    :: Q, MACH, LENGTH, RE, GAMMA, R, ALT
 
+*     Local constants:
+
+      CHARACTER (1) :: METHOD = 'L'
+
 *     Local variables:
 
       INTEGER :: IT, MODE
@@ -369,11 +479,19 @@ C     Read the aerodynamic database:
 
       PRES = (Q + Q) / (GAMMA * MACH * MACH)
 
-      MODE = 0
+***   MODE = 0
+*     Interpolate the altitude corresponding to this pressure:
 
-      CALL INTRP1 (MODE, MAXH, IT, PH, PRES, H, ALT, DHDP)
+      CALL LCSFIT (MAXH, PH, H, .TRUE., METHOD, 1, PRES, ALT, DHDP)
+      ALT = MAX (H(1), MIN (H(MAXH), ALT))
 
-      CALL INTRP1 (MODE, MAXH, IT, H, ALT, TEMPH, TEMP, DTDH)
+***   CALL INTRP1 (MODE, MAXH, IT, PH, PRES, H, ALT, DHDP)
+
+*     Interpolate the temperature corresponding to this altitude:
+
+      CALL LCSFIT (MAXH, H, TEMPH, .TRUE., METHOD, 1, ALT, TEMP, DTDH)
+
+***   CALL INTRP1 (MODE, MAXH, IT, H, ALT, TEMPH, TEMP, DTDH)
 
       RHO = PRES / (R * TEMP)
 

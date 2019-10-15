@@ -66,14 +66,20 @@
 !     Handle the left-hand end of this flat region:
 
       ie = ifl(iregion)           ! Left end point of current flat region
+      if (lunout > 0) &
+         write (lunout, '(a, 3i4)') &
+            ' HANDLE_FLATNESS:  n, iregion, ie:', n, iregion, ie
       if (ie >= npmin) then       ! Else too near the left end of the data
          ir = ifr(iregion)        ! Right end of flat region
          nf = ir - ie + 1         ! # pts. in the flat region
          nb = min (nf, npmax)     ! Limit the blending region
+         if (lunout > 0) write (lunout, '(a, 3i4)') 'ir, nf, nb:', ir, nf, nb
          if (iregion < nfl) then  ! Avoid possibly bumping into next broadening
             if (ir < n - npmin) nb = min (nb, nf/2)
+            if (lunout > 0) write (lunout, '(a, i4)') 'Adjusted nb:', nb
          end if
          ir = ie + nb - 1         ! Adjusted end of flat region to treat
+         if (lunout > 0) write (lunout, '(a, i4)') 'Adjusted ir:', ir
          if (ir  - ie >= npmin) then
             p(2) = curvature(ie-2) - curvature(ir)  ! Scaled height of shape fn.
             w = s(ir) - s(ie)                       ! Width of blend region
@@ -83,8 +89,8 @@
             call beval ('COSL', 2, p, add, ir-ie, snorm(ie), blend(ie))
             if (lunout > 0) then
                write (lunout, '(a, i2, a)') 'Flat region', iregion, ', left'
-               write (lunout, '(i4, 2es16.8)') &
-                  (i, curvature(i), blend(i), i = ie, ir-1)
+!!             write (lunout, '(i4, 2es16.8)') &
+!!                (i, curvature(i), blend(i), i = ie, ir-1)
             end if
             curvature(ie:ir-1) =  curvature(ie:ir-1) + blend(ie:ir-1)
             curvature(ie-1)    = (curvature(ie-2) + curvature(ie))*half
@@ -115,12 +121,12 @@
       call beval ('COSR', 2, p, add, ie-il, snorm(il+1), blend(il+1))
       if (lunout > 0) then
          write (lunout, '(a, i2, a)') 'Flat region', iregion, ', right'
-         write (lunout, '(i4, 2es16.8)') &
-            (i, curvature(i), blend(i), i = il+1, ie)
+!!       write (lunout, '(i4, 2es16.8)') &
+!!          (i, curvature(i), blend(i), i = il+1, ie)
       end if
       curvature(il+1:ie) =  curvature(il+1:ie) + blend(il+1:ie)
       curvature(ie+1)    = (curvature(ie) + curvature(ie+2))*half
-      if (lunout > 0) write (*, '(i4, es16.8)') (i, curvature(i), i = il, ie+2)
+!!    if (lunout > 0) write (*, '(i4, es16.8)') (i, curvature(i), i = il, ie+2)
    end do
 
    if (lunout > 0) then

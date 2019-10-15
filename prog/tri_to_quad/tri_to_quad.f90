@@ -5,11 +5,12 @@
 !  Description:
 !
 !     Interpolate an unstructured surface flow solution to a structured mesh.
-!  Initially, the input is a single-zone Tecplot surface triangulation with a
-!  variable number of quantities defined at each vertex, and the target mesh is
-!  a multiblock PLOT3D-type grid.  Output is in either Tecplot or PLOT3D form.
+!  One or more zones in a Tecplot surface triangulation with a variable number
+!  of quantities defined at each vertex or centroid are input, and the target
+!  mesh is a multiblock PLOT3D-type grid.  Output is in either Tecplot or PLOT3D
+!  form.
 !
-!  Input Tecplot data format (original, vertex-centered):
+!  Input Tecplot data format (original, vertex-centered, one or more zones):
 !
 !     VARIABLES = "X", "Y", "Z", "TEMP", "PRESS", "CP", "MACHE", "ASOUNDE", ...
 !     ZONE N=96000, E=32000, F=FEPOINT, ET=TRIANGLE
@@ -67,22 +68,20 @@
 !
 !  Method:
 !
-!     >  The surface triangulation is read as a single zone and converted to an
-!        ADT (Alternating Digital Tree) for search purposes.  If the function
-!        values are cell-centered, they are interpolated to the cell vertices
-!        first.  No unique best interpolation method exists.  The area-weighted
-!        averaging used here suffices for typical triangulations.
+!     >  The surface triangulation is read one zone at a time, with the option
+!        retrofitted in triangulation_io to pack the zones as a single output
+!        zone activated so that all cells can be converted to an ADT (Alternat-
+!        ing Digital Tree) for search purposes.  If the function values are
+!        cell-centered, they are interpolated to the cell vertices first.  No
+!        unique best interpolation method exists.  The area-weighted averaging
+!        used here originally (now in the I/O package) suffices for typical
+!        triangulations.
 !     >  Target blocks are processed in order (read and written as needed).
 !     >  For each target point, the ADT search locates the nearest point on the
 !        surface triangulation (never outside it).  The function values can then
 !        be interpolated with the indicated trilinear coefficients.
 !     >  Optionally, target points beyond the indicated X will be set to the
 !        indicated F (probably zero, as for radiation on an aft body).
-!
-!  Note:
-!
-!     This program still uses the original Tecplot I/O package.  It has not
-!     been updated to use the I/O package version prompted by Tecplot 360.
 !
 !  History:
 !
@@ -97,16 +96,19 @@
 !                    build_adt and search_adt interfaces.
 !     07/02/14   "   The tri_* modules come from triangulation_io.f90, not
 !                    tecplot_io_module (comments were wrong).
+!     07/23/18   "   Updated to use the Tecplot 360 version of tecplot_io, and
+!                    also the extended triangulation_io, which now handles
+!                    multi-zone triangulations and cell-centered functions.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
-!                           Now with ERC Incorporated/NASA ARC.
-!
+!                           Later with ERC, Inc. and AMA, Inc. at NASA ARC.
+!  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !  Modules:
 
-   use grid_block_structure  ! Must be the tecplot_io_module version
-   use grid_header_structure
+   use grid_header_structure ! As found in tecplot_io.f90
+   use grid_block_structure  ! As found in tecplot_io.f90
    use tecplot_io_module     ! Tecplot file I/O (structured data)
    use tri_header_structure  ! Part of triangulation_io.f90
    use tri_zone_structure    ! Likewise
@@ -133,7 +135,7 @@
 
    integer :: &
       fileform, i, i1, i2, i3, ib, ios, itri, iz, j, nblocks, nf, ni, ninside, &
-      nj, nnode, nout, npts, ntri, nzone
+      nj, nnode, nout, npts, ntri, nvar, nzone
 
    real :: &
       davg, dist, dmax, dsq, dtol, f_beyond_xub, p, q, r, x_upper_bound
@@ -145,20 +147,18 @@
       formatted_target, formatted_out, PLOT3D_out, Tecplot_out
 
    character :: &
-      filename * 80, filename2 * 80, title_out * 80
-
-   real, allocatable, dimension (:) :: &
-      total_areas, areas
+      filename * 80, filename2 * 80
 
    real, allocatable, dimension (:,:) :: &
       fnode
 
 !  Derived data types:
 
+   type (grid_header) :: &
+      header_out
+
    type (grid_type), pointer, dimension (:) :: &
       xyzf_interp
-
-   type (grid_header) :: tec_header
 
    type (tri_header_type) :: &
       tri_header
@@ -191,8 +191,6 @@
    end if
 
    read (lunctl, *) filename      ! Target coordinates
-   title_out = trim (filename)
-
    read (lunctl, *) formatted_target
    if (formatted_target) then
       open (luntarget, file=filename, status='old', form='formatted',          &
@@ -207,12 +205,6 @@
    end if
 
    read (lunctl, *) filename
-   open (lunout1, file=filename, status='unknown', iostat=ios)
-   if (ios /= 0) then
-      write (luncrt, '(/, a)') ' Unable to open output file:', filename
-      go to 99
-   end if
-
    read (lunctl, *) filename2
    read (lunctl, *) formatted_out
 
@@ -220,12 +212,24 @@
    PLOT3D_out  = .not. Tecplot_out
 
    if (PLOT3D_out) then
+      open (lunout1, file=filename,  status='unknown', iostat=ios)
+      if (ios /= 0) then
+         write (luncrt, '(/, a)') ' Unable to open output file:', filename
+         go to 99
+      end if
       open (lunout2, file=filename2, status='unknown', iostat=ios)
       if (ios /= 0) then
          write (luncrt, '(/, a)') ' Unable to open output function file:',     &
             filename2
          go to 99
       end if
+   else  ! Tecplot output file
+      header_out%filename  = filename
+      header_out%formatted = formatted_out
+      header_out%ndim = 3
+!!    header_out%numq = 1         ! Don't know yet
+      header_out%datapacking = 0  ! Point order is more convenient/less efficient
+      header_out%ndatasetaux = 0  ! We haven't used auxiliaries yet
    end if
 
    read (lunctl, *) dtol ! Distance tolerance for diagnostic purposes only
@@ -241,9 +245,10 @@
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    ios = 1  ! Verbose mode
+   tri_header%combine_zones = .true. ! Pack zone(s) into header fields
+                                     ! If cell-centered, fns. are converted too
 
    call tri_read (lunin, tri_header, tri_xyzf, ios)  ! Read entire dataset
-
    if (ios /= 0) then
       write (luncrt, '(/, a)') 'Trouble reading triangulated dataset: aborting.'
       go to 99
@@ -254,40 +259,41 @@
 
 !  The interpolation scheme requires vertex-centered data.
 !  If necessary, area-average the input functions to the vertices, in-place.
+!  This is done in tri_read now.
 
-   if (fileform == 2) then
-
-      do iz = 1, nzone
-
-         nnode = tri_xyzf(iz)%nnodes
-         ntri  = tri_xyzf(iz)%nelements
-
-         allocate (areas(ntri), total_areas(nnode))
-
-         call tri_areas (nnode, ntri, tri_xyzf(iz)%xyz, tri_xyzf(iz)%conn,     &
-                         areas, total_areas)
-
-         allocate (fnode(nf,nnode))
-
-         call tri_centers_to_vertices (nnode, ntri, nf, areas, total_areas,  &
-                                       tri_xyzf(iz)%conn, tri_xyzf(iz)%f, fnode)
-
-         deallocate (areas, total_areas)
-
-         deallocate (tri_xyzf(iz)%f);  allocate (tri_xyzf(iz)%f(nf,nnode))
-
-         tri_xyzf(iz)%f(:,:) = fnode(:,:);  deallocate (fnode)
-
-      end do
-
-   end if
+!! if (fileform == 2) then
+!!
+!!    do iz = 1, nzone
+!!
+!!       nnode = tri_xyzf(iz)%nnodes
+!!       ntri  = tri_xyzf(iz)%nelements
+!!
+!!       allocate (tri_area(ntri), area_total(nnode))
+!!
+!!       call tri_areas (nnode, ntri, tri_xyzf(iz)%xyz, tri_xyzf(iz)%conn,     &
+!!                       tri_area, area_total)
+!!
+!!       allocate (fnode(nf,nnode))
+!!
+!!       call tri_centers_to_vertices (nnode, ntri, nf, tri_area, area_total,  &
+!!                                     tri_xyzf(iz)%conn, tri_xyzf(iz)%f, fnode)
+!!
+!!       deallocate (tri_area, area_total)
+!!
+!!       deallocate (tri_xyzf(iz)%f);  allocate (tri_xyzf(iz)%f(nf,nnode))
+!!
+!!       tri_xyzf(iz)%f(:,:) = fnode(:,:);  deallocate (fnode)
+!!
+!!    end do
+!!
+!! end if
 
 !  Set up the search tree:
 
-   nnode = tri_xyzf(1)%nnodes     ! One zone is assumed for now
-   ntri  = tri_xyzf(1)%nelements
+   nnode = tri_header%nnodes     ! One or more zones are handled now
+   ntri  = tri_header%nelements
 
-   call build_adt (nnode, ntri, tri_xyzf(1)%conn, tri_xyzf(1)%xyz)
+   call build_adt (nnode, ntri, tri_header%conn, tri_header%xyz)
 
 
 !  Read the target grid header and allocate the array of data structures:
@@ -311,14 +317,16 @@
    end do
 
    if (Tecplot_out) then
-      tec_header%filename  = filename
-      tec_header%formatted = formatted_out
-      tec_header%ndim      = 2
-      tec_header%numq      = nf
-      tec_header%nblocks   = nblocks
-      tec_header%title     = title_out
-      tec_header%varname   = tri_header%varname
-      call Tec_header_write (lunout1, tec_header, ios)
+      header_out%numq    = nf
+      header_out%nblocks = nblocks
+      header_out%title   = tri_header%title
+      nvar = nf + 3
+      allocate (header_out%varname(nvar))
+      header_out%varname(:) = tri_header%varname(:)
+
+!!    call Tec_header_write (lunout1, filename, formatted_out, 2, title_out,   &
+!!                           nf, tri_header%varname, ios)
+      call Tec_header_write (lunout1, header_out, ios)
       if (ios /= 0) then
          write (luncrt, '(/, a)') ' Trouble writing Tecplot file header.'
          go to 99
@@ -327,7 +335,6 @@
    else ! PLOT3D-type output
 
       call xyz_header_io (2, lunout1, formatted_out, nblocks, xyzf_interp, ios)
-
       if (ios /= 0) then
          write (luncrt, '(/, a)') ' Trouble writing the grid file header.'
          go to 99
@@ -356,7 +363,6 @@
 !     Read an input target block:
 
       call xyz_allocate (xyzf_interp(ib), ios)
-
       if (ios /= 0) then
          write (luncrt, '(/, a, i5)') &
             ' Allocation trouble for target grid.  Block #:', ib
@@ -377,7 +383,6 @@
 !     Allocate the corresponding output block of function values:
 
       call q_allocate (xyzf_interp(ib), nf, ios)
-
       if (ios /= 0) then
          write (luncrt, '(/, a, i5)') &
             ' Allocation trouble for function file output.  Block #:', ib
@@ -411,7 +416,7 @@
             end if
 
             call search_adt (surface_xyz, itri, p, q, r, dsq, .true., nnode,   &
-                            ntri, tri_xyzf(1)%conn, tri_xyzf(1)%xyz, interp_xyz)
+                            ntri, tri_header%conn, tri_header%xyz, interp_xyz)
 !           !!!!!!!!!!!!!!!
 
             dist = sqrt (dsq)
@@ -419,18 +424,18 @@
             davg = davg + dist
 
             if (dist < dtol) then     ! The best triangle found was within the
-               ninside = ninside + 1  ! distance tolerance
+               ninside = ninside + 1  ! distance tolerance 
             else
                nout = nout + 1
             end if
 
-            i1 = tri_xyzf(1)%conn(1,itri)
-            i2 = tri_xyzf(1)%conn(2,itri)
-            i3 = tri_xyzf(1)%conn(3,itri)
+            i1 = tri_header%conn(1,itri)
+            i2 = tri_header%conn(2,itri)
+            i3 = tri_header%conn(3,itri)
 
-            xyzf_interp(ib)%q(:,i,j,1) = p * tri_xyzf(1)%f(:,i1) +             &
-                                         q * tri_xyzf(1)%f(:,i2) +             &
-                                         r * tri_xyzf(1)%f(:,i3)
+            xyzf_interp(ib)%q(:,i,j,1) = p * tri_header%f(:,i1) + &
+                                         q * tri_header%f(:,i2) + &
+                                         r * tri_header%f(:,i3)
          end do ! Next i
 
       end do ! Next j
@@ -445,8 +450,12 @@
 
       if (Tecplot_out) then
 
-         call Tec_block_write (lunout1, tec_header, xyzf_interp(ib), ios)
+         xyzf_interp(ib)%nzoneaux     = 0   ! We've never handled auxiliaries
+         xyzf_interp(ib)%solutiontime = 0
+         xyzf_interp(ib)%zone_title   = 'Zone'
+         write (xyzf_interp(ib)%zone_title(5:11), '(i7)') ib
 
+         call Tec_block_write (lunout1, header_out, xyzf_interp(ib), ios)
          if (ios /= 0) then
             write (luncrt, '(/, a, i4)') ' Trouble writing Tecplot block #', ib
             go to 99

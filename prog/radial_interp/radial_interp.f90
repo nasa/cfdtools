@@ -89,7 +89,7 @@
 !
 !     The assumptions allow use of surface searches (and possibly radial line searches) in place of volume searches, although
 !     the more general option (ii) for flow field interpolation still uses 3-D searches along the new radial lines.
-!
+! 
 !     >  Read the full original volume (or surface) grid and associated flow solution if present.
 !
 !     >  If an output grid is implied, read the full new surface grid (vertex-centered) and establish common edge info.
@@ -167,11 +167,25 @@
 !     --------------- MISCELLANEOUS CONTROLS -------------------
 !     1                       Flow interpolation method: 1 assumes consistent radial lines; 2 relaxes this
 !     T                       T = allow surface cell extrapolation; F = force all surface (p,q)s into the unit square
-!     0.0001                  dtol = projected distance tolerance for surface cell searches (in the same units as the grid)
-!     0.01  0.15              Optional inputs ds1 and ds2fraction:  ds1 > 0. means redistribute each radial line a la OUTBOUND.
+!     0.0001                  E.g., dtol = 0.0001 m = distance tolerance for surface cell searches (same units as the grid)
+!     newnk ds1 ds2fraction   Optional inputs to redistribute each radial line a la OUTBOUND.  GRID ONLY.  See NOTES below.
 !
-!     NOTE:  dtol < 0 means decay surface mismatches to zero at the outer boundary.
-!
+!     NOTES:  (1) dtol < 0 means decay surface mismatches to zero at the outer boundary, else apply the same dx/dy/dz at each k;
+!                 note that the same differences is probably the right choice if the new surface adds curvature, esp. at k = 2.
+!             (2) DO NOT ATTEMPT TO REDISTRIBUTE THE RADIAL LINES IF A FLOW FILE IS PRESENT.  (One reason: Half-cell spacing at the wall.)
+!             (3) If the optional last line is not present, the output radial distribution matches that of the input grid;
+!                 Alternatively, enter newnk = 0 and ds1 = -99. to suppress redistribution.
+!                 These optional controls allow changing the output nk (or not) and/or the output radial distribution:
+!                 newnk = input nk is allowed (probably to impose a ds1 > 0.);
+!                 newnk = 2 means the most likely case: double the point count in the k direction; e.g., 65 --> 129;
+!                 newnk = 0 means the output nk is the same as the input nk;
+!                 newnk = some sensible positive integer means change nk to that newnk; ds1 = -1. is probably the right choice;
+!                 ds1 < -1. suppresses any redistribution;
+!                 ds1 = -1. means preserve the input relative spacing (probably for a different nk);
+!                 ds2 =  0. means preserve the input wall spacing;
+!                 ds2 >  0. means a fixed wall spacing everywhere;
+!                 ds2fraction is not used if ds1 = -1.;
+!                 otherwise, ds2fraction is applied to the interim 1-sided stretching's outer spacing for 2-sided stretching
 !  Sponsor:
 !
 !     TSA Reacting Flow Environments Branch, NASA Ames Research Center (now Aerothermodynamics Branch)
@@ -209,10 +223,19 @@
 !                    similarly, it appears that (for each radial line) the cell-centered grid and flow would need to be converted
 !                    to vertices, redistributed, then converted back.  Do that if it's ever called for.
 !     08/07/13   "   All ADT variants are now in a single module with generic build_adt and search_adt interfaces.
+!     03/19/18   "   Jeff Hill asked for an option to change the number of grid points in the radial direction, as convenient for
+!                    the case of grid alignment within DPLR on a coarsened (say 222) then wanting to impose the next finer surface.
+!                    This calls for a 111 volume output, not 112.  The optional last line of the control file now has three inputs,
+!                    not two.  Only the grid is treated; expected usage allows FCONVERT to upsequence the flow solution.
+!     03/22/18   "   The cases of an old (or no) optional last line in the control file did not turn off redistribution.
+!                    To suppress redistribution, omit the last line or enter (say) newnk = 0 and ds1 = -99. with a ds2fraction.
+!     03/23/18   "   The special case of newnk = 2 now means double the current k resolution, as in 65 --> 129.
+!     04/27/18   "   The option to change nk, intended for vertex-centered grids only, led to unassigned flow interpolations.
+!                    Changing nk was supposed to be disallowed for flow solutions all along.
 !
 !  Author:
 !
-!     David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA  (now ERC, Inc./ARC)
+!     David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA  (then ERC, Inc./ARC; now AMA, Inc./ARC)
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -257,7 +280,7 @@
 !  !!!!!!!!!!!!!!!!
 
    integer :: &
-      i, i1, ib, ios, j, lunflow, method, mi, mj, mk, n, nblocks_old, nblocks_new, ni, nj, nk, npts, num_q
+      i, i1, ib, ios, j, lunflow, method, mi, mj, mk, n, nblocks_old, nblocks_new, newnk, ni, nj, nk, npts, num_q
 
    real :: &
       ds1, ds2fraction, dtol, overall_data_range
@@ -267,7 +290,7 @@
       initialize, input_f, output_f, output_g, recenter_f, recenter_g
 
    character :: &
-      filename * 200, filename_target * 200
+      filename * 80, filename_target * 80
 
    type (edge_type), allocatable, dimension(:) :: &
       new_edges
@@ -458,8 +481,21 @@
 !  Read optional redistribution controls:
 !  --------------------------------------
 
-   ds1 = zero
-   read (lunctl, *, iostat=ios) ds1, ds2fraction
+   if (.not. input_f) then
+      read  (lunctl, *, iostat=ios) newnk, ds1, ds2fraction
+      if (ios /= 0) then
+         newnk = nk    ! The default is to preserve the input volume grid's distribution in the k direction
+         ds1   = -99.  ! Prevents any redistribution
+         if (output_g) write (luncrt, '(/, a)') ' The radial lines will not be redistributed.'
+      else
+         if (newnk == 2) newnk = 2*nk - 1 ! Special case for doubling the density
+         if (output_g) write (luncrt, '(/, a, i5, 2f12.7)') &
+            ' The radial lines will be redistributed: newnk, ds1, ds2fraction =', newnk, ds1, ds2fraction
+      end if
+   else
+      write (luncrt, '(/, a)') ' Flow grid radial line distribution is disallowed.'
+      ds1 = -99.
+   end if
 
    close (lunctl)
 
@@ -488,8 +524,8 @@
 
       open (lunxyz, file=filename_target, status='old', form=format(i1:11), iostat=ios)
 
-      call xyz_header_io (1, lunxyz, formatted, nblocks_new, new_grid, ios)
-
+      call xyz_header_io (1, lunxyz, formatted, nblocks_new, new_grid, ios)  ! Header of output volume grid matches new surface grid
+                                                                             ! except perhaps for %nk
       close (lunxyz)
 
 !     Determine the new surface grid connectivity.  This was added to existing edge-info routines that have been merged:
@@ -506,9 +542,11 @@
             new_grid(ib)%ni = new_grid(ib)%ni + 1 ! Cell-centered with halos
             new_grid(ib)%nj = new_grid(ib)%nj + 1
          end do
-      end if
+      end if 
 
-      new_grid(:)%nk = nk  ! Same as "old" grid when just a new surface is provided
+      new_grid(:)%nk = nk  ! Same as "old" grid when just a new surface is provided; may change if newnk /= nk (grid only)
+
+      if (.not. recenter_g .and. newnk /= 0) new_grid(:)%nk = newnk
 
    else ! No output volume grid.  We're reading one as a target.  Forget about exactness in the interpolated flow at common faces:
 
@@ -854,7 +892,7 @@
       ' k=1 Face         Xmin            Xmax              Ymin            Ymax              Zmin            Zmax'
 
    do ib = 1, nblocks
-      write (6, '(i4, 1p, 3(e18.7, e16.7))') &
+      write (6, '(i4, 3(es18.7, es16.7))') &
          ib, grid(ib)%xmin, grid(ib)%xmax, grid(ib)%ymin, grid(ib)%ymax, grid(ib)%zmin, grid(ib)%zmax
    end do
 
@@ -874,9 +912,9 @@
    overall_data_range = max (xmax - xmin, ymax - ymin, zmax - zmin)
    tol = eps * overall_data_range
 
-   write (6, '(/, (2x, a, 1p, e16.7, e18.7))') &
+   write (6, '(/, (2x, a, es16.7, es18.7))') &
       'Overall Xmin & Xmax:', xmin, xmax, '        Ymin & Ymax:', ymin, ymax, '        Zmin & Zmax:', zmin, zmax
-   write (6, '(/, a, 1p, e16.7)') ' Overall data range:', overall_data_range
+   write (6, '(/, a, es16.7)') ' Overall data range:', overall_data_range
 
 !  Compare surface block edges to find interior edges:
 
@@ -974,9 +1012,10 @@
 !  01/28/11   "   Remnants of inactive blanking have been removed.  An option to redistribute the points along each new radial line
 !                 has been added (extra step for each radial line).
 !  08/07/13   "   All ADT variants are now in a single module with generic build_adt and search_adt interfaces.
+!  03/19/18   "   Allow for changing the number of points in the radial direction.
 !
-!  Author:  David Saunders, ELORET/NASA Ames Research Center, CA  (now ERC, Inc./ARC)
-!
+!  Author:  David Saunders, ELORET/NASA Ames Research Center, CA  (then ERC, Inc./ARC; now AMA, Inc./ARC)
+!  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !  Modules:
@@ -1066,11 +1105,11 @@
 !  Local variables:
 !  !!!!!!!!!!!!!!!!
 
-   integer :: i, i_use, ib, ic, icorner, idim, ie, ier, ie_use, iedge, ip, ip_use, iquad, &
-              j, j_use, jc, jdim, k, kdim, keval, len, n, ni, ninside, nj, nk, nout_r, nout_s
+   integer :: i, i_use, ib, ic, icorner, idim, ie, ier, ie_use, iedge, ip_use, iquad, &
+              j, j_use, jc, jdim, k, keval, len, n, ni, ninside, nj, nk, nout_r, nout_s
 
-   real    :: cell_volume, decay, ds2, dsqmin, dtolsq, dx, dy, dz, extra, overall_data_range, p, pm1, q, qm1, r, rm1, total,       &
-              xfoot, xtarg, yfoot, ytarg, zfoot, ztarg
+   real    :: cell_volume, d1, decay, ds2, dsqmin, dtolsq, dx, dy, dz, extra, overall_data_range, p, pm1, q, qm1, r, rm1, &
+              total, xfoot, xtarg, yfoot, ytarg, zfoot, ztarg
 
    real, dimension (3) :: foot_coords, target_coords
 
@@ -1079,7 +1118,7 @@
 !  Variables saved for further calls:
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer, save :: nquad, ngeometric
+   integer, save :: kdim, nquad, ngeometric, newnk
 
    integer, allocatable, dimension (:,:), save :: conn
 
@@ -1155,13 +1194,14 @@
 
       tline(1) = zero
 
-      redistribute = ds1 > zero .and. .not. output_f  ! Don't mess with the cell-centered grid accompanying a flow soln. for now
+      newnk = new_grid%nk  ! The new volume grid header has already been written
+      redistribute = ds1 >= -one .and. .not. output_f  ! Only the grid can be redistributed; allow newnk = nk
 
-      if (redistribute) then  ! Option to control the wall spacing
+      if (redistribute) then
          ngeometric  = 2      ! I.e., no geometric portion
          growth_rate = one
          derivs(1)   = -999.  ! Suppresses unwanted derivative calculations
-         allocate (xnew(kdim), ynew(kdim), znew(kdim), tnew(kdim))
+         allocate (xnew(newnk), ynew(newnk), znew(newnk), tnew(newnk))
       end if
 
       if (output_f) allocate (arcs(kdim,5)) ! 1-4 for corners, 5 for current new spoke during flow field interpolation
@@ -1191,6 +1231,7 @@
    ni = new_grid%ni
    nj = new_grid%nj
    nk = new_grid%nk
+   if (.not. output_f) nk = new_grid%nk  ! This is now newnk (grid-only case only)
 
    dtolsq  = dtol * dtol
    washout = dtol < zero
@@ -1217,7 +1258,7 @@
    end if
 
    write (luncrt, '(/, a, i4, a, 3i5, a, i8, /)') &
-      ' Beginning new grid block', iblock_new, '.  Dimensions:', ni, nj, nk, '  Total:', ni * nj * nk
+      ' Beginning new grid block', iblock_new, '.  Dimensions:', ni, nj, kdim, '  Total:', ni * nj * kdim
 
 !  For each surface point of the current new grid block:
 
@@ -1276,7 +1317,7 @@
                      n  = pq_map(ip_use)%ijn(3,i_use,j_use)
                      ninside = ninside + 1
 
-!!!                  WRITE (6, '(a,2i4,a,2i4,a,3i4,a,1p,2e19.11)') &
+!!!                  WRITE (6, '(a,2i4,a,2i4,a,3i4,a,2es19.11)') &
 !!!                     ' Reuse at i,j:',i,j, '  ip_use,ie_use:',ip_use,ie_use, '  ic,jc,n:',ic,jc,n, '  p,q:', p, q
 
                      go to 500  ! Very hard to avoid without excessive indenting - a rare case where it makes the most sense
@@ -1314,7 +1355,7 @@
                               n  = pq_map(ip_use)%ijn(3,i_use,j_use)
                               ninside = ninside + 1
 
-                              WRITE (6, '(a,2i4,a,2i4,a,3i4,a,1p,2e19.11)') &
+                              WRITE (6, '(a,2i4,a,2i4,a,3i4,a,2es19.11)') &
                                  ' Reuse at i,j:',i,j, '  ip_use,icorner:',ip_use,icorner, '  ic,jc,n:',ic,jc,n, '  p,q:', p, q
 
                               go to 500 ! Very hard to avoid without excessive indenting
@@ -1333,19 +1374,19 @@
          call search_adt (target_coords, iquad, p, q, dsqmin, true, nblocks_old, old_grid, nquad, conn, foot_coords)
 
 !!!      dx = xtarg - foot_coords(1);  dy = ytarg - foot_coords(2);  dz = ztarg - foot_coords(3)
-!!!      WRITE (6, '(a, 3i4, a, i7, 2f12.8, a, 1p, 3e16.8)') &
+!!!      WRITE (6, '(a, 3i4, a, i7, 2f12.8, a, 3es16.8)') &
 !!!         ' ib,i,j:', iblock_new,i,j, '  iquad,p,q:', iquad,p,q, '  dx/y/z:',dx,dy,dz
 
          if (dsqmin < dtolsq) then ! The best surface quad found was within the distance tolerance
             ninside = ninside + 1
          else
             nout_s = nout_s + 1
-            write (luncrt, '(a, 3i4, a, 1p, e13.5)') &
+            write (luncrt, '(a, 3i4, a, es13.5)') &
                ' Tolerance exceeded for new (i,j,n) =', i, j, iblock_new, '  min. distance:', sqrt (dsqmin)
 !!!         dx = xtarg - foot_coords(1);  dy = ytarg - foot_coords(2);  dz = ztarg - foot_coords(3)
-!!!         write (6, '(a, 3i4, a, i7, 2f12.8, a, 1p, 3e16.8)') &
+!!!         write (6, '(a, 3i4, a, i7, 2f12.8, a, 3es16.8)') &
 !!!            ' ib,i,j:', iblock_new,i,j, '  iquad,p,q:', iquad,p,q, '  dx/y/z:',dx,dy,dz
-!!!         write (6, '(a, 1p, 3e16.8)') ' xtarg, ytarg, ztarg: ', xtarg, ytarg, ztarg
+!!!         write (6, '(a, 3es16.8)') ' xtarg, ytarg, ztarg: ', xtarg, ytarg, ztarg
          end if
 
          n  = conn(1,iquad) ! Block #
@@ -1364,7 +1405,7 @@
 
 !        Save the interpolated surface (x,y,z) for checking problem points.
 !        We could probably use foot_coords(*) from SEARCH_ADT, but reuse of results from earlier edge points precludes this
-!        unless we store them.  Reevaluating keeps the k = 1 results consistent with those for k = 2:nk (which use dx, dy, dz).
+!        unless we store them.  Reevaluating keeps the k = 1 results consistent with those for k = 2:kdim (which use dx, dy, dz).
 
          xfoot = qm1 * (pm1 * old_grid(n)%x(ic,jc,  1) + p * old_grid(n)%x(ic+1,jc,  1)) + &
                    q * (pm1 * old_grid(n)%x(ic,jc+1,1) + p * old_grid(n)%x(ic+1,jc+1,1))
@@ -1381,13 +1422,14 @@
 
          interp_surf%z(i,j,1) = zfoot;  zline(1) = zfoot;  dz = ztarg - zfoot
 
-!!!      WRITE (6, '(a, 1p, 6e15.5)') ' x/y/z/foot & dx/y/z:', xfoot, yfoot, zfoot, dx, dy, dz
+!!!      WRITE (6, '(a, 6es15.5)') ' x/y/z/foot & dx/y/z:', xfoot, yfoot, zfoot, dx, dy, dz
 
          if (output_g) then ! Interpolate the rest of the new radial grid line off the surface.
 
-!           The interim new line is needed to calculate arc-length-based decay of the correction at the surface.
+!           The interim new line is needed to calculate arc-length-based decay of the correction at the surface, and it may be
+!           redistributed as well:
 
-            do k = 2, nk
+            do k = 2, kdim
                xline(k) = qm1 * (pm1 * old_grid(n)%x(ic,jc,  k) + p * old_grid(n)%x(ic+1,jc,  k)) + &
                             q * (pm1 * old_grid(n)%x(ic,jc+1,k) + p * old_grid(n)%x(ic+1,jc+1,k))
                yline(k) = qm1 * (pm1 * old_grid(n)%y(ic,jc,  k) + p * old_grid(n)%y(ic+1,jc,  k)) + &
@@ -1403,46 +1445,55 @@
 
 !              Adjust the outer k points by the DECAYED difference in surface xyzs, so the original outer boundary is preserved.
 
-               total = one / tline(nk)
-               do k = 2, nk
-                  decay = (tline(nk) - tline(k)) * total
-                  new_grid%x(i,j,k) = xline(k) + decay * dx
-                  new_grid%y(i,j,k) = yline(k) + decay * dy
-                  new_grid%z(i,j,k) = zline(k) + decay * dz
+               total = one / tline(kdim)
+               do k = 2, kdim
+                  decay = (tline(kdim) - tline(k)) * total
+                  xline(k) = xline(k) + decay * dx
+                  yline(k) = yline(k) + decay * dy
+                  zline(k) = zline(k) + decay * dz
                end do
 
             else ! For smooth surfaces with curvature and added resolution, not decaying can actually help the outer boundary.
 
-               do k = 2, nk
-                  new_grid%x(i,j,k) = xline(k) + dx
-                  new_grid%y(i,j,k) = yline(k) + dy
-                  new_grid%z(i,j,k) = zline(k) + dz
+               do k = 2, kdim
+                  xline(k) = xline(k) + dx
+                  yline(k) = yline(k) + dy
+                  zline(k) = zline(k) + dz
                end do
 
             end if
 
 !           Control the grid spacing at the wall?  (It may actually be input to match spacing from an inner layer of blocks.)
+!           Alternatively, the number of radial points may be changed.
 
-            if (redistribute) then  ! As in OUTBOUND and DPLR's alignment of the outer grid boundary with the shock
+            if (redistribute) then
 
-               do k = 1, nk
-                  xline(k) = new_grid%x(i,j,k)
-                  yline(k) = new_grid%y(i,j,k)
-                  zline(k) = new_grid%z(i,j,k)
-               end do
+               call chords3d (kdim, xline, yline, zline, false, total, tline)
 
-               call chords3d (nk, xline, yline, zline, false, total, tline)
+               if (ds1 == -one) then  ! Preserve the relative spacings
 
-               call expdis5 (1, zero, total, ds1, nk, tnew, -luncrt)  ! One-sided Vinokur-type stretching, safeguarded
+                  call changen1d (1, kdim, tline, 1, newnk, tnew)
 
-               ds2 = (total - tnew(nk-1)) * ds2fraction
+               else  ! 1-sided then 2-sided stretching
 
-               call blgrid (nk, ds1, ds2, ngeometric, growth_rate, tnew, luncrt, ier)  ! 2-sided Vinokur stretching
+                  if (ds1 == zero) then
+                     d1 = tline(2)
+                  else  ! ds1 > zero means constant wall spacing
+                     d1 = ds1
+                  end if
+
+                  call expdis5 (1, zero, total, d1, newnk, tnew, -luncrt)  ! One-sided Vinokur-type stretching, safeguarded
+
+                  ds2 = (total - tnew(newnk-1)) * ds2fraction
+
+                  call blgrid (newnk, d1, ds2, ngeometric, growth_rate, tnew, luncrt, ier)  ! 2-sided Vinokur stretching
+
+               end if
 
                keval = 1;  new = true  ! Arc-length-based local cubic spline interpolation
 
-               do k = 1, nk
-                  call plscrv3d (nk, xline, yline, zline, tline, lcs_method, new, false, tnew(k), keval, &
+               do k = 1, newnk
+                  call plscrv3d (kdim, xline, yline, zline, tline, lcs_method, new, false, tnew(k), keval, &
                                  xnew(k), ynew(k), znew(k), derivs)
                   new = false
                   new_grid%x(i,j,k) = xnew(k)
@@ -1450,6 +1501,12 @@
                   new_grid%z(i,j,k) = znew(k)
                end do
 
+            else
+               do k = 2, kdim
+                  new_grid%x(i,j,k) = xline(k)
+                  new_grid%y(i,j,k) = yline(k)
+                  new_grid%z(i,j,k) = zline(k)
+               end do
             end if
 
             if (output_f) then ! Interpolate the flow solution similarly for this radial line.
@@ -1464,7 +1521,7 @@
                   pq_map(iblock_new)%pq (1,i,j) = p;   pq_map(iblock_new)%pq (2,i,j) = q
                   pq_map(iblock_new)%ijn(1,i,j) = ic;  pq_map(iblock_new)%ijn(2,i,j) = jc;  pq_map(iblock_new)%ijn(3,i,j) = n
 
-!!!               WRITE (6, '(a,2i4,a,3i4,a,1p,2e19.11)') ' Save at i,j:',i,j, '  ic,jc,n:',ic,jc,n, '  p,q:', p, q
+!!!               WRITE (6, '(a,2i4,a,3i4,a,2es19.11)') ' Save at i,j:',i,j, '  ic,jc,n:',ic,jc,n, '  p,q:', p, q
 
                   icorner = 0
                   if (i == 1) then
@@ -1631,7 +1688,7 @@
          case (1) ! Centers -> vertices
 
             allocate (t(num_q,ni,nj,nk))
-
+ 
             do k = 1, nk
                ka = max (1, k - 1);  kb = min (k, mk)
                do j = 1, nj
@@ -1742,11 +1799,11 @@
       sk = zero
 
 !!!   k = 1
-!!!   write (6,'(a, 3i5, a, 1p, 3e16.8)') ' i,j,k: ', i,j,k, '  x,y,z: ', new_grid%x(i,j,k), new_grid%y(i,j,k), new_grid%z(i,j,k)
+!!!   write (6,'(a, 3i5, a, 3es16.8)') ' i,j,k: ', i,j,k, '  x,y,z: ', new_grid%x(i,j,k), new_grid%y(i,j,k), new_grid%z(i,j,k)
 
       do k = 2, nk
 
-!!!      write (6,'(a, 3i5, a, 1p, 3e16.8)') ' i,j,k: ', i,j,k, '  x,y,z: ', new_grid%x(i,j,k), new_grid%y(i,j,k), new_grid%z(i,j,k)
+!!!      write (6,'(a, 3i5, a, 3es16.8)') ' i,j,k: ', i,j,k, '  x,y,z: ', new_grid%x(i,j,k), new_grid%y(i,j,k), new_grid%z(i,j,k)
 
 !        Current new radial line arc-length at point k:
 
@@ -1798,7 +1855,7 @@
 
       icell = ic;  jcell = jc;  kcell = 1
 
-!!!   WRITE (luncrt, '(a, 1p, 3e15.5)') ' dx, dy, dz:', dx, dy, dz
+!!!   WRITE (luncrt, '(a, 3es15.5)') ' dx, dy, dz:', dx, dy, dz
 
       do k = 2, nk
 
@@ -1812,7 +1869,7 @@
             zt = zt - dz
          end if
 
-!!!      WRITE (luncrt, '(a, 3i4, a, 1p, 3e15.5, a, 3i4)') &
+!!!      WRITE (luncrt, '(a, 3i4, a, 3es15.5, a, 3i4)') &
 !!!         ' ripple3d at ijk =', i,j,k, '  x/y/znew:', xt, yt, zt, '  i/j/kcell:', icell, jcell, kcell
 
          call ripple3d (idim, jdim, kdim, 1, idim, 1, jdim,1, kdim,  &

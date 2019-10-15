@@ -4,7 +4,7 @@ add_executable(integrate
 target_link_libraries(integrate
   global
   geomlib
-  integrate1d
+  integratelib
   linsys
   progtools
   numodules

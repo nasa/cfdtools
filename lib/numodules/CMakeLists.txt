@@ -1,4 +1,5 @@
 add_library(numodules
+  addnoise.f90
   bessel.f
   bounds.f
   brodlie.f

@@ -36,7 +36,7 @@
       real,                                pointer :: values (:,:)  ! For the common case of all-real-value tables
       character (max_table_file_name)              :: filename      ! Name of the file to use if the table is to be read or written
       character (max_table_header_length), pointer :: header (:)    ! Header lines to be allocated as needed
-      character (max_table_token_length),  pointer :: tokens (:,:)  ! Numeric tokens(i,j) = token or column i on numeric row j
+      character (max_table_token_length),  pointer :: tokens (:,:)  ! Character tokens(i,j) = token or column i on non-header row j
    end type table_type
 
 !  Storage Note:  These are line-oriented utilities, so the tokens on a line/row are stored contiguously (i = 1:ncols for row j).
@@ -88,6 +88,8 @@
 !     11/18/16     "      "      A table with 369 characters required some larger limits above.
 !     02/11/17     "      "      The alphanumeric case (table_io_read_alpha) required allowing for the case of all alphanumeric
 !                                that match in terms of number of columns, with no header records assumed.
+!     11/20/18     "      "      Displaying a (real) table on the screen required suppression of the open and close in subroutine
+!                                table_io_write_real.  Do the same in table_io_write_alpha.  While we're at it, add table_io_copy.
 !
 !  Author:  David Saunders, ERC, Inc.,/NASA Ames Research Center, Moffett Field, CA (now with AMA, Inc. at NASA ARC).
 
@@ -127,6 +129,7 @@
 !! public :: table_io_write_mixed        ! Writes a table for which the numeric column data types are defined by column_type(:)
    public :: table_io_thin               ! Repack a table with row 1 + every nth following row, as may be needed for a time history
    public :: table_io_deallocate         ! Deallocates table arrays
+   public :: table_io_copy               ! Copies a table to a new or existing table
 
    contains
 
@@ -222,7 +225,7 @@
 !     There may be a need to work with alphanumeric columns, as in the case of the author's SORT_ROWS utility.
 !
 !     The strategy (in read_alpha) is to interpret nheader > 0 and nrows = 0 to mean there are no header lines and the data rows
-!     a alphanumeric, not strictly numeric.  We still need to check that all rows have the same number of columns.
+!     are alphanumeric, not strictly numeric.  We still need to check that all rows have the same number of columns.
 !
 !     Rewind the table, count the tokens on line 1, and make sure the remaining lines contain the same number of tokens.  If so,
 !     rewind again and return for the read_alpha calling routine to continue.
@@ -292,8 +295,8 @@
 !     Arguments:
 
       integer,           intent (in)    :: lun    ! The table is opened here, read as header and tokens, and closed upon return
-      type (table_type), intent (inout) :: table  ! filename, nheader, nrows, and ncols have been set on input;
-                                                  ! header(:) and tokens(:,:) are set upon return
+      type (table_type), intent (inout) :: table  ! %filename should be set on input;
+                                                  ! %header(:) and %tokens(:,:) are set upon return
       integer,           intent (out)   :: ios    ! 0 means no problem
 
 !     Execution:
@@ -420,22 +423,31 @@
 !     Arguments:
 
       integer,           intent (in)    :: lun    ! The output file is opened here, written to, and closed upon return
+                                                  ! unless lun = standard output (screen), when the open and close are suppressed
       type (table_type), intent (inout) :: table  ! filename, nheader, nrows, and ncols have been set on input, along with
                                                   ! header(:) and tokens(:,:)
       character (1),     intent (in)    :: sep    ! Desired column separator, probably blank, tab, or comma
       integer,           intent (out)   :: ios    ! 0 means no problem
 
+!     Local constants:
+
+      integer, parameter :: std_out = 6           ! Suppress the open and close if we're writing to the screen
+
 !     Local variables:
 
       integer :: i, i1, i2, j, l, lform, lname, width
+      logical :: screen_output
 
 !     Execution:
 
       lname = len_trim (table%filename)
-      open (lun, file=table%filename(1:lname), status='unknown', iostat=ios)
-      if (ios /= 0) then
-         write (*, '(2a)') '*** Unable to open table file ', table%filename(1:lname)
-         go to 99
+      screen_output = lun == std_out
+      if (.not. screen_output) then
+         open (lun, file=table%filename(1:lname), status='unknown', iostat=ios)
+         if (ios /= 0) then
+            write (*, '(2a)') '*** Unable to open table file ', table%filename(1:lname)
+            go to 99
+         end if
       end if
 
       if (table%nheader > 0) then
@@ -524,7 +536,7 @@
 
       end select
 
-      close (lun)
+      if (.not. screen_output) close (lun)
       go to 99
 
  90   write (*, '(a, 2i5)') '    Current and needed buffer length:', max_table_buffer, i2 - 1
@@ -555,25 +567,34 @@
 !     Arguments:
 
       integer,           intent (in)    :: lun    ! The table file is opened here as "unknown", written to, then closed upon return
+                                                  ! unless lun = standard output (screen), when the open and close are suppressed
       type (table_type), intent (inout) :: table  ! In this version, %tokens(:,:) are not accessed; most other table components are
       character (1),     intent (in)    :: sep    ! Desired column separator, probably blank, tab, or comma, but see also the use
                                                   ! of sep = table_io_format_sep
       integer,           intent (out)   :: ios    ! 0 means no problem
 
+!     Local constants:
+
+      integer, parameter :: std_out = 6           ! Omit the open and close if lun = standard output
+
 !     Local variables:
 
       integer        :: i, j, lname
       integer, save  :: lform  ! Internal procedure uses it
+      logical        :: screen_output
       character (11) :: format1
       character (24) :: format2
 
 !     Execution:
 
       lname = len_trim (table%filename)
-      open (lun, file=table%filename(1:lname), status='unknown', iostat=ios)
-      if (ios /= 0) then
-         write (*, '(2a)') '*** Unable to open table file ', table%filename(1:lname)
-         go to 99
+      screen_output = lun == std_out
+      if (.not. screen_output) then
+         open (lun, file=table%filename(1:lname), status='unknown', iostat=ios)
+         if (ios /= 0) then
+            write (*, '(2a)') '*** Unable to open table file ', table%filename(1:lname)
+            go to 99
+         end if
       end if
 
       do line = 1, table%nheader
@@ -626,7 +647,7 @@
 
       end select
 
-      close (lun)
+      if (.not.screen_output) close (lun)
       ios = 0
 
  99   return
@@ -797,5 +818,65 @@
    99 return
 
       end subroutine table_io_deallocate
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      subroutine table_io_copy (table1, table2, new, real, ios)  ! Copy table1 to new table2, which is allocated here appropriately.
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!     Arguments:
+
+      type (table_type), intent (in)  :: table1  ! Input table (treated as alphnumeric or real, according to the real argument)
+      type (table_type), intent (out) :: table2  ! Output copy of the input table
+      logical,           intent (in)  :: new     ! T means allocate table2 arrays; F means they're allocated already
+      logical,           intent (in)  :: real    ! The application needs to know if table%values(:,:) is present
+      integer,           intent (out) :: ios     ! 0 means no problem
+
+!     Local variables:
+
+      integer :: ncolumns, nheader, nrows
+
+!     Execution:
+
+      nheader = table1%nheader;  table2%nheader = nheader
+      nrows   = table1%nrows;    table2%nrows   = nrows
+      ncols   = table1%ncols;    table2%ncols   = ncols
+
+      if (nheader > 0) then
+         if (new) then
+            allocate (table2%header(nheader), stat=ios)
+            if (ios /= 0) then
+               write (*, '(a)') '*** Trouble allocating table2%header:', nheader
+               go to 99
+            end if 
+         end if
+         table2%header(:) = table1%header(:)
+      end if
+
+      if (new) then
+         allocate (table2%tokens(ncols,nrows), stat=ios)
+         if (ios /= 0) then
+            write (*, '(a)') '*** Trouble allocating table2%tokens:', nrows, ncols
+            go to 99
+         end if
+      end if
+      table2%tokens(:,:) = table1%tokens(:,:)
+
+      if (real) then
+!!!      if (allocated (table2%values)) then  ! Not allowed for pointers; only for allocatable arrays
+         if (new) then
+            allocate  (table2%values(ncols,nrows), stat=ios)
+            if (ios /= 0) then
+               write (*, '(a)') '*** Trouble allocating table2%values:', nrows, ncols
+               go to 99
+            end if
+         end if
+         table2%values(:,:) = table1%values(:,:)
+      end if
+
+ 99   return
+
+      end subroutine table_io_copy
 
    end module table_io

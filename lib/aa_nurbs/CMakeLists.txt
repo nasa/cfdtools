@@ -24,7 +24,7 @@ target_link_libraries(aa_nurbs PRIVATE
   geomlib
   gridlib
   interplib
-  integrate1d
+  integratelib
   optlib
 )
 target_include_directories(aa_nurbs PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

@@ -6,9 +6,10 @@
 !
 !     Interpolate one unstructured surface flow solution to another in 3-space.
 !  This is an adaptation of the earlier TRI_TO_QUAD, replacing the structured
-!  target surface grid with a surface triangulation.  Both assume that the
-!  input dataset is a single-zone surface triangulation.  Here, the target (and
-!  hence output) triangulation may contain one or more zones.
+!  target surface grid with a surface triangulation.  The original single-zone
+!  input dataset assumption has now been overcome via an extension of the tri-
+!  angulation_io module.  The target (and hence output) triangulation may also
+!  contain one or more zones as originally.
 !
 !  Input Tecplot data format (original, vertex-centered):
 !
@@ -29,6 +30,9 @@
 !     95992 95993 95994
 !     95995 95996 95997
 !     95998 95999 96000
+!     :::::::::::::::::
+!
+!  Further zones are now an option.
 !
 !  Alternative cell-centered Tecplot input format (DPLR overset grid tools):
 !
@@ -89,9 +93,21 @@
 !     08/08/13   "   All ADT variants are in one module now with generic
 !                    build_adt and search_adt interfaces.
 !     07/03/14   "   TRI_TO_TRI adapted from TRI_TO_QUAD.
+!     04/21/17   "   The tri_area(:) array name clashed with a callable utility
+!                    added subsequently to triangulation_io.f90.  It has been
+!                    renamed as triang_area(:).
+!     07/20/18   "   Hemispherical integration of radiance data involves multi-
+!                    zone triangulations.  Interpolation of such surface data
+!                    to a different triangulation is now an option following
+!                    an extension within triangulation_io that concatenates
+!                    all zones as a single zone within new header fields, for
+!                    rapid searching via the ADT scheme, which builds all cells
+!                    of all zones into its search tree rather than treating one
+!                    zone at a time.
 !
-!  Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA
-!
+!  Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
+!                  Now with AMA, Inc. at NASA ARC.
+!  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !  Modules:
@@ -129,7 +145,7 @@
    character :: &
       filename * 80
    real, allocatable, dimension (:) :: &
-      area_total, t_area
+      area_total, triang_area
    real, allocatable, dimension (:,:) :: &
       fnode
 
@@ -189,8 +205,9 @@
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    ios = 1  ! Verbose mode
+   tri_header_1%combine_zones = .true.  ! Option prompted by this application
 
-   call tri_read (lunin, tri_header_1, tri_xyzf_1, ios)  ! Read entire dataset
+   call tri_read (lunin, tri_header_1, tri_xyzf_1, ios)  ! Read all zones as one
 
    if (ios /= 0) then
       write (luncrt, '(/, a)') &
@@ -202,41 +219,42 @@
 
 !  The interpolation scheme requires vertex-centered data.
 !  If necessary, area-average the input functions to the vertices, in-place.
+!  This is now done within triangulation_io.
 
-   if (fileform == 2) then
-
-      do iz = 1, tri_header_1%nzones
-
-         nnode = tri_xyzf_1(iz)%nnodes
-         ntri  = tri_xyzf_1(iz)%nelements
-
-         allocate (t_area(ntri), area_total(nnode))
-
-         call tri_areas (nnode, ntri, tri_xyzf_1(iz)%xyz, tri_xyzf_1(iz)%conn, &
-                         t_area, area_total)
-
-         allocate (fnode(nf,nnode))
-
-         call tri_centers_to_vertices (nnode, ntri, nf, t_area, area_total,  &
-                                       tri_xyzf_1(iz)%conn, tri_xyzf_1(iz)%f,  &
-                                       fnode)
-
-         deallocate (t_area, area_total)
-
-         deallocate (tri_xyzf_1(iz)%f);  allocate (tri_xyzf_1(iz)%f(nf,nnode))
-
-         tri_xyzf_1(iz)%f(:,:) = fnode(:,:);  deallocate (fnode)
-
-      end do
-
-   end if
+!! if (fileform == 2) then
+!!
+!!    do iz = 1, tri_header_1%nzones
+!!
+!!       nnode = tri_xyzf_1(iz)%nnodes
+!!       ntri  = tri_xyzf_1(iz)%nelements
+!!
+!!       allocate (triang_area(ntri), area_total(nnode))
+!!
+!!       call tri_areas (nnode, ntri, tri_xyzf_1(iz)%xyz, tri_xyzf_1(iz)%conn, &
+!!                       triang_area, area_total)
+!!
+!!       allocate (fnode(nf,nnode))
+!!
+!!       call tri_centers_to_vertices (nnode, ntri, nf, triang_area, &
+!!                                     area_total, tri_xyzf_1(iz)%conn, &
+!!                                     tri_xyzf_1(iz)%f, fnode)
+!!
+!!       deallocate (triang_area, area_total)
+!!
+!!       deallocate (tri_xyzf_1(iz)%f);  allocate (tri_xyzf_1(iz)%f(nf,nnode))
+!!
+!!       tri_xyzf_1(iz)%f(:,:) = fnode(:,:);  deallocate (fnode)
+!!
+!!    end do
+!!
+!! end if
 
 !  Set up the search tree:
 
-   nnode = tri_xyzf_1(1)%nnodes     ! One zone is assumed for now
-   ntri  = tri_xyzf_1(1)%nelements
+   nnode = tri_header_1%nnodes     ! Multiple zones have been merged now
+   ntri  = tri_header_1%nelements
 
-   call build_adt (nnode, ntri, tri_xyzf_1(1)%conn, tri_xyzf_1(1)%xyz)
+   call build_adt (nnode, ntri, tri_header_1%conn, tri_header_1%xyz)
 
 
 !  Open and read the target triangulation header:
@@ -300,6 +318,7 @@
       nnodes    = tri_xyzf_2(iz)%nnodes
       nelements = tri_xyzf_2(iz)%nelements
       allocate   (tri_xyzf_2(iz)%f(nf,nnodes))
+      tri_xyzf_2(iz)%element_type = 'TRIANGLE'
 
 !     Process all the points of this target zone:
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -321,7 +340,7 @@
 
          call search_adt (tri_xyzf_2(iz)%xyz(:,i), itri, p, q, r, dsq, &
                           .true., nnode, ntri,  &
-                          tri_xyzf_1(1)%conn, tri_xyzf_1(1)%xyz, interp_xyz)
+                          tri_header_1%conn, tri_header_1%xyz, interp_xyz)
 !        !!!!!!!!!!!!!!!
 
          dist = sqrt (dsq)
@@ -329,18 +348,18 @@
          davg = davg + dist
 
          if (dist < dtol) then     ! The best triangle found was within the
-            ninside = ninside + 1  ! distance tolerance
+            ninside = ninside + 1  ! distance tolerance 
          else
             nout = nout + 1
          end if
 
-         i1 = tri_xyzf_1(1)%conn(1,itri)
-         i2 = tri_xyzf_1(1)%conn(2,itri)
-         i3 = tri_xyzf_1(1)%conn(3,itri)
+         i1 = tri_header_1%conn(1,itri)
+         i2 = tri_header_1%conn(2,itri)
+         i3 = tri_header_1%conn(3,itri)
 
-         tri_xyzf_2(iz)%f(:,i) = p * tri_xyzf_1(1)%f(:,i1) + &
-                                 q * tri_xyzf_1(1)%f(:,i2) + &
-                                 r * tri_xyzf_1(1)%f(:,i3)
+         tri_xyzf_2(iz)%f(:,i) = p * tri_header_1%f(:,i1) + &
+                                 q * tri_header_1%f(:,i2) + &
+                                 r * tri_header_1%f(:,i3)
       end do ! Next node
 
       davg = davg / real (nnodes)

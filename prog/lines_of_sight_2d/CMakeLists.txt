@@ -8,6 +8,7 @@ target_link_libraries(lines_of_sight_2d
   numodules
   progtools
   adt
+  intrinsics
   interp2d
   linsys
   optlib

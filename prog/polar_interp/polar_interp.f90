@@ -73,9 +73,11 @@
 !
 !  Output Data Format:
 !
-!     Single-zone Tecplot ASCII dataset, BLOCK order, suited to SURFACE_INTERP.
+!     Single-zone Tecplot ASCII dataset, BLOCK order, suited to SURFACE_INTERP
+!     for likely interpolation to a CFD grid to go with output from BLAYER for
+!     CBAERO anchoring purposes.
 !
-!  Option To Help Generate Target Spokes:
+!  Option (1) To Help Generate Target Spokes:
 !
 !     Constructing spokes on an "ellipsled" slender-body vehicle prompted this
 !     option to read surface grid patch indices in the spoked form above, with
@@ -113,6 +115,42 @@
 !     refer is issued so that indices can be converted to (x,y,z) coordinates.
 !     This surface grid should be in PLOT3D form, ASCII or unformatted.
 !
+!  Option (2) To Help Generate Target Spokes:
+!
+!     For the axisymmetric case, this option expects a form of the generatrix
+!     as the input dataset entered as the first control input. This should be
+!     suited to NEQAIR calculations: fairly coarse towards the shoulder where
+!     tangent-slab results are less appropriate and where use of option (1)
+!     above via every nth CFD-type surface grid point in the spoke direction
+!     puts too many points. The input ni and nj for the second prompt should
+!     be the number of points in this generatrix-type dataset (the "12'oclock"
+!     spoke, including the center point) and the number of spokes produced from
+!     this input spoke and nj - 1 evenly-spaced rotations of it about the nose
+!     point in the anticlockwise direction.  (The repeated nose point from the
+!     rotated spokes is suppressed in the output dataset, the name of which is
+!     prompted for. As with Option (1) above, this dataset matches the normal
+!     input form with header indices but without any function data.)
+!
+!     The input dataset in this case looks like this:
+!
+!     x  y  ! Nose coordinates
+!     x  y  ! Further points along the generatrix at the 12 o'clock position
+!     x  y  ! y is likely to be 0. on all lines
+!     x  y
+!     :  :
+!     x  y
+!
+!     Option (2) is detected by the decimal point(s) expected on line 1, so
+!     don't enter 0  0 (integers) there.
+!
+!  Separate Means of Generating Spoked Body Points (CAPSULE_SPOKES):
+!
+!     For the axisymmetric case, the simplest way of generating spoked body
+!     points is probably the more recent CAPSULE_SPOKES utility, which reads a
+!     list of clock angles at which to rotate an input generatrix from the 12
+!     o'clock position to the 6 o'clock position.  The spokes need not be uni-
+!     formly spaced, in contrast to those produced by Option (2) above.
+!
 !  History:
 !
 !     08/29/08  D. Saunders  Initial implementation as part of an alternative
@@ -147,8 +185,19 @@
 !     06/18/12   "      "    The full-body case can use LCSFIT's cyclic option,
 !                            at least for the geometry.
 !
+!     08/22/18   "      "    Belated addition of a simple second way of generat-
+!                            ing target spoke coordinates via rotation of a
+!                            generatrix-like spoke 1, for axisymmetric cases.
+!
+!     05/20/19   "      "    Mysterious early termination with no error message
+!                            and no output seems to have been mishandling of
+!                            ios in the look_for_generating_spokes procedure.
+!
+!     05/21/19   "      "    Added mention of the (more recent) CAPSULE_SPOKES
+!                            utility as a way of generating spoked body points.
+!
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
-!                           now ERC, Inc. at NASA ARC.
+!                           (later with ERC, Inc. and AMA, Inc. at NASA ARC)
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -210,12 +259,11 @@
       open  (lun_in, file=filename_in, status='old', iostat=ios)
    end do
 
-!  Check for the retrofitted option to read indices.  If we return with
-!  ios = 0, we assume that option wasn't detected, and proceed as originally,
-!  else we're done.
+!  Check for a retrofitted option to read indices or a single spoke.  If we
+!  return with ios = 0, we assume that no option to generate spoke coordinates
+!  was detected, and proceed as originally, else we're done.
 
-   call look_for_indices_option ()  ! Internal procedure below
-
+   call look_for_generating_spokes ()  ! Internal procedure below
    if (ios /= 0) go to 99
 
    read (lun_in, *, iostat=ios) nspokes, nf
@@ -457,7 +505,8 @@
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      subroutine look_for_indices_option ()  ! See main program header
+      subroutine look_for_generating_spokes ()  ! Look for two ways of generat-
+                                                !ing spoke coordinates (only).
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -468,11 +517,26 @@
 !     Local variables:
 
       integer   :: if1, ii, jj, ni, nj
-      logical   :: formatted, not_integer
+      logical   :: formatted, generatrix_option, not_integer
       character :: token * 16
       integer, allocatable, dimension (:,:) :: idata, jdata
 
 !     Execution:
+
+!     Look for a decimal point on the first line of the input dataset.
+!     Reuse token as a buffer, looking for nose point coordinates:
+
+      read (lun_in, *) token;  rewind (lun_in)
+      generatrix_option = index (token, '.') /= 0
+      write (luncrt, *) 'Generatrix_option: ', generatrix_option
+
+      if (generatrix_option) then
+         call option_2 ()  ! Retrofitted internal procedure
+         ios = 0
+         go to 99
+      end if
+
+!     Option 1 for generating spoke coordinates follows as originally:
 
       not_integer = .false.
       do ! Until EOF
@@ -480,7 +544,7 @@
          if (ios < 0) exit
          if (index (token, '.') /= 0) not_integer = .true.
       end do
-
+      write (luncrt, *) 'not_integer: ', not_integer
       rewind (lun_in)
 
       if (not_integer) then
@@ -563,14 +627,68 @@
       write (lun_out, '(3es15.7)') ((xdata(i,j), ydata(i,j), zdata(i,j), &
                                      i = 1, nidata(j)), j = 1, nspokes)
       close (lun_out)
-
       deallocate (xgrid, ygrid, zgrid, xdata, ydata, zdata, idata, jdata)
 
       ios = 1  ! Done
-
 99    return
 
-      end subroutine look_for_indices_option
+      end subroutine look_for_generating_spokes
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      subroutine option_2 ()  ! See the program header description.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      real :: dtheta, theta, qx, qy, qz
+
+      call count_records (lun_in, .true., ni, ios)
+      if (ios > 0) go to 99  ! Fail
+
+      write (luncrt, '(a)', advance='no') &
+         'Generatrix input option detected.  How many spokes in 180 deg.? '
+      read  (lunkbd, *) nj
+
+      dtheta = -180. / real (nj-1)  ! Anticlockwise rotations from 12 o'clock
+
+      allocate (xgrid(ni,nj), ygrid(ni,nj), zgrid(ni,nj))
+
+      do i = 1, ni
+         read (lun_in, *) xgrid(i,1), zgrid(i,1)  ! Avoid trailing comments
+         ygrid(i,1) = 0.
+      end do
+      qx = xgrid(1,1) + 1.
+      qy = ygrid(1,1)
+      qz = zgrid(1,1)
+
+      do j = 2, nj  ! Rotate about Oa, in-place
+         theta = dtheta * real (j-1)
+         xgrid(:,j) = xgrid(:,1)
+         ygrid(:,j) = ygrid(:,1)
+         zgrid(:,j) = zgrid(:,1)
+         call rotate3d (ni, xgrid(:,j), ygrid(:,j), zgrid(:,j), theta, &
+                        xgrid(1,1), qy, qz, qx, qy, qz)
+      end do
+      ygrid(:,nj) = qy  ! Make sure of it
+
+!     As for spoke option 1:
+
+      write (luncrt, '(a)', advance='no') 'Output dataset name: '
+      read  (lunkbd, *) filename_out
+      open  (lun_out, file=filename_out, status='unknown')
+
+      write (lun_out, '(2i3)') nj, 1  ! # Spokes + eventual # functions
+      write (lun_out, '(i3)')  ni, (ni-1, j = 2, nj)
+      write (lun_out, '(3es15.7)')  (xgrid(i,1), ygrid(i,1), zgrid(i,1), &
+                                     i = 1, ni)
+      write (lun_out, '(3es15.7)') ((xgrid(i,j), ygrid(i,j), zgrid(i,j), &
+                                     i = 2, ni), j = 2, nj)
+      close (lun_out)
+      deallocate (xgrid, ygrid, zgrid)
+
+99    ios = 1  ! Done
+
+      end subroutine option_2
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

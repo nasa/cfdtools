@@ -13,7 +13,7 @@ add_library(gridlib
   compass.f
   condis.f
   copy_face.f90
-  curvdis.f
+  curvdis.f90
   curvdis2.f90
   curvdis3d.f
   curvdis3d2.f90
@@ -34,6 +34,7 @@ add_library(gridlib
   expdis5.f
   fixogrid.f
   flow_gradients.f90
+  flow_gradients_2d.f90
   flow_gradients_nf.f90
   foilgrd.f
   foilgrid.f

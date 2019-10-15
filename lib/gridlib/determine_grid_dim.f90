@@ -20,7 +20,8 @@
 !  Therefore, the (formatted) strategy is to buffer line 2, assuming separate
 !  lines for the dimensions of each block, and use an internal read on the
 !  buffer that may or may not encounter end-of-data.  The unformatted case
-!  can safely try to read the whole header as 3-D and rely on iostat.
+!  can safely try to read the whole header as 3-D and rely on iostat (but see
+!  07/01/2018 history entry).
 !
 !  History:
 !
@@ -33,8 +34,13 @@
 !                               counting tokens on line 2: just do an internal
 !                               read of three integers, and trap any I/O error.
 !     07/09/2014    "     "     Glitch: ndim wasn't being set for 2-D/unformat.
+!     07/01/2018    "     "     An unformatted 2-D grid was wrongly determined
+!                               to be 3-D. Check what is found for the third
+!                               dimension of all blocks, and switch if an
+!                               unlikely value is found.  (Intel compiler.) :(
 !
 !  Author:  David Saunders, ERC Inc./NASA Ames Research Center, CA
+!           Now with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -50,12 +56,13 @@
 
 !  Local constants:
 
+   integer,        parameter :: is_unlikely = 100000000
    character (11), parameter :: format = 'unformatted'
    character (1),  parameter :: blank  = ' '
 
 !  Local variables:
 
-   integer        :: i1, l, l2, nb, ni, nj, nk
+   integer        :: i1, ib, l, l2, nb, ni, nj, nk
    logical        :: already_open
    character (64) :: buffer
    integer, allocatable :: nijk(:,:)
@@ -114,8 +121,12 @@
          end if
          ndim = 2
          ios  = 0
-      else
-         ndim = 3  ! Don't diagnose the more likely case
+      else  ! Make sure that all the third dimensions look plausible
+         ndim = 0
+         do ib = 1, nb
+            if (nijk(3,ib) < 1 .or. nijk(3,ib) > is_unlikely) ndim = 2
+         end do
+         if (ndim /= 2) ndim = 3  ! Don't diagnose the more likely case
       end if
 
       deallocate (nijk)

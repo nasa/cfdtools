@@ -30,7 +30,14 @@
       real               :: surface_area            ! Total surface area of this triangulation
       real               :: enclosed_volume         ! Total volume defined by this triangulation and interior_point
       real               :: solid_volume            ! Total volume of all elements of a volume mesh (all tets or all hexahedra)
-      character (80)     :: title                   ! Dataset title
+      logical            :: combine_zones           ! T means tri_read combines all zones into one, using header%conn, %xyz, %f
+      logical            :: centroids_to_vertices   ! T means tri_read converts function data to vertices if fileform = 2
+      integer            :: nnodes                  ! # points or nodes forming such a combined triangulation (or volume)
+      integer            :: nelements               ! # triangles|tetra/hexahedra forming the combined surface or volume mesh
+      integer, dimension (:,:), pointer :: conn     ! Connectivity for all zones if needed for rapid searching, as for tri_type
+      real,    dimension (:,:), pointer :: xyz      ! Element vertex coordinates for all zones for rapid searching   "   "   "
+      real,    dimension (:,:), pointer :: f        ! Vertex-centered function values for all zones  "   "   "   "   "   "   "
+      character (80)          :: title              ! Dataset title
       character (32), pointer :: varname (:)        ! Variable names; embedded blanks are permitted; 32 matches other software
    end type tri_header_type
 
@@ -114,8 +121,16 @@
 !  11/18/14                  edges), prompting unstructured volume grid analogues of the unstructured surface utilities.
 !  03/08/15    "       "     Added a bare-bones utility for writing a surface triangulation as a small field NASTRAN file.
 !  08/03/15    "       "     Handled the ZONETYPE=FExxxx keyword as an alternative to F=FEPOINT, ET=xxx for defining element type.
+!  07/21/18    "       "     ADT searching of multizone triangulations (or unstructured volumes) requires a way of assembling all
+!                            zones as a single list of all elements.  Subroutine tri_read now has this option, via new header
+!                            fields %combine_zones, %conn, %xyz and %f.  If functions are cell-centered, they will be area-averaged
+!                            to the vertices as needed for ADT searching.  But see the following afterthought.
+!  07/23/18    "       "     Tri_read now has an independent option to convert centroid function values to vertices via new header
+!                            field, %centroids_to_vertices.
+!  07/26/18    "       "     Tecplot won't read a single-function line VARLOCATION=([4-4]=CELLCENTERED) written by tri_zone_write.
+!                            Instead, it expects VARLOCATION=([4]=CELLCENTERED).  Thanks to Jeff Hill for thinking of this.
 !
-!  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA (now with ERC, Inc. at NASA ARC)
+!  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA (later with ERC, Inc. and AMA, Inc. at NASA ARC).
 !
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -236,12 +251,19 @@
 
       subroutine tri_read (lun, header, grid, ios)
 
-!     Read a 3-space unstructured surface dataset, binary or ASCII, with BLOCK or POINT data packing.
+!     Read a 3-space unstructured surface dataset, one or more zones, binary or ASCII, with BLOCK or POINT data packing.
 !     The first 3 variables are returned as the x, y, z fields of each zone in grid(:).
 !     Remaining variables become the "f" field packed in "point" order (n-tuples, where n = numf = # variables - 3).
 !     The input file title is also returned, along with the variable names (up to name_limit characters each).
 !     Titles for the zone or zones are returned in the appropriate field of each element of the grid array.
 !     The file is opened and closed here.
+!
+!     07/21/18  ADT searching of multizone unstructured datasets requires treating all elements of all zones as a single list.
+!               This option has been enabled here via new header variables as explained above, starting with header%combine_zones.
+!               The zones are read and packed one zone at a time, and they are NOT deallocated in case the application needs to do
+!               more than just searching/interpolation.  If the function data are cell-centered, they are area-averaged to vertices
+!               (for surface_zones; volume averaging of volume-cell centroid function values has not been implemented yet). This
+!               conversion may also be requested via header%centroids_to_vertices even if header%combine_zones = F.
 !
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -258,7 +280,9 @@
                                                          ! standard output; early return follows
 !     Local variables:
 
-      integer :: iz
+      integer :: ie, in, iz, ne, nf, nn, ntri, nv, nvert, nz
+      logical :: combine
+      real, allocatable :: area_total(:), tri_area(:), fnode(:,:)
 
 !     Execution:
 !     ----------
@@ -267,31 +291,81 @@
 !     and set up the zone dimensions by scanning till EOF:
 
       call tri_header_read (lun, header, grid, ios)
-
       if (ios /= 0) go to 999
 
+      combine = header%combine_zones
+      if (combine) then  ! Count all nodes and all elements of all zones
+         nz = header%nzones
+         nf = header%numf
+         nn = 0;  ne = 0
+         do iz = 1, nz
+            nn = nn + grid(iz)%nnodes
+            ne = ne + grid(iz)%nelements
+         end do
+
+         nv = header%nvertices
+         allocate (header%conn(nv,ne), header%xyz(3,nn), header%f(nf,nn))
+         header%nnodes = nn
+         header%nelements = ne
+         if (verbose) write (*, '(a, i7)') ' # combined nodes:', nn, ' # combined cells:', ne
+      end if
+
 !     Allocate and read each zone:
+
+      ie = 0;  in = 0  ! Packing offsets
 
       do iz = 1, header%nzones
 
          call tri_zone_allocate (header, grid(iz), ios)
-
          if (ios /= 0) then
-            write (*, '(a, i5)') ' tri_read: Trouble allocating zone #', iz
+            write (*, '(a, i6)') ' tri_read: Trouble allocating zone #', iz
             write (*, '(2a)')    ' File name: ', trim (header%filename)
             go to 999
          end if
 
          call tri_zone_read (lun, header, grid(iz), ios)
-
          if (ios /= 0) then
-            write (*, '(a, i4)')  ' tri_read:  Trouble reading zone #', iz
+            write (*, '(a, i6)')  ' tri_read:  Trouble reading zone #', iz
             write (*, '(2a)')     ' File name: ', trim (header%filename)
-            write (*, '(a, 3i5)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
+            write (*, '(a, 3i9)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
             go to 999
          end if
 
+         ntri  = grid(iz)%nelements
+         nvert = grid(iz)%nnodes
+
+         if (combine .or. header%centroids_to_vertices) then
+            if (header%fileform == 2) then  ! Convert function values from centroids to vertices
+               allocate (tri_area(ntri), area_total(nvert))
+
+               call tri_areas (nvert, ntri, grid(iz)%xyz, grid(iz)%conn, tri_area, area_total)
+
+               allocate (fnode(nf,nvert))
+
+               call tri_centers_to_vertices (nvert, ntri, nf, tri_area, area_total, grid(iz)%conn, grid(iz)%f, fnode)
+
+               deallocate (tri_area, area_total)
+               deallocate (grid(iz)%f);  allocate (grid(iz)%f(nf,nvert))
+
+               grid(iz)%f(:,:) = fnode(:,:);  deallocate(fnode)
+            end if
+         end if
+
+         if (combine) then  ! Pack the zone data into the header space for all zones:
+            header%conn(:,ie+1:ie+ntri)  = grid(iz)%conn(:,:) + in
+            header%xyz (:,in+1:in+nvert) = grid(iz)%xyz(:,:)
+            header%f   (:,in+1:in+nvert) = grid(iz)%f(:,:)
+            ie = ie + ntri
+            in = in + nvert
+            if (verbose) write (*, '(a, 2i10)') ' Zone packing offsets ie & in:', ie, in
+         end if
+
       end do
+
+!!    if (verbose .and. combine) then
+!!       write (*, '(3es25.15)') header%xyz(:,:)
+!!       write (*, '(3i10)')     header%conn(:,:)
+!!    end if
 
   999 continue
 
@@ -349,7 +423,7 @@
          if (ios /= 0) then
             write (*, '(a, i4)')  ' tri_write:  Trouble writing zone #', iz
             write (*, '(2a)')     ' File name: ', trim (header%filename)
-            write (*, '(a, 3i5)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
+            write (*, '(a, 3i9)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
             go to 999
          end if
 
@@ -531,6 +605,11 @@
          grid(iz)%nzoneheaderlines = nzoneheaderlines(iz)
          grid(iz)%solutiontime     = undefined
       end do
+
+      if (verbose) then
+         write (*, '(a)') '   zone  # nodes  #elements'
+         write (*, '(i7, 2i9)') (iz, nnodes(iz), nelements(iz), iz = 1, nzones)
+      end if
 
 !     Also, any dataset auxiliary info. can be reread and stored (auxiliaries not handled though - see Tecplot_io package):
 
@@ -1051,7 +1130,7 @@
 
          if (verbose) then
             write (*, '(a, i5)') ' # zones found:', nz, ' # variables:  ', nvar
-            if (nz == 1) write (*, '(a, i11)') ' # nodes:   ', nnodes(1), ' # elements:', nelements(1)
+            if (nz == 1) write (*, '(a, i9)') ' # nodes:   ', nnodes(1), ' # elements:', nelements(1)
          end if
 
          end subroutine count_zones
@@ -1352,11 +1431,12 @@
 !     Local variables:
 
       integer   :: first, last, lentrim, line, mark  ! Shared by internal procedures
-      integer   :: i, n, nnodes
+      integer   :: i, n, nelements, nnodes
 
 !     Execution:
 
       nnodes    = zone%nnodes
+      nelements = zone%nelements
       formatted = header%formatted
       numf      = header%numf
 
@@ -1390,9 +1470,10 @@
                end if
 
                read (lun, *, iostat=ios) zone%conn
-
                if (ios /= 0) then
-                  write (*, '(/, a, i4, a, i9)') ' Trouble reading connectivity data.  Logical unit:', lun, '  # nodes:', nnodes
+                  write (*, '(/, a, i4, a, i9)') &
+                     ' Trouble reading point order connectivity data. Unit:', lun, '  # elements:', nelements
+                  write (*, '(a, 2i9)') ' Zone connectivity dimensions: ', size (zone%conn, 1), size (zone%conn, 2)
                   go to 99
                end if
 
@@ -1416,9 +1497,10 @@
                end if
 
                read (lun, *, iostat=ios) zone%conn
-
                if (ios /= 0) then
-                  write (*, '(/, a, i4, a, i9)') ' Trouble reading connectivity data.  Logical unit:', lun, '  # nodes:', nnodes
+                  write (*, '(/, a, i4, a, i9)') &
+                     ' Trouble reading block order connectivity data. Unit:', lun, '  # elements:', nelements
+                  write (*, '(a, 2i9)') ' Zone connectivity dimensions: ', size (zone%conn, 1), size (zone%conn, 2)
                   go to 99
                end if
 
@@ -1686,7 +1768,11 @@
                   lc = 6
                   write (centered(4:5), '(i2)') nvar;  centered(6:6) = ']'
                end if
-               write (lun, '(3a)') 'VARLOCATION=(', centered(1:lc), '=CELLCENTERED)'
+               if (numf > 1) then
+                  write (lun, '(3a)') 'VARLOCATION=(', centered(1:lc), '=CELLCENTERED)'
+               else  ! For a single function, [4-4] is not allowed -- just [4]
+                  write (lun, '(a)') 'VARLOCATION=([4]=CELLCENTERED)'
+               end if
                write (lun, '(5es16.8)') (zone%xyz(iv,1:nnodes),  iv = 1, nvertices)
                write (lun, '(5es16.8)') (zone%f(iv,1:nelements), iv = 1, numf)
 
@@ -2250,7 +2336,7 @@
          if (ios /= 0) then
             write (*, '(a, i4)')  ' vol_read:  Trouble reading zone #', iz
             write (*, '(2a)')     ' File name: ', trim (header%filename)
-            write (*, '(a, 3i5)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
+            write (*, '(a, 3i9)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
             write (*, '(a, i3)')  ' # vertices per cell:', header%nvertices
             go to 999
          end if
@@ -2313,7 +2399,7 @@
          if (ios /= 0) then
             write (*, '(a, i4)')  ' vol_write:  Trouble writing zone #', iz
             write (*, '(2a)')     ' File name: ', trim (header%filename)
-            write (*, '(a, 3i5)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
+            write (*, '(a, 3i9)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
             go to 999
          end if
 
@@ -3132,7 +3218,7 @@
          if (ios /= 0) then
             write (*, '(a, i4)')  ' nas_sf_tri_write:  Trouble writing zone #', iz
             write (*, '(2a)')     ' File name: ', trim (header%filename)
-            write (*, '(a, 3i5)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
+            write (*, '(a, 3i9)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
             go to 999
          end if
 

@@ -6,7 +6,7 @@ C     PURPOSE:
 C
 C        INTEGRATE drives a choice of numerical integration routines.
 C     Originally, selected methods were applied to one or more sets of data
-C     read from one file (stored by rows or by columns in free format).
+C     read from one file (stored by rows or by columns in free format). 
 C     Now, one dataset is treated, and it is read using the much newer
 C     table_io module at the expense of some mostly-unused features.
 C
@@ -155,7 +155,7 @@ C     Variables:
       REAL      :: AREA, CENTER, MOMENT, RANGE(0:3), TWOPI, XA, XB
 
 CCC   REAL      :: A(0:MXPTS/2), B(0:MXPTS/2), AREAS(MXPTS),
-CCC  +          :: COEFS(MXPTS,3),
+CCC  +          :: COEFS(MXPTS,3), 
 CCC  +          :: X(MXPTS+1), XNORM(MXPTS), Y(MXPTS+1), YMOM(MXPTS)
 
       REAL, ALLOCATABLE, DIMENSION (:) ::

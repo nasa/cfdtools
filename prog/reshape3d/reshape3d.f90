@@ -75,8 +75,11 @@
 !                                 results even if the transformation isn't
 !                                 really rigid because the size is changing).
 !
+!     04/06/18   DAS              Full precision output is long overdue.
+!
 !  AUTHORS (Original): David Saunders, Michael Wong,   Sterling Software/ARC, CA
 !          (Current):  David Saunders, ELORET Corp/NASA Ames Research Center, CA
+!                      Now with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -274,12 +277,12 @@
 
          case (0)   ! "Review": Display the data.
 
-            write (luncrt, '(/, (1x, i6, 1p, 3e16.7))') &
+            write (luncrt, '(/, (1x, i6, 3es24.15))') &
                (i, x(i), y(i), z(i), i = 1, min (n, ndisplay))
 
             if (n > ndisplay) then
                write (luncrt, '(a)') ' ::::::::::::::::::::::'
-               write (luncrt, '(1x, i6, 1p, 3e16.7)') &
+               write (luncrt, '(1x, i6, 3es24.15)') &
                   (i, x(i), y(i), z(i), i = max (ndisplay + 1, n - ndisplay), n)
             end if
 
@@ -483,7 +486,7 @@
             ymid = (ymin + ymax) * half
             zmid = (zmin + zmax) * half
 
-            write (luncrt, '(/, 3(3x, a, 1p, 2e17.8, e19.8, /))') &
+            write (luncrt, '(/, 3(3x, a, 2es24.15, es26.15, /))') &
                'Xmin, Xmax, Xcenter:', xmin, xmax, xmid, &
                'Ymin, Ymax, Ycenter:', ymin, ymax, ymid, &
                'Zmin, Zmax, Zcenter:', zmin, zmax, zmid
@@ -549,7 +552,7 @@
 
 800  write (luncrt, 1001)
      call opener (luncrt, 'Output file name?  EOF = quit: ', &
-        lunkbd, dataset, lunout, 'NEW')
+        lunkbd, dataset, lunout, 'UNKNOWN')
 
      if (header) then
         call reads (luncrt, 'Output title line? <CR> = same: ', &
@@ -560,7 +563,7 @@
         write (lunout, 1003, err=903) n
      end if
 
-     write (lunout, '(1p, 3e16.7)') (x(i), y(i), z(i), i = 1, n)
+     write (lunout, '(3es24.15)', err=903) (x(i), y(i), z(i), i = 1, n)
 
      deallocate (x, y, z)
      if (undo) deallocate (xorig, yorig, zorig, xlast, ylast, zlast)

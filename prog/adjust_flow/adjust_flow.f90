@@ -21,8 +21,13 @@
 !
 !     07/15/08  D.A.Saunders  ADJUST_GRID version being adapted here.
 !     07/19/12    "      "    ADJUST_FLOW adapted from ADJUST_GRID.
+!     10/03/18    "      "    Added the scaling options that were strangely
+!                             omitted initially.
+!     11/28/18    "      "    The scale factors were reverting to defaults after
+!                             block 1.
 !
 !  Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
+!                  Now with AMA, Inc. at NASA/ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -42,7 +47,7 @@
       lunfo  = 4,        &
       lunkbd = 5,        &
       luncrt = 6,        &
-      mxmenu = 14,       &
+      mxmenu = 17,       &
       halfm  = (mxmenu + 4) / 2 ! 4 here allows for -2, -1, 0, and mxmenu + 1
 
    character, parameter :: &
@@ -74,16 +79,19 @@
       '   1: Translate X',                     &
       '   2: Translate Y',                     &
       '   3: Translate Z',                     &
-      '   4: Reflect Z about the XY-plane',    &
-      '   5: Reflect X about the YZ-plane',    &
-      '   6: Reflect Y about the ZX-plane',    &
-      '   7: Switch X & Y',                    &
-      '   8: Switch Y & Z',                    &
-      '   9: Switch Z & X',                    &
-      '  10: Rotate (X,Y) about (Xc,Yc)',      &
-      '  11: Rotate (Y,Z) about (Yc,Zc)',      &
-      '  12: Rotate (Z,X) about (Zc,Xc)',      &
-      '  13: Rotate (X,Y,Z) about line PQ',    &
+      '   4: Scale X',                         &
+      '   5: Scale Y',                         &
+      '   6: Scale Z',                         &
+      '   7: Reflect Z about the XY-plane',    &
+      '   8: Reflect X about the YZ-plane',    &
+      '   9: Reflect Y about the ZX-plane',    &
+      '  10: Switch X & Y',                    &
+      '  11: Switch Y & Z',                    &
+      '  12: Switch Z & X',                    &
+      '  13: Rotate (X,Y) about (Xc,Yc)',      &
+      '  14: Rotate (Y,Z) about (Yc,Zc)',      &
+      '  15: Rotate (Z,X) about (Zc,Xc)',      &
+      '  16: Rotate (X,Y,Z) about line PQ',    &
       '  99: Done',                            &
       '                                   '/   ! Last ' ' eases display
                                                ! of menu as two columns.
@@ -197,10 +205,7 @@
             nk  = block(ib)%nk
             n   = ni*nj*nk
 
-            cr  = .false. ! TRANSFORM may want to return to the menu
-            eof = .false.
-
-!           Internal procedure efficient for x/y/z, less so for f:
+!           Internal procedure is efficient for x/y/z, less so for f:
 
             call transform (ib, ni, nj, nk, nf, n, &
                             block(ib)%x, block(ib)%y, block(ib)%z, block(ib)%q)
@@ -318,13 +323,15 @@
 
       integer    :: i, j, k
       real       :: temp
-      real, save :: angle, p, px, py, pz, q, qx, qy, qz, shift
+      real, save :: angle, p, px, py, pz, q, qx, qy, qz, scale, shift
       logical    :: prompt
       real, allocatable, dimension (:,:,:) :: vx, vy, vz
 
 !     Execution:
 
       prompt = ib == 1
+      cr  = .false.
+      eof = .false.
 
       select case (choice)
 
@@ -358,22 +365,61 @@
 
          z(:) = z(:) + shift
 
-      case (4) ! "Reflect Z about the XY-plane":
+      case (4) ! "Scale X and u"
+
+         if (prompt) then
+            scale = -1.
+            call readr (luncrt, '   Enter X scale (+ or -; <cr>=-1.): ', &
+                        lunkbd, scale, cr, eof)
+            if (eof) go to 999
+            cr = .false.  ! Because other options can't work if cr = T
+         end if
+
+         x(:) = x(:)*scale
+         f(ns+1,:,:,:) = f(ns+1,:,:,:)*scale
+
+      case (5) ! "Scale Y and v"
+
+         if (prompt) then
+            scale = -1.
+            call readr (luncrt, '   Enter Y scale (+ or -; <cr>=-1.): ', &
+                        lunkbd, scale, cr, eof)
+            if (eof) go to 999
+            cr = .false.
+         end if
+
+         y(:) = y(:)*scale 
+         f(ns+2,:,:,:) = f(ns+2,:,:,:)*scale
+
+      case (6) ! "Scale Z and w"
+
+         if (prompt) then
+            scale = -1.
+            call readr (luncrt, '   Enter Z scale (+ or -; <cr>=-1.): ', &
+                        lunkbd, scale, cr, eof)
+            if (eof) go to 999
+            cr = .false.
+         end if
+
+         z(:) = z(:)*scale
+         f(ns+3,:,:,:) = f(ns+3,:,:,:)*scale
+
+      case (7) ! "Reflect Z about the XY-plane":
 
          z(:) = -z(:)
          f(ns+3,:,:,:) = -f(ns+3,:,:,:)
 
-      case (5) ! "Reflect X about the YZ-plane":
+      case (8) ! "Reflect X about the YZ-plane":
 
          x(:) = -x(:)
          f(ns+1,:,:,:) = -f(ns+1,:,:,:)
 
-      case (6) ! "Reflect Y about the ZX-plane":
+      case (9) ! "Reflect Y about the ZX-plane":
 
          y(:) = -y(:)
          f(ns+2,:,:,:) = -f(ns+2,:,:,:)
 
-      case (7) ! "Switch X and Y":
+      case (10) ! "Switch X and Y":
 
          do i = 1, n
             temp = x(i)
@@ -391,7 +437,7 @@
             end do
          end do
 
-      case (8) ! "Switch Y and Z":
+      case (11) ! "Switch Y and Z":
 
          do i = 1, n
             temp = y(i)
@@ -409,7 +455,7 @@
             end do
          end do
 
-      case (9) ! "Switch Z and X":
+      case (12) ! "Switch Z and X":
 
          do i = 1, n
             temp = x(i)
@@ -427,7 +473,7 @@
             end do
          end do
 
-      case (10) ! "Rotate (X,Y)":
+      case (13) ! "Rotate (X,Y)":
 
          if (prompt) then
             call readr (luncrt, '   Degrees anticlockwise: ', &
@@ -449,7 +495,7 @@
          f(ns+2,:,:,:) = vy(:,:,:)
          deallocate (vx, vy)
 
-      case (11) ! "Rotate (Y,Z)":
+      case (14) ! "Rotate (Y,Z)":
 
          if (prompt) then
             call readr (luncrt, '   Degrees anticlockwise: ', &
@@ -471,7 +517,7 @@
          f(ns+3,:,:,:) = vz(:,:,:)
          deallocate (vy, vz)
 
-      case (12) ! "Rotate (Z,X)":
+      case (15) ! "Rotate (Z,X)":
 
          if (prompt) then
             call readr (luncrt, '   Degrees anticlockwise: ', &
@@ -493,7 +539,7 @@
          f(ns+3,:,:,:) = vz(:,:,:)
          deallocate (vx, vz)
 
-      case (13) ! "Rotate (X,Y,Z) about line joining P and Q"
+      case (16) ! "Rotate (X,Y,Z) about line joining P and Q"
 
          if (prompt) then
             call readr (luncrt, '   Degrees (RH rule; thumb P -> Q): ', &

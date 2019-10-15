@@ -30,7 +30,25 @@
 !       Therefore, the program endeavors to detect an input left half, and
 !       stops early if necessary.
 !
-!  Further details:
+!     (Later:)  This version allows for suppressing lines to be processed by a
+!     radiation solver as might be needed for a radiometer with a viewing cone
+!     angle of less than 90 degrees.  The strategy adopted is this:
+!
+!     > Look for an optional cone angle with the body pt. x/y/z coordinates.
+!     > Calculate all hemisphere lines and save all files as for the 90 degree
+!       case.  (Suppressing parts of hemispherical surface files is not
+!       practical.)
+!     > Count the number of lines of sight (hemisphere vertices) within any
+!       cone angle < 90, and write that many to an additional PLOT3D-type file
+!       named cone.<angle>.<BP #>.lines.g file.
+!     > Companion utility NEQAIR_DATA will process the lines in the latter file,
+!       numbered 1:m, say. These LOS-n lines are then processed by NEQAIR, each
+!       in its own /LINE-n subdirectory (n = 1:m).
+!     > NEQAIR_INTEGRATION uses the same cone-angle calculation to read NEQAIR
+!       results for these lines only and enter zero values for the rest before
+!       integrating over all cells of the underlying hemisphere quadrants.
+!
+!  Further details (cone angle = 90 deg case):
 !
 !     For radiative heat flux calculations on an atmospheric entry vehicle, at
 !     a specified body surface point, the "right" answer should account for all
@@ -219,6 +237,10 @@
 !     12/16/16    "     "     Josh Monk requested changing 4x40 L to 8x40L.
 !                             Try that in the hope of not hurting less extreme
 !                             cases.
+!     02/14/18    "     "     Started arranging to suppress unneeded lines for
+!                             the case of radiometers with some view cone angle
+!                             less than 90 deg.  Enter the needed angle on the
+!                             body point x/y/z line.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
 !           Now with ERC, Inc. at  NASA ARC.
@@ -290,6 +312,7 @@
       un, v1, v2              ! For unit normals and rotation axis end pts.
 
    real, allocatable, dimension (:) :: &
+      cone_angle,                      & ! 90 or missing => full hemisphere
       tline, xline, yline, zline,      & ! For one radial volume grid line
       tnorm
 
@@ -297,10 +320,10 @@
       pq, xyz                 ! (p,q)s & (x,y,z)s of list of surface points
 
    logical :: &
-      ascii, cell_centered, formatted, indices, uniform, yeq0
+      cell_centered, formatted, full_90, indices, uniform, yeq0
 
    character :: &
-      answer*1, buffer*64, identifier*64
+      answer*1, identifier*64
 
    type (grid_type), pointer, dimension (:) :: &
       inner_surface, outer_surface, radial_lines, volume_grid
@@ -318,40 +341,11 @@
       ' # hemisphere points, pole to equator, > 0: '
    read (lunkbd, *) ne
 
-!  Read the list of target body points, indices or coordinates:
-!  ------------------------------------------------------------
+!  Read the target body point indices or coordinates [& cone angles?]:
+!  -------------------------------------------------------------------
 
-   ascii = true  ! Can't pass a constant as an inout argument.
-
-   call file_prompt (lunpoints, 0, 'list of surface points', 'old', false,  &
-                     ascii, ios)
+   call get_bp_data ()
    if (ios /= 0) go to 99
-
-   ntargets = 0
-   do ! Count the target points till EOF
-      read (lunpoints, '(a)', iostat=ios) buffer ! We can look for '.' below
-      if (ios /= 0) exit
-      ntargets = ntargets + 1
-   end do
-   rewind (lunpoints)
-
-   indices = index (buffer, '.') == 0
-
-   write (luncrt, '(/, a, i4)') ' # target points specified: ', ntargets
-   write (luncrt, '(a, l1)') ' indices specified? ', indices
-
-   allocate (nij(3,ntargets), xyz(3,ntargets), pq(2,ntargets))
-
-   if (indices) then
-      do n = 1, ntargets ! Allow for trailing comments
-         read (lunpoints, *) nij(:,n)
-      end do
-   else
-      do n = 1, ntargets
-         read (lunpoints, *) xyz(:,n)
-      end do
-   end if
-   close (lunpoints)
 
 !  Read the volume grid:
 !  ---------------------
@@ -761,6 +755,12 @@
 
       call xyz_write (lunout4, true, nlines, radial_lines, ios)
 
+      if (cone_angle(ibp) < 90.) call save_cone_only ()  ! Reduced set of lines
+
+      do i = 1, nlines
+         deallocate (radial_lines(i)%x, radial_lines(i)%y, radial_lines(i)%z)
+      end do
+
       deallocate (radial_lines)
 
       dmax = sqrt (dmax);  dmean = dmean / real (nlines)
@@ -780,6 +780,77 @@
 !  -----------------------------------------------------
 
    contains
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine get_bp_data ()  ! The body pt. file may include cone angles now
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      integer :: lbuf, nitems
+      logical :: ascii
+      character (3)  :: seps
+      character (64) :: buffer
+
+!     Execution:
+
+      ascii = true  ! Can't pass a constant as an inout argument.
+
+      call file_prompt (lunpoints, 0, 'body point x/y/z[/cone angle]', 'old', &
+                        false, ascii, ios)
+      if (ios /= 0) go to 99
+
+      ntargets = 0
+      do ! Count the target points till EOF
+         read (lunpoints, '(a)', iostat=ios) buffer ! We can look for '.' below
+         if (ios /= 0) exit
+         ntargets = ntargets + 1
+      end do
+
+      write (luncrt, '(/, a, i4)') ' # target points specified: ', ntargets
+
+      allocate (nij(3,ntargets), xyz(3,ntargets), pq(2,ntargets), &
+                cone_angle(ntargets))
+
+!     Assume the user doesn't mix indices with cone angles that include '.':
+
+      lbuf = index (buffer, '!') - 1  ! Avoid counting comment tokens
+      if (lbuf < 0) lbuf = len_trim (buffer)
+
+      indices =  index (buffer(1:lbuf), '.') == 0
+      seps    = ' ,' // char (9)  ! Space, comma, or tab
+
+      call token_count (buffer(1:lbuf), seps, nitems)  ! Should be 3 or 4
+
+      write (luncrt, '(a, l1)') ' Body point indices specified? ', indices
+      if (nitems == 3) then
+         write (luncrt, '(a)') ' Not expecting cone angle with BP inputs.'
+      else
+         write (luncrt, '(a)') ' Expecting cone angle with BP inputs.'
+      end if
+
+      rewind (lunpoints)
+      cone_angle(:) = 90.
+      if (indices) then
+         do n = 1, ntargets ! Allow for trailing comments
+            if (nitems == 3) then
+               read (lunpoints, *) nij(:,n)
+            else
+               read (lunpoints, *) nij(:,n), cone_angle(n)
+            end if
+         end do
+      else
+         do n = 1, ntargets
+            if (nitems == 3) then
+               read (lunpoints, *) xyz(:,n)
+            else
+               read (lunpoints, *) xyz(:,n), cone_angle(n)
+            end if
+         end do
+      end if
+      close (lunpoints)
+      ios = 0
+99    return
+
+      end subroutine get_bp_data
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
@@ -914,8 +985,8 @@
 
       tl(2) = min (tl(2), 2.0*data_range/total)  ! tl(1), tl(2) are normalized
 
-      call intsec6 (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl, &
-                    tl, lcs_method, iquad, p, q, t, xyz_interp, dsqmin)
+      call intsec6_2pt (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl, &
+                        tl, lcs_method, iquad, p, q, t, xyz_interp, dsqmin)
 
 !!!   write (luncrt, '(a, 2i4, 4i10)') &
 !!!      ' vertex, iquad, conn(:,iquad):', nn, iquad, conn(:,iquad)
@@ -967,5 +1038,67 @@
       end do
 
       end subroutine intersect_line
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine save_cone_only ()  ! Suppress lines outside the cone angle
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      integer :: i, ncone, nk
+      logical, allocatable :: keep(:)
+      real :: angle, vnormal(3), v2(3)
+      type (grid_type), pointer, dimension (:) :: cone_lines
+      character (64) :: filename
+
+!     Execution:
+
+      filename(1:11)  = 'cone.xx.xx.'
+      write (filename(6:10), '(f5.2)') cone_angle(ibp)
+      filename(12:)   = tri_header%filename
+      open (lunout4, file=filename, status='unknown')
+
+      nk = radial_lines(1)%nk
+      vnormal(1) = radial_lines(1)%x(1,1,nk) - radial_lines(1)%x(1,1,1)
+      vnormal(2) = radial_lines(1)%y(1,1,nk) - radial_lines(1)%y(1,1,1)
+      vnormal(3) = radial_lines(1)%z(1,1,nk) - radial_lines(1)%z(1,1,1)
+      allocate (keep(nlines))
+      keep(1)  = true
+      keep(2:) = false
+
+      ncone = 1
+      do i = 2, nlines
+         v2(1) = radial_lines(i)%x(1,1,nk) - radial_lines(1)%x(1,1,1)
+         v2(2) = radial_lines(i)%y(1,1,nk) - radial_lines(1)%y(1,1,1)
+         v2(3) = radial_lines(i)%z(1,1,nk) - radial_lines(1)%z(1,1,1)
+         call angle_between_vectors (vnormal, v2, angle)
+         if (angle > cone_angle(ibp)) cycle
+            ncone = ncone + 1
+            keep(i) = true
+      end do
+
+      allocate (cone_lines(ncone))
+      cone_lines(:)%ni = 1
+      cone_lines(:)%nj = 1
+      cone_lines(:)%nk = nk
+
+      ncone = 0
+      do i = 1, nlines
+         if (.not. keep(i)) cycle
+            ncone = ncone + 1
+            allocate (cone_lines(ncone)%x(1,1,nk), &
+                      cone_lines(ncone)%y(1,1,nk), &
+                      cone_lines(ncone)%z(1,1,nk))
+            cone_lines(ncone)%x(:,:,:) = radial_lines(i)%x(:,:,:)
+            cone_lines(ncone)%y(:,:,:) = radial_lines(i)%y(:,:,:)
+            cone_lines(ncone)%z(:,:,:) = radial_lines(i)%z(:,:,:)
+      end do
+
+      call xyz_write (lunout4, true, ncone, cone_lines, ios)
+
+      do i = 1, ncone
+         deallocate (cone_lines(i)%x, cone_lines(i)%y, cone_lines(i)%z)
+      end do
+      deallocate (keep, cone_lines)
+
+      end subroutine save_cone_only
 
    end program hemispheres_of_sight

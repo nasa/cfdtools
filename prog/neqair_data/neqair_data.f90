@@ -2,7 +2,17 @@
 !
    program neqair_data
 !
-!  Description:
+!  Version Description:
+!
+!     This version of NEQAIR_DATA can write line-of-sight (LOS) data in both the
+!  original rigid format read by NEQAIR versions up to and including v14 and the
+!  simpler column-oriented format handled from NEQAIR v15 on.  Both data formats
+!  involve a sample.LOS.dat file read here that indicates the species names.  If
+!  a sample file is found with a NEQAIR version number on line 1, then the later
+!  data format is indicated. The sample file is transcribed as the header of all
+!  output LOS data files in either case.
+!
+!  Original Preamble:
 !
 !     Earlier utilities LINES_OF_SIGHT[_2D] and FLOW_INTERP[_2D] typically
 !  produce multiple lines of sight and flow-field data interpolated to each
@@ -24,13 +34,13 @@
 !     [Later:  This version has the option, prompted by meteor studies, to
 !  output line-of-sight data in the direction away from the body.]
 !
-!     This program retrieves the PLOT3D-format files (e.g., los.g & los.f) and
-!  writes a separate file in NEQAIR's LOS.dat format for each line of sight it
-!  finds, into the working directory.  These output file names contain line
-!  numbers, such as LOS-1.dat.  A script can then run NEQAIR on some range m:n
-!  of line numbers, by copying or linking to input files and writing radiation
-!  results for each line one level down in directories /LINE-m through /LINE-n
-!  (say).
+!     This program retrieves the PLOT3D-format files (e.g., los.g & los.f in
+!  SI units) and writes a separate file in NEQAIR's LOS.dat format for each
+!  line of sight it finds, into the working directory. These output file names
+!  contain line numbers, such as LOS-1.dat.  A script can then run NEQAIR on
+!  some range m:n of line numbers, by copying or linking to input files and
+!  writing radiation results for each line one level down in directories
+!  /LINE-m through /LINE-n (say).
 !
 !     The current version now offers options to redistribute the line-of-sight
 !  data to a [presumably smaller] different number of points in order to speed
@@ -50,11 +60,19 @@
 !  need to be suppressed to avoid NEQAIR trouble with low temperatures, and the
 !  line data need to be output in the shock-to-body direction.
 !
+!               The following paragraph is NEQAIR V14-specific:
+!
 !     The function file should contain T, Tr, Tv, Te (K) and the species number
 !  densities (m^-3).  Note that DPLR's postprocessor does NOT extract Tr unless
 !  irot = 1.  BE SURE THAT THERE ARE 4 TEMPERATURES IN THE FUNCTION FILE.
 !  Common usage with 2-temperature data (ivib = 1 in DPLR) means reading and
 !  writing T, T, Tv, Tv for these 4 temperatures.
+!
+!               NEQAIR V15 differences:
+!
+!     NEQAIR V15[+] handles variables numbers of temperatures.  The number of
+!  species names beginning with T determines the number of temperatures that
+!  should be in the input function file in the indicated order.
 !
 !     One line of sight's worth of data (one input block) is read at a time.
 !  The header of a file named sample.LOS.dat file in the working directory is
@@ -64,7 +82,40 @@
 !  independent of the number and order of the species, as long as the file
 !  sample.LOS.dat lists them in the header in the correct order.
 !
-!     See an accompanying example of sample.LOS.dat.
+!  Minimum Contents of File sample.LOS.dat:
+!
+!     V14 or earlier:
+!
+!        >  A line of asterisks precedes the species section.
+!        >  The species names may appear in any order.
+!        >  Two lines of hyphens must appear.  The last line is all hyphens.
+!        >  Replace the comments in column 1 below appropriately.
+!
+!*******************************************************************************
+!        aaaaaaaa       aaaaaaaa       aaaaaaaa       aaaaaaaa    (2x,(7x,a8))
+!        CO2            CO             N2             O2       :Species Symbols.
+!        NO             C              N              O
+!
+!-------------------------------------------------------------------------------
+!  no.   x,cm   total partcc       t        tr        tv        te  (i5,f8.3,
+!iiii rrrrrrr rrrrrrrrrrrrrr rrrrrrrrr rrrrrrrrr rrrrrrrrr rrrrrrrrre15.6,4f10.1
+!      rrrrrrrrrrrrrr rrrrrrrrrrrrrr rrrrrrrrrrrrrr rrrrrrrrrrrrr   (6x,4e15.6)
+!      Include these 9 lines (from --- to --- lines) for first grid point only!!
+!      End each grid point entry with a blank line.
+!      End data file with a line of zero's as shown on the next line.
+!   0     0.0            0.0       0.0       0.0       0.0       0.0
+!-------------------------------------------------------------------------------
+!
+!     V15 sample.LOS.dat Format:
+!
+!        >  NEQAIR expects a version number on line 1.
+!        >  Descriptive lines follow, with # comments in column 1.
+!        >  The last line (no # comment) should contain species names preceded
+!           by titles for data point number n, distance x (cm), and ntot (the
+!           total number density, cm^-3, which is determined and written here
+!           and is NOT expected in the input function file).
+!
+!  Point Redistribution Options:
 !
 !     If the option to reduce the number of points along each line of sight is
 !  employed, this is done based on the magnitude of the distribution of the
@@ -166,23 +217,25 @@
 !                             the order required for NEQAIR to integrate away
 !                             from the body rather than towards it.  This is
 !                             required for meteor studies, where the lines are
-!                             probably normal to the X axis, and a "light
+!                             probably parallel to the X axis, and a "light
 !                             curve" is sought (requiring further processing
 !                             of the NEQAIR results).
 !     06/04/15    "     "     The redistribution prompt was missing the 'c'
 !                             option; no real change.
-!     11/05/16    "     "     Brett Cruden recommended putting free stream (or
-!                             low) temperature at the outermost point in order
-!                             to run NEQAIR safely in black body mode on all
-!                             lines of sight whether they encounter the body
-!                             (and are truncated by the "adjust_hemisphere_LOS"
-!                             step--see /HEMISPHERE_LINES_OF_SIGHT) or not.
-!                             HOLD UP:  Dinesh says we need a radiance, not a
-!                             wall temperature, to start lines that have
-!                             been truncated at the wall.
+!     03/04/19    "     "     Started option to output LOS data in the column-
+!                             oriented format handled by NEQAIR v15.  The legacy
+!                             format expected by V14 and its predecessors is
+!                             retained as an option, and sample.LOS.dat is used
+!                             to determine the kind of output produced.
+!     03/22/19    "     "     Finished dual output format options and testing.
+!     04/03/19    "     "     A two-temperature/8 species case encountered an
+!                             ambiguity between variable names n and Na in the
+!                             column-oriented data format of NEQAIR v15.  Also,
+!                             the index for Tv is not necessarily 3 for this
+!                             data format choice.
 !
-!  Author: David Saunders, ERC, Inc./NASA Ames Research Center, Moffett Field/CA
-!                 Now with AMA, Inc. at ARC.
+!  Author: David Saunders, ERC Inc./NASA Ames Research Center, Moffett Field/CA
+!          Later with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -197,7 +250,6 @@
 !  Local constants:
 
    integer, parameter :: &
-      iTv    = 3,        &    ! Index of Tv in the function data
       lunf   = 1,        &    ! Input LOS function file matching input grid
       lung   = 2,        &    ! Input grid file (one LOS per block, 2D|3D)
       lunh   = 3,        &    ! File 'sample.LOS.dat' with header to transcribe
@@ -212,8 +264,10 @@
       Nmin     = 1000.,  &    ! Minimum number density allowed (any species)
       Tmin     = 500.         ! For suppressing points outside the shock via Tv
 
-   logical, parameter :: &
-      normalize = .false.
+   logical, parameter ::   &
+      false     = .false., &
+      normalize = false,   &
+      true      = .true.
 
    character, parameter :: &
       format*11 = 'unformatted'
@@ -221,18 +275,23 @@
 !  Local variables:
 
    integer :: &
-      i, i1, ilast, iline, ios, ir, is, is0, ismooth, length, most_pts, nf, &
-      nlines, nnew, npts
+      i, i1, ilast, iline, ios, ir, is, is0, ismooth, ispecies1, iTv, length, &
+      most_pts, nf, nlines, nnew, npts, nspecies, num_T
 
    real :: &
-      power, total, total_N
+      arc, power, total, total_N
 
    logical :: &
       cr, curvature, eof, formatted_f, formatted_g, gradient, hybrid, &
-      redistribute, relative, thin2x, towards_body, twod
+      output_columns, output_n, output_ntot, redistribute, relative, thin2x, &
+      towards_body, twod
 
-   character :: &
-      answer*1, filename*64
+   character (1) :: &
+      answer
+   character (32) :: &
+      run_time_format
+   character (128) :: &
+      filename
 
    real, allocatable, dimension (:) :: &
       x, y, z, xnew, ynew, znew, sc, sv
@@ -249,6 +308,12 @@
          'You need file ', trim (filename), ' with species names, etc., in it.'
       go to 99  ! Single stop preference
    end if
+
+!  This sample file determines the output LOS format.  Check its first line:
+
+   read (lunh, '(a)') filename  ! Convenient buffer
+   rewind (lunh)
+   output_columns = filename(1:4) /= '****' ! Easier than isolating a version #
 
 !  Prompt for the input multiblock grid and function files of LOS data:
 
@@ -288,7 +353,7 @@
    if (.not. twod) then
       do i = 1, nlines
          if (input_los(i)%ni /= 1 .or. input_los(i)%nj /= 1 .or. &
-             input_los(i)%nk <= 1) twod = .true.
+             input_los(i)%nk <= 1) twod = true
       end do
    end if
 
@@ -308,8 +373,8 @@
    end if
    if (ios /= 0) go to 99
 
-   write (luncrt, '(a, i7, i4)') ' # lines of sight and # species found:', &
-      nlines, nf - 4
+   write (luncrt, '(a, i7, i4)') ' # lines of sight and # functions found:', &
+      nlines, nf
    write (luncrt, '(a, i5)') ' # points found on the first line of sight:', npts
 
    most_pts = 0  ! For picking # processors if NEQAIR is parallelized
@@ -352,7 +417,7 @@
 
 !  Option to have NEQAIR integrate away from the body instead of towards it:
 
-   towards_body = .true.
+   towards_body = true
    call ready (luncrt, &
               'Should NEQAIR integrate towards the body? [y|n; <CR> = yes]: ', &
                lunkbd, towards_body, cr, eof)
@@ -372,7 +437,8 @@
 
       open (lunout, file=filename(1:length), status='unknown', iostat=ios)
 
-      call transcribe_los_header ()  ! Transfer sample LOS.dat header & rewind
+      call transcribe_los_header ()  ! Transcribe sample LOS.dat header & rewind
+      if (ios /= 0) go to 99         ! Species count mismatch?
 
 !     Input lines of sight are dimensioned (1,nj) or (1,1,nk), but reversing
 !     the order is preferable for the I/O of normal cases (towards the body):
@@ -448,7 +514,7 @@
          if (input_los(iline)%q(iTv,i,1,1) >= Tmin) exit
       end do
 
-      is0 = npts - ilast + 1         ! 
+      is0 = npts - ilast + 1
       most_pts = max (most_pts, ilast)
 
 !     Make the arc lengths correspond to cell centers at which the function
@@ -464,20 +530,53 @@
 
       if (towards_body) then
 
-!       The last arc length is taken by NEQAIR to be the total arc length,
-!       so we subtract the shock arc length from all arc lengths upon output,
-!       meaning they start at zero.
+!        The last arc length is taken by NEQAIR (14-?) to be total arc length,
+!        so we subtract the shock arc length from all arc lengths upon output,
+!        meaning they start at zero.
 
-         do i = is0, npts
-            ir = npts + 1 - i
-            is = i - is0 + 1
-            input_los(iline)%q(5:,ir,1,1) = &              ! 5 <-> 1st # density
-               max (cm_to_cc*input_los(iline)%q(5:,ir,1,1), Nmin)
-            total_N   = sum (input_los(iline)%q(5:,ir,1,1))
-            write (lunout, '(i5, 2es15.7, 4f10.1, /, (5x, 4es15.7))') &
-               is, sc(i) - sc(is0), total_N, input_los(iline)%q(:,ir,1,1)
-            write (lunout, '(a)')
-         end do
+         if (output_columns) then  ! Optional outputs depend on header titles
+
+            do i = is0, npts
+               ir  = npts + 1 - i
+               is  = i - is0 + 1
+               input_los(iline)%q(ispecies1:,ir,1,1) = &
+                  max (cm_to_cc*input_los(iline)%q(ispecies1:,ir,1,1), Nmin)
+               total_N  =  sum (input_los(iline)%q(ispecies1:,ir,1,1))
+               arc = sc(i) - sc(is0)
+               if (output_n) then
+                  if (output_ntot) then
+                     write (lunout, run_time_format) &
+                        is, arc, total_n, input_los(iline)%q(:,ir,1,1)
+                  else
+                     write (lunout, run_time_format) &
+                        is, arc, input_los(iline)%q(:,ir,1,1)
+                  end if
+               else
+                  if (output_ntot) then
+                     write (lunout, run_time_format) &
+                        arc, total_n, input_los(iline)%q(:,ir,1,1)
+                  else
+                     write (lunout, run_time_format) &
+                        arc, input_los(iline)%q(:,ir,1,1)
+                  end if
+               end if
+            end do
+
+         else  ! Legacy line-oriented LOS format
+
+            do i = is0, npts
+               ir = npts + 1 - i
+               is = i - is0 + 1
+               input_los(iline)%q(ispecies1:,ir,1,1) = &
+                  max (cm_to_cc*input_los(iline)%q(ispecies1:,ir,1,1), Nmin)
+               total_N  =  sum (input_los(iline)%q(ispecies1:,ir,1,1))
+               write (lunout, '(i5, 2es15.7, 4f10.1, /, (5x, 4es15.7))') &
+                  is, sc(i) - sc(is0), total_N, input_los(iline)%q(:,ir,1,1)
+               write (lunout, '(a)')
+            end do
+            write (lunout, '(a)') '    0  0.0  0.0  0.0  0.0  0.0  0.0'
+
+         end if
 
       else  ! Meteor case?  We want NEQAIR to integrate away from the body
 
@@ -486,18 +585,47 @@
             sv(i) = total - sc(npts - i + 1)
          end do
 
-         do i = 1, npts - is0 + 1
-            input_los(iline)%q(5:,i,1,1) = &               ! 5 <-> 1st # density
-               max (cm_to_cc*input_los(iline)%q(5:,i,1,1), Nmin)
-            total_N  =  sum (input_los(iline)%q(5:,i,1,1))
-            write (lunout, '(i5, 2es15.7, 4f10.1, /, (5x, 4es15.7))') &
-               i, sv(i), total_N, input_los(iline)%q(:,i,1,1)
-            write (lunout, '(a)')
-         end do
+         if (output_columns) then
+
+            do i = 1, npts - is0 + 1
+               input_los(iline)%q(ispecies1:,i,1,1) = &
+                  max (cm_to_cc*input_los(iline)%q(ispecies1:,i,1,1), Nmin)
+               total_N  =  sum (input_los(iline)%q(ispecies1:,i,1,1))
+               if (output_n) then
+                  if (output_ntot) then
+                     write (lunout, run_time_format) &
+                        i, sv(i), total_n, input_los(iline)%q(:,i,1,1)
+                  else
+                     write (lunout, run_time_format) &
+                        i, sv(i), input_los(iline)%q(:,i,1,1)
+                  end if
+               else
+                  if (output_ntot) then
+                     write (lunout, run_time_format) &
+                        sv(i), total_n, input_los(iline)%q(:,i,1,1)
+                  else
+                     write (lunout, run_time_format) &
+                        sv(i), input_los(iline)%q(:,i,1,1)
+                  end if
+               end if
+            end do
+
+         else  ! Line-oriented output
+
+            do i = 1, npts - is0 + 1
+               input_los(iline)%q(ispecies1:,i,1,1) = &    ! 5 <-> 1st # density
+                  max (cm_to_cc*input_los(iline)%q(ispecies1:,i,1,1), Nmin)
+               total_N  =  sum (input_los(iline)%q(ispecies1:,i,1,1))
+               write (lunout, '(i5, 2es15.7, 4f10.1, /, (5x, 4es15.7))') &
+                  i, sv(i), total_N, input_los(iline)%q(:,i,1,1)
+               write (lunout, '(a)')
+            end do
+            write (lunout, '(a)') '    0  0.0  0.0  0.0  0.0  0.0  0.0'
+
+         end if
 
       end if
 
-      write (lunout, '(a)') '    0  0.0  0.0  0.0  0.0  0.0  0.0'
       close (lunout)
 
       deallocate (input_los(iline)%x, input_los(iline)%y, x, y, sv, sc)
@@ -675,7 +803,7 @@
          if (twod) then
             write (lunplot, '(a)') '# Output x, y, s, f'
             write (lunplot, '(4es16.8)') &
-               (xnew(n), ynew(n), snew(n), fnew(n,iTv), n = 1, nnew) 
+               (xnew(n), ynew(n), snew(n), fnew(n,iTv), n = 1, nnew)
          else
             write (lunplot, '(a)') '# Output x, y, z, s, f'
             write (lunplot, '(5es16.8)') &
@@ -725,7 +853,7 @@
       integer, intent (in)  :: nnew                 ! Desired point count
       real,    intent (out) :: snew(nnew)           ! Redistributed arc lengths
       real,    intent (out), dimension (nnew) :: &
-                                 xnew, ynew, znew   ! For diagnostics only  
+                                 xnew, ynew, znew   ! For diagnostics only
 !     Local constants:
 
       real, parameter :: one = 1.
@@ -766,7 +894,7 @@
       ier = -99  ! Kludge to normalize both "x" and "y" (i.e., sv and f)
 
       call curvdis2 (ncurv, sv(icurv), f(icurv), nred, power, ismooth, &
-                     luncrt, .true., snew(nshock), snew(nshock), ier)
+                     luncrt, true, snew(nshock), snew(nshock), ier)
 
 !     These snew values are along the (sv,T) curve, not along the LOS arc.
 !     Furthermore, they are badly scaled (having been denormalized).
@@ -780,7 +908,7 @@
                      scale, shift, ier)
       call usescale ('N', 2, ncurv, svnorm, fnorm, fnorm, scale, shift, ier)
 
-      call chords2d (ncurv, svnorm, fnorm, .false., total, arcs)
+      call chords2d (ncurv, svnorm, fnorm, false, total, arcs)
 
 !     Retrieve the normalized form of the redistributed arcs:
 
@@ -808,16 +936,105 @@
       subroutine transcribe_los_header ()  ! From 'sample.LOS.dat'
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      integer :: ndashed
-      character (80) :: line
+      integer, parameter :: max_length = 512  ! Allow for many species
+      integer, parameter :: num_titles = 10   ! Needs to include all possible Ts
+      character (1), parameter :: blank = ' '
 
-      ndashed = 0
+      integer :: i, l, ndashed, nheader, num_first
+      character (3) :: seps
+      character (4) :: first_titles(num_titles) ! Are n and/or ntot present?
+      character (max_length) :: line
 
-      do while (ndashed < 2) ! Until the 2nd '-----' line has been transcribed
-         read (lunh, '(a)') line
-         write (lunout, '(a)') trim (line)
-         if (line(1:1) == '-') ndashed = ndashed + 1
-      end do 
+      if (output_columns) then  ! NEQAIR 15+
+
+!        Transcribe down to and including the first non-comment (titles) line
+         do
+           read (lunh, '(a)') line;  l = len_trim (line)
+           write (lunout, '(a)') line(1:l)
+           if (line(1:1) /= '#') then
+             if (l > 20) exit ! Handle a possible blank line preceding titles
+           end if
+         end do
+
+!        For the first line of sight only, determine the data contents:
+
+         if (iline == 1) then  ! Is n and/or ntot to be output? Also, count Ts.
+
+           seps = ' , '; seps(3:3) = char (9)  ! Tab
+           call token_count (line(1:l), seps, nheader)  ! Count all titles
+
+           write (luncrt, '(a, i4)') '# variable names found: ', nheader
+
+!          Tokenize leading titles to look for n, ntot and various temperatures:
+
+           num_first = num_titles
+           call tokens (line(1:l), num_first, first_titles)
+           output_n = false;  output_ntot = false;  num_T = 0
+
+           do i = 1, num_first  ! TOKENS converts to upper case
+             l = len_trim (first_titles(i))
+             if (l == 1 .and. first_titles(i)(1:1) == 'N')    output_n    = true
+             if (l == 4 .and. first_titles(i)(1:4) == 'NTOT') output_ntot = true
+             if (first_titles(i)(1:1) == 'T') num_T = num_T + 1
+             if (l == 2 .and. first_titles(i)(1:2) == 'TV')   iTv = i
+           end do
+
+!          Handle a possible clash between 'n' (line number) and 'N' (nitrogen):
+
+           if (output_n) then   ! This may have been because of N, not n
+               output_n = false
+               do i = 1, num_T + 1  ! n should precede a T if it's there
+                 l = len_trim (first_titles(i))
+                 if (l == 1 .and. first_titles(i)(1:1) == 'N') output_n = true
+               end do
+           end if
+
+!          iTv needs to point into the function file, not the variable name list:
+
+           iTv = iTv -1  ! For arc length
+           if (output_n)    iTv = iTv - 1
+           if (output_ntot) iTv = iTv - 1
+
+!          Trap mismatched species counts:
+
+           nspecies = nheader - num_T - 1  ! Don't count arc length
+           if (output_n)    nspecies = nspecies - 1
+           if (output_ntot) nspecies = nspecies - 1
+           if (nspecies + num_T /= nf) then
+             write (luncrt, '(a, 3i6)') &
+               '*** Species mismatch? nf, # Ts, nspecies:', nf, num_T, nspecies
+             l = len_trim (line)
+             write (luncrt, '(a)') line(1:l)
+             write (luncrt, '(a, l1)') 'output_n?    ', output_n, &
+                                       'output_nTot? ', output_ntot
+             ios = -1
+           end if
+           ispecies1 = num_T + 1  ! Index into input function data
+
+           run_time_format = '(i4, 2es15.8, nes15.8, nnes15.8)'
+!                             12345678901234567890123456789012
+           if (.not. output_n)    run_time_format(2:4) = blank
+           if (.not. output_ntot) run_time_format(6:6) = blank
+           write (run_time_format(15:15), '(i1)') num_T
+           write (run_time_format(24:25), '(i2)') nspecies
+        end if
+
+      else  ! Legacy data format, NEQAIR 14 and earlier
+
+        iTv = 3   ! Because T, T, Tv, Tv are stipulated in the function file
+        ios = 0;  ndashed = 0
+        do while (ndashed < 2) ! Until the 2nd '-----' line has been transcribed
+          read (lunh, '(a)') line
+          write (lunout, '(a)') trim (line)
+          if (line(1:1) == '-') ndashed = ndashed + 1
+        end do
+        if (ndashed /= 2) then
+          write (luncrt, '(a)') '*** Missing asterisk lines in sample header?'
+          ios = -1
+        end if
+        ispecies1 = 5  ! Index of first # density; 4 temperatures are assumed
+
+      end if
 
       rewind (lunh)  ! For the next call
 

@@ -5,7 +5,7 @@ target_link_libraries(nozzle_throat_conditions
   global
   lewis
   progtools
-  integrate1d
+  integratelib
   interplib
   searchlib
   numodules

@@ -489,6 +489,12 @@
 !                            Also: suppress duplicate profile output by the
 !                            hybrid method (second stage was repeating what
 !                            was already written by the first stage).
+!     11/17/17  "       "    Raised tlimit in subroutine blayer_edge from 0.5
+!                            to 0.7 on account of cases with nk = 101 (low) and
+!                            thick boundary layers at high altitude. For the
+!                            selected profile, a curvature-based preliminary
+!                            Hedge was being updated by the traditional method
+!                            before the save_plottable_details call.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
 !           Now with ERC, Inc. at NASA ARC (August 2010 through June 2015).
@@ -2621,6 +2627,9 @@
 !     06/11/14  "       "    Raised klast from 3*nk/4 to 4*nk/5.
 !     10/11/17  "       "    Added hybrid and shift_ratio arguments to control
 !                            saved profile details.
+!     11/17/17  "       "    Raised tlimit from 0.5 to 0.7 on account of cases
+!                            with nk = 101 (low) and thick boundary layers at
+!                            high altitude.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
 !           Now with ERC, Inc. at NASA ARC (August 2010 through June 2015).
@@ -2667,7 +2676,7 @@
                          rpower  = one/power
    real,    parameter :: small_fraction  & ! Criterion for smoothing curvature
                                  = 0.10
-   real,    parameter :: tlimit  = 0.5     ! Upper limit on normalized wall
+   real,    parameter :: tlimit  = 0.7     ! Upper limit on normalized wall
                                            ! distance allowed for edge value
    real,    parameter :: tol     = 1.e-8   ! Acceptable uncertainty in the
                                            ! BL edge arc length (s, not t)
@@ -2681,8 +2690,8 @@
               kpeak_previous, kwindow, l1, l2, lunout, nfit, nfit2, niter, nt, &
               numfun
 
-   real    :: t1, t2, tmin, flattened_min, fmin, Hmax, stotal, term, ttotal,   &
-              Hedge_interim, tedge_interim
+   real    :: t1, t2, tmin, flattened_min, fmin, Hmax, redge, stotal, term, &
+              ttotal, Hedge_interim, tedge_interim
 
    logical :: write_profile
 
@@ -2887,6 +2896,8 @@
 !!!      fmin = -dyy(1) / (term * sqrt (term))   ! Equivalent plain kappa peak
 
          tedge = tmin * ttotal                   ! Denormalize edge distance
+         redge = Hedge                           ! Interim ratio at peak kappa;
+                                                 ! trad. method may change it
          kedge = kleft + kpeak                   ! Ensure kedge pnts. to the pt.
                                                  ! to the left of the b.l. edge
          call interval (n, Wdistance, tedge, one, kedge)
@@ -2914,14 +2925,16 @@
    end if
 
    if (save_profile) then
-      tmin = tedge / ttotal
-      write (lunout, '(a, i2, a, f10.6)') &
-         '# Normalized delta at iteration', niter, ':', tmin
+      tmin = tedge / ttotal  ! In case of fminrc failure?
+      if (niter > 1) then
+         write (lunout, '(a, i2, a, f10.6)') &
+            '# Normalized peak-curvature delta at iteration', niter, ':', tmin
+      end if
    end if
 
    if (niter < maxiter) then ! Iterate to achieve normalized edge height ~ .10
-       niter = niter + 1
-      ttotal = tedge / 0.10
+       niter = niter + 1     ! This was a bad idea; maxiter = 1 now
+      ttotal = tedge / 0.10  ! ??
       go to 10
    end if
 
@@ -3043,7 +3056,7 @@
       write (lunout, '(a)') &
          ' $options line=''symbol'', symbol=15,'
       write (lunout, '(a, f8.5, a, f8.5, a)')       &
-         ' legend = ''Boundary layer edge is at (', Hedge, ',', tmin, ' )'',', &
+         ' legend = ''Peak curvature edge is at (', redge, ',', tmin, ' )'',', &
          ' $end'
       write (lunout, '(/, a, 2i4, /, 2es18.11)') &
          '# kedge, kleft, Hedge, tmin:', kedge, kleft, Hedge, tmin

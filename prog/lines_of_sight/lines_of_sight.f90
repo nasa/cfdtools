@@ -102,7 +102,8 @@
 !                             orthogonal to the shock as the proper thing to do
 !                             for tangent-slab radiation calculations.  The
 !                             earlier body-normal and Ox-parallel options have
-!                             been retained.
+!                             been retained.  (Later: Shock-normal is NOT the
+!                             recommended usage.)
 !     08/06/13    "     "     All ADT variants have been combined into a module
 !                             for distribution reasons (generic build & search).
 !     08/16/14    "     "     A trailing comment in the body-point file allowed
@@ -111,9 +112,21 @@
 !                             remedied.
 !     11/11/14    "     "     Tabulate x,y,z with body point indices to help
 !                             plotting of radiative heating along surfaces.
+!     08/25/17    "     "     A 20-meter search range was occasionally not
+!                             enough.  Make it 20 diameters as it should have
+!                             been from the start for aft body points.
+!     09/05/17    "     "     The calculation of diameter was flawed for left
+!                             half body.
+!     10/22/18    "     "     The unstructured analogue, USLOS, needs the
+!                             release_adt call that has been missing here all
+!                             along.  It surely belongs.  Also: use the outer
+!                             bounding box diagonal to set the upper limit for
+!                             the intersections instead of heuristics involving
+!                             the body diameter.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
-!                           Now with ERC, Inc. at ARC.
+!                           ERC, Inc. at ARC (08/2010 through 06/2015).
+!                           AMA, Inc. at ARC (from 07/2015).
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -160,7 +173,8 @@
       nij(:,:)                ! For (patch,i,j) of results of searches
 
    real :: &
-      dmax, dmean, dsqmin, dtolsq, p, q, t, total, xyz_interp(3), ymax, ymin
+      bbox_diagonal, dmax, dmean, dsqmin, dtolsq, p, q, t, total, &
+      xyz_interp(3), xmax, xmin, ymax, ymin, zmax, zmin
 
    real, dimension (nl) :: &
       tl, xl, yl, zl          ! For 2-point lines passed to INTSEC6
@@ -249,7 +263,7 @@
          nlines = nlines + 1
       end do
       rewind (luntarget)
-   
+
 !     Distinguish (n,i,j) block/point indices from (x,y,z) coordinates:
 
       call index_or_not (buffer, indices)
@@ -316,10 +330,14 @@
       outer_surface(ib)%z(:,:,1) = volume_grid(ib)%z(:,:,nk)
    end do
 
+   call get_data_range ()  ! Bounding box diagonal, for intersection purposes
+
 !  Count the surface quads (same for inner and outer surfaces):
 !  ------------------------------------------------------------
 
-   nquad = 0;  ymin = 1.e+30;  ymax = -ymin
+   nquad = 0
+   ymin = 1.e+30;  ymax = -ymin
+   zmin = ymin;    zmax = -ymin
 
    do ib = 1, nblocks
       ni = inner_surface(ib)%ni
@@ -330,11 +348,13 @@
          do i = 1, ni
             ymin = min (ymin, inner_surface(ib)%y(i,j,1))
             ymax = max (ymax, inner_surface(ib)%y(i,j,1))
+            zmin = min (zmin, inner_surface(ib)%z(i,j,1))
+            zmax = max (zmax, inner_surface(ib)%z(i,j,1))
          end do
       end do
    end do
 
-   dtolsq = ((ymax - ymin) * 0.00001) ** 2  ! Tolerance for search diagnostics
+   dtolsq = (bbox_diagonal*1.e-6)**2          ! Tolerance for search diagnostics
 
    allocate (conn(3,nquad)) ! For (patch,i,j) of each surface quad.
 
@@ -401,10 +421,11 @@
 
       dmax = sqrt (dmax);  dmean = dmean / real (nlines)
 
-      write (luncrt, '(/, a, 2i5, /, a, 1p, 2e12.5)') &
+      write (luncrt, '(/, a, 2i5, /, a, 2es12.5)') &
          ' # surface points inside/outside tolerance:', ninside, noutside,     &
          ' max & mean distance:', dmax, dmean
 
+      call release_adt ()  ! This has long been overlooked
    end if
 
 !! write (luncrt, '(a, 3i5)') 'nij(1:3,1):', nij(1:3,1)
@@ -430,7 +451,7 @@
       ib = nij(1,l)
       nk = max (nk, volume_grid(ib)%nk)
       radial_lines(l)%nk = nk        ! Probably all the same
-   
+
       call xyz_allocate (radial_lines(l), ios)
 
       if (ios /= 0) then
@@ -484,7 +505,7 @@
 
       if (parallel_to_Ox) then  ! Retrofitted kludge
 
-         un(1) = -one
+         un(1) = -one  ! ? What about an aft-body point?
          un(2) = zero
          un(3) = zero
 
@@ -515,21 +536,22 @@
 
       else  ! ! Body-normal or Ox-parallel method
 
-         xl(1) = xyz(1,l);  xl(2) = xl(1) + total * un(1)
-         yl(1) = xyz(2,l);  yl(2) = yl(1) + total * un(2)
-         zl(1) = xyz(3,l);  zl(2) = zl(1) + total * un(3)
+         xl(1) = xyz(1,l);  xl(2) = xl(1) + bbox_diagonal*un(1)
+         yl(1) = xyz(2,l);  yl(2) = yl(1) + bbox_diagonal*un(2)
+         zl(1) = xyz(3,l);  zl(2) = zl(1) + bbox_diagonal*un(3)
 
 !        Intersect the 2-point line with the outer boundary:
 
-         tl(1)  = 0.01 ! Tell INTSEC6 the range of normalized t to search in
-         tl(nl) = 20.0
+         tl(1)  = zero           ! Tell INTSEC6 the range of t to search in
+         tl(nl) = bbox_diagonal  ! These are NOT redundant if nl = 2
 
-         call intsec6 (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl,    &
-                       tl, lcs_method, iquad, p, q, t, xyz_interp, dsqmin)
+         call intsec6_2pt (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl,    &
+                           tl, lcs_method, iquad, p, q, t, xyz_interp, dsqmin)
 
-!!       write (luncrt, '(a,4i10)') ' iquad,conn(:,iquad):', iquad,conn(:,iquad)
-!!       write (luncrt, '(a,4es19.11)') ' p, q, t, total:', p, q, t, total
-!!       write (luncrt, '(a,4es19.11)') ' xyzint, dsqmin:', xyz_interp, dsqmin
+!        The output t is normalized.
+!!       write (luncrt, '(a,4i10)') 'iquad,conn(:,iquad):', iquad,conn(:,iquad)
+!!       write (luncrt, '(a,4es19.11)') 'p, q, t, bbox:', p, q, t, bbox_diagonal
+!!       write (luncrt, '(a,4es19.11)') 'xyzint, dsqmin:', xyz_interp, dsqmin
 
          if (dsqmin < dtolsq) then ! The nearest quad was within tolerance
             ninside  = ninside + 1
@@ -544,9 +566,9 @@
 !        relevant portion of the straight line of sight:
 
          do k = 1, nk
-            radial_lines(l)%x(1,1,k) = xl(1) + ((xl(2) - xl(1))*t) * tline(k)
-            radial_lines(l)%y(1,1,k) = yl(1) + ((yl(2) - yl(1))*t) * tline(k)
-            radial_lines(l)%z(1,1,k) = zl(1) + ((zl(2) - zl(1))*t) * tline(k)
+            radial_lines(l)%x(1,1,k) = xl(1) + ((xl(2) - xl(1))*t)*tline(k)
+            radial_lines(l)%y(1,1,k) = yl(1) + ((yl(2) - yl(1))*t)*tline(k)
+            radial_lines(l)%z(1,1,k) = zl(1) + ((zl(2) - zl(1))*t)*tline(k)
          end do
 
       end if
@@ -555,7 +577,7 @@
 
    dmax = sqrt (dmax);  dmean = dmean / real (nlines)
 
-   write (luncrt, '(/, a, 2i5, /, a, 1p, 2e12.5)') &
+   write (luncrt, '(/, a, 2i5, /, a, 2es12.5)') &
       ' # outer intersection points inside/outside tolerance:',                &
       ninside, noutside, ' max & mean distance:', dmax, dmean
 
@@ -567,5 +589,37 @@
 !  Let F90 do all the deallocates.
 
 99 continue
+
+!  Internal procedures for LINES_OF_SIGHT:
+
+   contains
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine get_data_range ()  ! .. of the shock boundary, for intersectns.
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      xmin = 1.e+10
+      xmax = -xmin
+      ymin =  xmin
+      ymax =  xmax
+      zmin =  xmin
+      zmax =  xmax
+
+      do ib = 1, nblocks
+         do j = 1, outer_surface(ib)%nj
+            do i = 1, outer_surface(ib)%ni
+               xmax = max (xmax, outer_surface(ib)%x(i,j,1))
+               xmin = min (xmin, outer_surface(ib)%x(i,j,1))
+               ymax = max (ymax, outer_surface(ib)%y(i,j,1))
+               ymin = min (ymin, outer_surface(ib)%y(i,j,1))
+               zmax = max (zmax, outer_surface(ib)%z(i,j,1))
+               zmin = min (zmin, outer_surface(ib)%z(i,j,1))
+            end do
+         end do
+      end do
+
+      bbox_diagonal = sqrt ((xmax-xmin)**2 + (ymax-ymin)**2 + (zmax-zmin)**2)
+
+      end subroutine get_data_range
 
    end program lines_of_sight

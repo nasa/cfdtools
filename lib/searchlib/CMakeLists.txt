@@ -18,6 +18,8 @@ add_library(searchlib
   ripple3d.f
   ripple_surf.f
   ssrchr.f
+  suppress1.f90
+  suppress2.f90
   unique_ri.f90
   xsort.f
 )

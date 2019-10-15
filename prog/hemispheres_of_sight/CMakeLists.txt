@@ -1,6 +1,5 @@
 add_executable(hemispheres_of_sight
   hemispheres_of_sight.f90
-  intsec6.f90
 )
 target_link_libraries(hemispheres_of_sight global)
 target_link_libraries(hemispheres_of_sight
@@ -13,6 +12,7 @@ target_link_libraries(hemispheres_of_sight
   surface_patch_utilities
   eigenlib
   optlib
+  geomlib
   gridlib
   ugridlib
   xyzq_io

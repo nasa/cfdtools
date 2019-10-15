@@ -1,6 +1,7 @@
 add_library(geomlib
   angle2d.f90
   angle_between_planes.f90
+  angle_between_vectors.f90
   arcs2d.f
   arcs3d.f
   area3.f

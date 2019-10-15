@@ -5,7 +5,7 @@
 !  Description:
 !
 !     For an entire CFD grid and function file containing just the function used
-!     to detect shock location (probably Temperature), calculate shock stand-off
+!     to detect shock location (normally Temperature), calculate shock stand-off
 !     distance at every inner surface point.  A single function is stipulated
 !     because the normals off the surface may cross block boundaries, meaning
 !     all the volume data must be stored.  This precludes use of the volume data
@@ -55,13 +55,14 @@
 !
 !     o  For each two-point normal, if the surface x exceeds a specified limit,
 !        set the stand-off distance to zero (assumed to be on the aft body),
-!        else impose a uniform distribution (as opposed to one derived from a
-!        nearby radial grid line) and for k = nk, 1, -1 interpolate the flow
-!        quantity until a spike is apparent, making further (relatively costly)
-!        interpolations redundant.  The spike defines the stand-off distance.
+!        else impose a radial-grid-line-like distribution on it and for k = nk,
+!        1, -1 interpolate the flow quantity until a spike is apparent, making
+!        further (relatively costly) interpolations redundant.  Linearly
+!        interpolate to find the arc length where the flow quantity is (say)
+!        1.1 x free-stream to define the stand-off distance.
 !
-!     o  Save results in Tecplot form for merging with BLAYER results via the
-!        MERGE_FILES utility.
+!     o  Save results in Tecplot form for possible merging with BLAYER results
+!        via the MERGE_FILES utility.
 !
 !  History:
 !
@@ -73,6 +74,18 @@
 !     08/28/09    "     "     Option to handle 2-D cases added transparently.
 !     08/08/13    "     "     All ADT variants have been merged into a module
 !               Now ERC, Inc. with generic build_adt and search_adt interfaces.
+!     08/28/17  Now AMA, Inc. Cases from John Theisinger at NASA LaRC were so
+!                             tightly aligned that uniform spacing along the
+!                             discretized body-normal profiles was a bad choice.
+!                             Worse: at low Mach, with little or no chemistry,
+!                             there may not be a temperature spike--just a
+!                             rise/no obvious drop, so seek the shock onset
+!                             (rise) rather than a drop that may not be there.
+!                             This precludes using Mach as the function.
+!                             Mach, in retrospect, with a different search,
+!                             would have been preferable.
+!     08/30/17    "     "     Followed John's suggestion of using 1.1xTinf
+!                             to interpolate a stand-off distance smoothly.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
 !
@@ -99,7 +112,7 @@
       nl        = 2          ! 2-point lines are passed to INTSEC7
 
    real, parameter ::    &
-      fraction  = 0.001, &   ! Rel. drop in flow variable (T?) defining shock
+      fs_scale  = 1.1,   &   ! For Tinf; cf. 0.9 x Minf scheme in DPLR
       half      = 0.5,   &
       one       = 1.0,   &
       zero      = 0.0
@@ -114,15 +127,16 @@
 !  Local variables:
 
    integer :: &
-      i, ib, ic, ihex, ios, iquad, j, jc, k, kc, n, nblocks, nf, nhex,         &
+      i, ib, ic, ier, ihex, ios, iquad, j, jc, k, kc, n, nblocks, nf, nhex,    &
       ni, nj, nk, ninside, noutside, npts, nquad
 
    integer, allocatable :: &
       conn(:,:)               ! For (patch,i,j) of boundary quads. to search
 
    real :: &
-      cutoff, dmax, dmean, dsqmin, dt, dtolsq, dx, dy, dz, p, pm1, q, qm1,     &
-      r, rm1, rnk, streamwise_coord, t, total, unused, ymax, ymin
+      cutoff, dmax, dmean, dsqmin, dt, dt1, dt2, dtolsq, dx, dy, dz,           &
+      freestream, p, pm1, q, qm1, r, rm1, rnk, streamwise_coord, t, total,     &
+      unused, ymax, ymin
 
    real, dimension (nl) :: &
       tl, xl, yl, zl          ! For 2-point lines passed to INTSEC7
@@ -193,6 +207,7 @@
 
    npts = 0;  nquad = 0;  nhex = 0
    ymin = 1.e+30;  ymax = -ymin
+   dt2  = 1.e+30               ! Need smallest outermost radial spacing
 
    do ib = 1, nblocks
 
@@ -229,12 +244,22 @@
          do i = 1, ni
             ymin = min (ymin, outer_surface(ib)%y(i,j,1))
             ymax = max (ymax, outer_surface(ib)%y(i,j,1))
+            dx   = volume_grid(ib)%x(i,j,nk) - volume_grid(ib)%x(i,j,nk-1)
+            dy   = volume_grid(ib)%y(i,j,nk) - volume_grid(ib)%y(i,j,nk-1)
+            dz   = volume_grid(ib)%z(i,j,nk) - volume_grid(ib)%z(i,j,nk-1)
+            dt   = sqrt (dx**2 + dy**2 + dz**2)
+            dt2  = min (dt2, dt)  ! For discretizing all 2-pt. body-normal lines
          end do
       end do
 
-   end do
+   end do  ! Next block
 
    dtolsq = ((ymax - ymin) * 0.00001) ** 2  ! Tolerance for search diagnostics
+   dx   = volume_grid(1)%x(i,j,2) - volume_grid(1)%x(i,j,1)  ! Wall spacing is
+   dy   = volume_grid(1)%y(i,j,2) - volume_grid(1)%y(i,j,1)  ! not critical --
+   dz   = volume_grid(1)%z(i,j,2) - volume_grid(1)%z(i,j,1)  ! block 1 is OK
+   dt1  = sqrt (dx**2 + dy**2 + dz**2) 
+   dt2  = dt2 + dt2  ! 2x is safe; avoid excessive smallness for many lines
 
    allocate (conn(3,nquad)) ! For (patch,i,j) of each boundary quad.
 
@@ -264,7 +289,7 @@
 
          do i = 1, ni
 
-!!          show = i == ni .and. j == nj
+!!          show = i == 60 .and. j == nj
 
 !           Derive a two-point line length from the volume grid radial line:
 
@@ -280,25 +305,25 @@
 
 !           Carefully calculated unit normal:
 
-            if (i < ni) then  ! (ic,jc) must point to "lower left"
-               ic = i
-               p = zero
-            else
-               ic = ni - 1
-               p = one
-            end if
+!!!         if (i < ni) then  ! (ic,jc) must point to "lower left"
+!!!            ic = i         ! No need:  this is done inside the
+!!!            p = zero       ! surface_normal utility now.
+!!!         else
+!!!            ic = ni - 1
+!!!            p = one
+!!!         end if
 
-            if (j < nj) then
-               jc = j
-               q = zero
-            else
-               jc = nj - 1
-               q = one
-            end if
+!!!         if (j < nj) then
+!!!            jc = j
+!!!            q = zero
+!!!         else
+!!!            jc = nj - 1
+!!!            q = one
+!!!         end if
 
             call surface_normal (ni, nj, inner_surface(ib)%x,                  &
                                  inner_surface(ib)%y, inner_surface(ib)%z,     &
-                                 ic, jc, p, q, un)
+                                 i, j, zero, zero, un)
 
 !           Two-point line off the wall:
 
@@ -378,9 +403,9 @@
 
    call build_adt (nblocks, volume_grid, nhex, conn, unused)
 
-!  For each surface normal, discretize it uniformly,
-!  interpolate the volume data, and locate the shock.
-!  --------------------------------------------------
+!  For each surface normal, discretize it like a radial grid line,
+!  interpolate the function data, and look for the shock jump.
+!  -----------------------------------------------------------
 
    do ib = 1, nblocks
 
@@ -396,7 +421,7 @@
 
          do i = 1, ni
 
-!!          show = i == ni .and. j == nj
+!!          show = i == 60 .and. j == nj
 
             xline(1)  = inner_surface(ib)%x(i,j,1)
             yline(1)  = inner_surface(ib)%y(i,j,1)
@@ -425,28 +450,40 @@
                cycle
             end if
 
+            freestream = volume_grid(ib)%q(1,i,j,nk) ! Outermost value
             xline(nk) = intersections(ib)%x(i,j,1)
             yline(nk) = intersections(ib)%y(i,j,1)
             zline(nk) = intersections(ib)%z(i,j,1)
 
-            dx = (xline(nk) - xline(1)) / rnk
-            dy = (yline(nk) - yline(1)) / rnk
-            dz = (zline(nk) - zline(1)) / rnk
-            dt = sqrt (dx**2 + dy**2 + dz**2)
+            dx = xline(nk) - xline(1)
+            dy = yline(nk) - yline(1)
+            dz = zline(nk) - zline(1)
+            dt = sqrt (dx**2 + dy**2 + dz**2)  ! Total arc length
 
-            do k = 1, nk  ! Uniform distribution
-               r = real (k-1)
-               xline(k) = r * dx + xline(1)
-               yline(k) = r * dy + yline(1)
-               zline(k) = r * dz + zline(1)
-               tline(k) = r * dt
+!           Two-sided stretching that won't miss the shock details:
+
+            call htdis4 (true, zero, dt, dt1, dt2, nk, tline, -luncrt, ier)
+            if (ier /= 0) then
+               write (luncrt, '(a, 3i5)') 'HTDIS4 trouble at ib,i,j:', ib, i, j
+               stop
+            end if
+
+            do k = 1, nk
+               r = tline(k) / dt
+               xline(k) = xline(1) + r*dx
+               yline(k) = yline(1) + r*dy
+               zline(k) = zline(1) + r*dz
             end do
 
-!           Search from the outer boundary for the spike at the shock:
+!!          if (show) &
+!!             write (luncrt, '(4f12.6)') &
+!!                (xline(k), yline(k), zline(k), tline(k), k = 1, nk)
+
+!           Search from the outer boundary for the jump at the shock:
 
             fline(nk) = zero  ! To pass the shock test
 
-            do k = nk - 1, 1, -1
+            do k = nk, 1, -1
 
                xyz_target(1) = xline(k)
                xyz_target(2) = yline(k)
@@ -480,12 +517,26 @@
 !!               ' ib,i,j,k:', ib,i,j,k, '  n,ic,jc,kc,f:', n,ic,jc,kc, fline(k)
 !!             end if
 
-               if (fline(k+1) - fline(k) > fline(k) * fraction) then
-                  intersections(ib)%q(1,i,j,1) = tline(k+1)  ! Stand-off dist.
+               if (k == nk) cycle  ! Just need fline(nk)
+!!             if (show) then
+!!                write (luncrt, '(a, i4, 3f12.6)')  &
+!!                   'k, fline(k), fline(k+1), fline(k)*fraction:', &
+!!                    k, fline(k), fline(k+1), fline(k)*fraction
+!!             end if
+
+!!!            if (fline(k) - fline(k+1)  >  fline(k)*fraction) then ! Prior fix
+!!!               intersections(ib)%q(1,i,j,1) = tline(k+1)  ! Stand-off dist.
+!!!               exit
+!!!            end if
+
+               q = freestream*fs_scale
+               if (fline(k) >= q) then  ! Linearly interpolate
+                  r = (q - fline(k+1))/(fline(k) - fline(k+1))
+                  intersections(ib)%q(1,i,j,1) = (one-r)*tline(k+1) + r*tline(k)
                   exit
                end if
 
-            end do
+            end do  ! Next k
 
          end do  ! Next i
 

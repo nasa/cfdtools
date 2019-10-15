@@ -46,7 +46,7 @@
 !     If this program is installed at another site, the following path should
 !     be edited appropriately prior to compiling and linking:
 !
-!        /share/apps/cfdtools/         ! See parameter constant "path" below
+!        /apps/pkgs/cfdtools/         ! See parameter constant "path" below
 !
 !     It is assumed that all the utilities invoked here reside in subdirectories
 !     with uppercase names and this indicated path.
@@ -63,7 +63,7 @@
 !        hemispheres_of_sight ! Many lines of sight for one body point
 !        flow_interp          ! 3D flow interpolation at LOS coordinates
 !        flow_interp_2D       ! 2D   "    "    "    "    "    "    "
-!        neqair_data          ! PLOT3D *.g *.f --> NEQAIR's LOS.dat form
+!        neqair_data          ! PLOT3D *.g,*.f --> NEQAIR's LOS.dat form
 !
 !  Assumptions:
 !
@@ -90,8 +90,18 @@
 !     01/24/14   "     "      NEQAIR_DATA has an extra prompt to allow NEQAIR
 !                             to integrate out from the body, as might be
 !                             required for meteor studies.
+!     02/26/18   "     "      Handled the HEMISPHERES_OF_SIGHT option to output
+!                             less than a full hemisphere of lines (if a cone
+!                             angle < 90 is entered on the body pt. x/y/z line).
+!     04/04/18   "     "      Updated the path of the various utilities. Didn't
+!                             eliminate it altogether because of the diagnostic
+!                             that points to where certain ancillary files might
+!                             be found.
+!     05/24/18   "     "      "Same relative distribution" needs to write the
+!                             requested number of points (unlike 2x thinning).
 !
 !  Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
+!                  Now with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -105,7 +115,7 @@
       lunsh  = 3,        &  ! For the output shell script
       lunkbd = 5,        &  ! For keyboard entries
       luncrt = 6,        &  ! For prompts and diagnostics
-      nc     = 64           ! # characters in file names
+      nc     = 96           ! # characters in file names
 
    logical, parameter :: &
       false  = .false.,  &
@@ -115,7 +125,8 @@
 !  are expected to be installed.  Be sure to get its length right.
 
    character, parameter :: &
-      path*21          = '/share/apps/cfdtools/', &
+!!!   path*21          = '/share/apps/cfdtools/', &
+      path*20          = '/apps/pkgs/cfdtools/', &
       blank*1          = ' ',   &
       n*1              = 'n',   &
       y*1              = 'y',   &
@@ -129,11 +140,11 @@
       ier, ios, ismooth, ndim, ne, npts, ntokens
 
    real :: &
-      power, s1, s2
+      cone_angle, power, s1, s2, xbp, ybp, zbp
 
    logical ::   &
       cr, eof, formatted_cc, formatted_vc, hemisphere, off_center, proceed, &
-      thin2x, towards_body, yes
+      relative, thin2x, towards_body, yes
 
    character (1) :: &
       answer, yesno
@@ -160,7 +171,7 @@
       '           ivarp = 0 120 120 125 125 1200   (2 temperatures)   or',     &
       '           ivarp = 0 120 120 120 120 1200   (1 temperature)',           &
       '    The working directory should also contain or point to these files:',&
-      '       (3) body point file (surface coordinates or grid indices)',      &
+      '       (3) body pt. file (x/y/z or grid i/j/k [+ optional cone angle]', &
       '       (4) neqair.inp      (tangent-slab or not, regions, etc.)',       &
       '       (5) neqair.pbs      (# nodes, desired NEQAIR version, etc.)',    &
       '       (6) run_neqair      (first/last LOS numbers as arguments)',      &
@@ -170,7 +181,9 @@
       'PREPARE_NEQAIR_DATA', &
       ' Be sure to enter the right species in sample.LOS.dat and to', &
       ' check neqair.inp and neqair.pbs.', &
-      ' The *.chem file is the best place to get the right species from.'
+      ' The *.chem file is the best place to get the right species from.', &
+      ' It is OK to use vertex-centered flow data.  This will mean the', &
+      ' same grid name is entered twice.'
 
    ier = 0
    call check_existence ('neqair.inp',     luncrt, ios);  if (ios /= 0) ier = 1
@@ -235,7 +248,7 @@
 
    end do
 
-!  Catch a possible user error:
+!  Catch a possible user error (originally, but now cone_angle may be present):
 
    read  (lunin, '(a)') buffer
    close (lunin)
@@ -243,7 +256,8 @@
    call token_count (buffer, blank, ntokens)
 
 !  Suppress this because it prevents trailing descriptive text.
-!  The LOS codes will read only ndim items per line of body point data.
+!  The LOS codes will read only ndim items per line of body point data, except
+!  now the hemisphere option looks for an optional fourth (cone angle) token.
 
 !! if (ntokens /= ndim) then
 !!    write (luncrt, '(a, 2i4)') &
@@ -268,7 +282,7 @@
    end if
 
    towards_body = answer /= 'O'
-   hemisphere  = answer == 'H'
+   hemisphere   = answer == 'H'
 
    if (hemisphere) then
        off_center = false
@@ -412,8 +426,9 @@
          if (eof) go to 99
 
          write (lunsh, '(a)') answer
-         yes    = answer /= 'n'
-         thin2x = answer == 't'
+         yes      = answer /= 'n'
+         relative = answer == 'r'
+         thin2x   = answer == 't'
 
          if (yes) then
             npts = 0
@@ -425,8 +440,9 @@
                               lunkbd, npts, cr, eof)
                   if (eof) go to 99
                end do
+               write (lunsh, '(i3)') npts
             end if
-            if (.not. (answer == 'r' .or. thin2x)) then
+            if (.not. (relative .or. thin2x)) then
                power = 1.
                call readr (luncrt, &
              'Initial shape function exponent to use [0. -> 2.; <CR> = 1.]: ', &
@@ -437,7 +453,6 @@
                  'Smoothing control? [0|1|2|3; <CR> = 1 => shape fn. only]: ', &
                            lunkbd, ismooth, cr, eof)
                if (eof) go to 99
-               write (lunsh, '(i3)')   npts
                write (lunsh, '(f5.2)') power
                write (lunsh, '(i1)')   ismooth
             end if
@@ -482,9 +497,9 @@
 !     .........................................................................
 
       ios = 1
-      ne = 9
+      ne = 25
       call readi (luncrt, &
-                  '# hemisphere points, pole to equator? [<CR> = 9] ', &
+                  '# hemisphere points, pole to equator? [<CR> = 25] ', &
                   lunkbd, ne, cr, eof)
       if (eof) go to 99
 
@@ -507,7 +522,7 @@
 
       write (luncrt, '(a)') &
       'LOS discretization is controlled by multiples s1 & s2 of the first and',&
-      'last relative grid spacing.  E.g., 1. & 1. (forebody), 10. & 5. (aft).'
+      'last relative grid spacing.  E.g., 1. & 1. (forebody), 2. & 2. (aft).'
 
       s1 = 1.
       call readr (luncrt, 's1 [<CR> = 1.]: ', lunkbd, s1, cr, eof)
@@ -535,9 +550,26 @@
       write (lunsh, '(i3, /, f8.4, /, f8.4)') npts, s1, s2
       write (lunsh, '(a)') 'HEMISPHERE'
 
-      filename_los_g = trim (identifier) // '.1.lines.g'
-      filename_los_f = trim (identifier) // '.1.lines.f'
-      ios = 0
+!     Radiometer option to process less than a full hemisphere of lines:
+
+      if (ntokens == 3) then  ! Optional cone angle is not present
+         filename_los_g = trim (identifier) // '.1.lines.g'
+         filename_los_f = trim (identifier) // '.1.lines.f'
+         ios = 0
+      else  ! The cone angle appears in the reduced lines of sight file name
+         read (buffer, *, iostat=ios) xbp, ybp, zbp, cone_angle
+         if (ios /= 0) then
+            write (luncrt, '(a, a)') &
+               '*** Trouble reading cone_angle from body point line:', &
+               buffer
+            go to 99
+         end if
+         filename_los_g(1:11) = 'cone.xx.xx.'
+         write (filename_los_g(6:10), '(f5.2)') cone_angle
+         filename_los_g(12:)  = trim (identifier) // '.1.lines.g'
+         filename_los_f(1:11) = filename_los_g(1:11)
+         filename_los_f(12:)  = trim (identifier) // '.1.lines.f'
+      end if
 
  99   return
 

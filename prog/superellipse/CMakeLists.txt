@@ -5,7 +5,7 @@ target_link_libraries(superellipse
   global
   gridlib
   intrinsics
-  integrate1d
+  integratelib
   interplib
   progtools
   numodules

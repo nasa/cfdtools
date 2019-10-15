@@ -4,6 +4,7 @@ add_library(progtools
   check_existence.f90
   cleantext.f
   countr.f
+  count_records.f90
   decode_ilist.f90
   decode_number.f90
   decode_rlist.f90

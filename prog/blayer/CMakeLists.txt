@@ -4,7 +4,7 @@ add_executable(blayer
 target_link_libraries(blayer global)
 target_link_libraries(blayer
   interplib
-  integrate1d
+  integratelib
   numodules
   progtools
   tecplot_io

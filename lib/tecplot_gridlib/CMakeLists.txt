@@ -23,7 +23,7 @@ add_library(tecplot_gridlib
   ../gridlib/compass.f
   ../gridlib/condis.f
   ../gridlib/copy_face.f90
-  ../gridlib/curvdis.f
+  ../gridlib/curvdis.f90
   ../gridlib/curvdis2.f90
   ../gridlib/curvdis3d.f
   ../gridlib/curvdis3d2.f90
