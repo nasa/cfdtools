@@ -1,0 +1,151 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Description of Program SLOS:
+
+   SLOS has been adapted from USLOS (unstructured [grid] lines of sight),
+   itself an adaptation of LINES_OF_SIGHT and HEMISPHERES_OF_SIGHT, which
+   are now superseded by this combination of the two purposes (body-normal
+   lines for tangent-slab radiation calculations, or hemispherical lines
+   for just one body point at a time) for the 3D structured grid case.
+   (See also LINES_OF_SIGHT_2D.)
+
+   The volume grid is expected to be right-handed, and for the hemisphere
+   case, the y >= 0 half is expected (with x pointing downstream).  An off-
+   center body point requires both halves for the hemisphere case.
+
+   The inner surface is expected to represent a mostly-convex surface.  Any
+   concavities may cause difficulties with hemisphere lines that encounter
+   the body.  Ancillary utility ADJUST_HEMISPHERE_LOS is the initial answer
+   for such cases.
+
+Body Point Inputs (one entry per line; trailing comments ignored):
+
+   Body-normal (tangent-slab radiation calculation) case:
+
+      0.  0.  0.
+      1.628659741950E-01  5.741545696080E-01  0.  ! Nose/cone tangency
+      8.985316209400E-01  1.837811469800E+00  0.  ! Cone/shoulder tangency
+       :                   :                   :
+
+      If only one body point is detected, a prompt still allows for the
+      tangent-slab case.
+
+   Hemispherical lines (full angular integration) case:
+
+      1.0742  -1.81  1.083  [10.]  ! x, y, z[, cone angle]
+
+      Only one body point is handled for this case.  The optional semi-cone
+      angle allows for writing fewer than the full hemisphere's worth of
+      lines to avoid unnecessary radiation cone angles outside the viewing
+      angle of a radiometer instrument.  Note that NEQAIR_INTEGRATION can
+      still integrate over a narrower angle than the indicated data angle.
+      If the optional angle is omitted, it is taken to be 90 degrees.
+
+Input Structured Volume Grid (PLOT3D Format):
+
+   Formatted or unformatted multiblock files are handled, and a single layer
+   of grid blocks is assumed (normally the case for hypersonic vehicles) so
+   that the outer surface of all blocks serves as the shock-aligned boundary
+   with which intersections of lines from the body point(s) are calculated.
+
+Outputs:
+
+   While the precursors of SLOS discretize the lines of sight with the same
+   relative point distributions as found in the nearest off-body grid line,
+   this variant follows the USLOS approach of using DPLR-type controls nk,
+   d1, and ds2_fraction that are prompted for.
+
+   The lines of sight are written to a single multiblock PLOT3D-type file,
+   one line per block.  These should be checked visually before proceeding
+   with radiation calculations.  Ensuing procedures will interpolate flow
+   data onto the discretized lines of sight and write results compatible with
+   the radiation solver.  The file name is hard-coded as 'los.g' as part
+   of simplifying the original nomenclature.
+
+Method:
+
+   >  A handful of prompts serve to drive the program -- no control file.
+   >  Read the indicated body point (x,y,z) file -- one or more points.
+   >  If a single body point is found, prompt in case hemispherical lines are
+      NOT intended.
+   >  If all body points are on the centerline (y = 0.), the input volume
+      grid is assumed to be the starboard (right) half.  That half (y > 0.)
+      also serves for off-center body-normal lines, but for a hemisphere at
+      an off-center body point, a full volume grid is expected, with the
+      outer surface closed and convex.
+   >  Build a search tree from the inner multiblock surface, and search
+      for each body point.
+   >  Generate and store the corresponding unit body-normal vector(s).
+   >  Build a new search tree from the outer boundary, as needed for line-
+      surface intersection calculations.
+
+   >  Body-normal line case:
+         >  For each body point B:
+            >  The body normal unit vector is already in hand.
+            >  A search interval along the body-normal line for minimizing
+               the distance to the outer surface is provided by s = 0 at the
+               low end and s = the diagonal of the bounding box for the
+               outer surface mesh.
+            >  The intersection point is then conveniently calculated via
+               a 1D minimization w.r.t. distance s from B along the body-
+               normal line (INTSEC6).
+            >  Impose a CFD-type point distribution on the intersected
+               interval BP, as needed for interpolated flow field data.
+               DPLR-type use of inputs nk, ds1, ds2fraction will suffice.
+         >  Write the discretized line(s) of sight to the indicated PLOT3D-
+            type output file.
+
+   >  Hemisphere lines of sight case:
+         >  The vertices of a triangulated unit hemispherical quadrant define
+            the lines of sight between the body point and the outer grid
+            boundary.  The number of uniform points specified along an edge
+            determines the resolution.  Typically, 25 such points are used,
+            giving 650 lines of sight for a centerline body point, or 1300
+            lines if the body point is off-center.  Centerline points require
+            just half the volume data, and the eventual integration over
+            solid angle of radiances from the lines of sight can be doubled.
+         >  The initial unit quadrant is transformed so that line 1/vertex 1
+            corresponds to the body point normal. After The lines for the
+            first quadrant are generated, the quadrant is rotated 90 degrees
+            about the normal and the next set of lines is generated.  Then if
+            the body point is off-center, this is repeated twice more.
+         >  Each intersection involves a 2-point line from the body point
+            through a quadrant vertex, of length derived from the bounding
+            box of the outer shock surface.  This length is overkill for many
+            intersection search intervals, but that doesn't matter.  Each
+            hemisphere line is intersected and discretized as for the body
+            normal (tangent-slab) case described above.
+History:
+
+   11/02/2018  D.A.Saunders  Started adapting USLOS for the structured case.
+                             The option for entering body point indices in
+                             lieu of x/y/z coordinates has been dispensed
+                             with.  Use GU to coarsen a surface grid if
+                             necessary.  Generation of shock-normal lines
+                             and lines parallel to Ox have also been omitted.
+                             Use the original LINES_OF_SIGHT for these.
+   11/07/2018     "    "     Implementation and testing completed.
+   11/09/2018     "    "     Use 'los.g' for the output file name as part of
+                             adjusting NEQAIR_Integration to handle the
+                             original nomenclature and this simplified form.
+   11/09/2018     "    "     Use 'los.g' for the output file name as part of
+   11/09/2018     "    "     Use 'los.g' for the output file name as part of
+   10/04/2019     "    "     Resetting the lower intersection search interval
+                             to zero was not being done for each new line.
+                             Earlier testing must not have encountered any
+                             intersection failures that are caused by outer
+                             grid boundaries that are not strictly convex!
+   10/05/2019    "    "      Failed intersections prompted another way of
+                             retrying: discretize the part of the line beyond
+                             the failed solution and evaluate line-surface
+                             distances from those points; pick the interval
+                             containing the smallest distance, and redo the
+                             line-surface intersection.  REMEMBER THAT THE
+                             ARC LENGTH INTERVAL PASSED TO INTSEC6 SHOULD BE
+                             NORMALIZED BY THE LINE LENGTH IF THAT IS THE
+                             INTERVAL EXPECTED TO CONTAIN THE INTERSECTION,
+                             AS IT IS HERE, USING THE BOUNDING BOX DIAGONAL.
+
+Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

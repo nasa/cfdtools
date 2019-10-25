@@ -1,0 +1,166 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Program USLOS Description:
+
+   USLOS (unstructured grid lines of sight) combines the functions of the
+   LINES_OF_SIGHT and HEMISPHERES_OF_SIGHT utilities for the case of 3-space
+   volume grids that are NOT multiblock volume grids.  Since these are purely
+   geometric functions, it is assumed that the needed inner and outer (shock)
+   boundaries can be provided as triangulated surfaces, and that these are
+   compatible with Tecplot (a de facto standard at NASA).  The lines of sight
+   are expected to be used for radiative heat flux calculations.
+
+   Anticipated usage is for either a list of forebody points or a single body
+   point on the aft body or perhaps near the shoulder of a typical atmos-
+   pheric entry vehicle.  More than one set of hemisphere lines of sight is
+   NOT recommended, so if the body point list contains multiple entries, it
+   is assumed that only the body-normal lines are required.
+
+   The inner surface is expected to be right-handed.  This means that for
+   vertices 1, 2, 3 of a triangular element, the body normal vector is de-
+   fined by the cross product vector w = (v2 - v1) x (v3 - v1) and this
+   should point into the flow field (i.e., outwards from what is presumed to
+   be a mostly-convex surface).  Any concavities may cause difficulties such
+   as those handled by ancillary utility ADJUST_HEMISPHERE_LOS for the
+   structured surface case, which will need an analogue for the unstructured
+   case.  If the outer surface is derived from the same (right-handed) volume
+   grid, this means that a vector defined similarly to be normal to the outer
+   surface would point away from the body. But no such normal is ever needed,
+   so the outer surface need not be right-handed.  It is used only for line-
+   surface intersection calculations.
+
+Body Point Inputs (one entry per line; trailing comments ignored):
+
+   Body-normal (tangent-slab radiation calculation) case:
+
+      0.  0.  0.
+      1.628659741950E-01  5.741545696080E-01  0.  ! Nose/cone tangency
+      8.985316209400E-01  1.837811469800E+00  0.  ! Cone/shoulder tangency
+       :                   :                   :
+
+   Hemispherical lines (full angular integration) case:
+
+      1.0742  -1.81  1.083  [10.]  ! x, y, z[, cone angle]
+
+      Only one body point is handled for this case.  The optional semi-cone
+      angle allows for writing fewer than the full hemisphere's worth of
+      lines to avoid unnecessary radiation cone angles outside the viewing
+      angle of a radiometer instrument.  Note that NEQAIR_INTEGRATION can
+      still integrate over a narrower angle than the indicated data angle.
+      If the optional angle is omitted, it is taken to be 90 degrees.
+
+Input Surface Triangulation Format (inner and outer, in separate files):
+
+   TITLE = "Dataset title"
+   VARIABLES = "x", "y", "z"[, "f1"[, "f2"] ...]
+   ZONE T="ZONE 1", NODES=450816, ELEMENTS=150272,
+   DATAPACKING=POINT, ZONETYPE=FETRIANGLE
+    3.5443134E-01  1.0169792E+00  5.8715301E-01 [optional functions, ignored]
+    3.5443952E-01  1.0356432E+00  5.5356261E-01     "         "         "
+         :              :              :
+         :              :              :
+    2.8716209E+00 -1.1242014E-01  6.4854415E-02  0.0000000E+00
+         1       2       3
+         4       5       6
+         :       :       :
+         :       :       :
+
+    450814  450815  450816
+
+   Multizone ASCII files are permitted.  Unformatted file input is not sup-
+   ported.  Any function data are ignored.  One way of triangulating a multi-
+   block PLOT3D-type structured PLOT3D-type surface is to run HYPER_AERO and
+   use the Tecplotable output of Newtonian Cp predictions.  The Cps will be
+   ignored.  They are vertex-centered, so tri_header%fileform = 1 here.
+
+Outputs:
+
+   PLOT3D-type output is retained as for the structured case (one or more
+   blocks, one line of sight per block).  Ensuing procedures will interpolate
+   flow data onto the discretized lines of sight and write results compatible
+   with the radiation solver.  The file name is hard-coded as 'los.g' as part
+   of simplifying the original nomenclature.
+
+Method:
+
+   >  A handful of prompts serve to drive the program -- no control file.
+   >  Read the indicated body point (x,y,z) file -- one or more points.
+   >  If a single body point is found, prompt in case hemispherical lines are
+      NOT intended.
+   >  If all body points are on the centerline (y = 0.), the input surfaces
+      are assumed to be the starboard (right) half.  That half (y > 0.)
+      also serves for off-center body-normal lines, but for a hemisphere at
+      an off-center body point, a full volume grid is expected, with the
+      outer surface closed and convex.
+   >  Read an inner surface triangulation then an outer surface triangulation
+      from what is assumed to be a shock-aligned volume grid.
+   >  Build a search tree from the inner surface triangulation, and search
+      for each body point.
+   >  Generate and store the corresponding unit body-normal vector(s).
+   >  Read the indicated outer boundary triangulation, and build a new search
+      tree as needed for line-surface intersection calculations.
+
+   >  Body-normal line case:
+         >  For each body point B:
+            >  The body normal unit vector is already in hand.
+            >  A search interval along the body-normal line for minimizing
+               the distance to the outer surface is provided by s = 0 at the
+               low end and s = the diagonal of the bounding box for the
+               outer surface mesh.
+            >  The intersection point is then conveniently calculated via
+               a 1D minimization w.r.t. distance s from B along the body-
+               normal line (INTSEC8).
+            >  Impose a CFD-type point distribution on the intersected
+               interval BP, as needed for interpolated flow field data.
+               DPLR-type use of inputs nk, ds1, ds2fraction will suffice.
+         >  Write the discretized line(s) of sight to the indicated PLOT3D-
+            type output file.
+
+   >  Hemisphere lines of sight case:
+         >  The vertices of a triangulated unit hemispherical quadrant define
+            the lines of sight between the body point and the outer grid
+            boundary.  The number of uniform points specified along an edge
+            determines the resolution.  Typically, 25 such points are used,
+            giving 650 lines of sight for a centerline body point, or 1300
+            lines if the body point is off-center.  Centerline points require
+            just half the volume data, and the eventual integration over
+            solid angle of radiances from the lines of sight can be doubled.
+         >  The initial unit quadrant is transformed so that line 1/vertex 1
+            corresponds to the body point normal. After The lines for the
+            first quadrant are generated, the quadrant is rotated 90 degrees
+            about the normal and the next set of lines is generated.  Then if
+            the body point is off-center, this is repeated twice more.
+         >  Each intersection involves a 2-point line from the body point
+            through a quadrant vertex, of length derived from the bounding
+            box of the outer shock surface.  This length is overkill for many
+            intersection search intervals, but that doesn't matter.  Each
+            hemisphere line is intersected and discretized as for the body
+            normal (tangent-slab) case described above.
+History:
+
+   09/27/2018  D.A.Saunders  Initial design.
+   10/20/2018     "    "     After a hiatus, finished the body-normal case.
+   10/22/2018     "    "     Allowed for multizone surfaces.
+   10/31/2018     "    "     Finished adding & testing the hemisphere option.
+   11/01/2018     "    "     Filled in the missing hemisphere method outline.
+   11/06/2018     "    "     Corrected some of the description above.  Note
+                             SLOS, the structured-grid analogue of USLOS, is
+                             now an alternative to the original utilities.
+   11/09/2018     "    "     Use 'los.g' for the output file name as part of
+                             adjusting NEQAIR_Integration to handle the
+                             original nomenclature and this simplified form.
+   10/22/2019     "    "     Updates analogous to SLOS refinements, where
+                             failed intersections prompted another way of
+                             retrying: discretize the part of the line beyond
+                             the failed solution and evaluate line-surface
+                             distances from those points; pick the interval
+                             containing the smallest distance, and redo the
+                             line-surface intersection.  REMEMBER THAT THE
+                             ARC LENGTH INTERVAL PASSED TO INTSEC8 SHOULD BE
+                             NORMALIZED BY THE LINE LENGTH IF THAT IS THE
+                             INTERVAL EXPECTED TO CONTAIN THE INTERSECTION,
+                             AS IT IS HERE, USING THE BOUNDING BOX DIAGONAL.
+
+Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

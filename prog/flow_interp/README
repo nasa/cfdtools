@@ -168,7 +168,7 @@ Control file format ('flow_interp.inp')
    0.0001                  Dist. tol. for target inside the grid or not
    --------------- OPTIONAL CONTROLS -------------
    T                       Suppress solution blocks if possible? [T|F]
-   3                       Method:  1 = plain ADT; 2 = plain KDTREE;
+   1                       Method:  1 = plain ADT; 2 = plain KDTREE;
                            3 = KDTREE + nearest-centroid-cell refinement
 
 History:
@@ -225,8 +225,23 @@ History:
                   actually contain the target.
    08/05/13   "   All ADT variants have been combined into a module now for
                   distribution reasons (generic build & search calls).
-
+   02/22/17   "   Suppress profile tabulation (to standard output) if the
+                  target grid seems to be a set of hemisphere lines of
+                  sight (more than 100 blocks, all 1 x 1 x nk).
+   10/15/19   "   Mysterious interpolations along lines of sight for radiation
+                  calculations revealed that the hybrid method 3 is potentially
+                  seriously flawed.  At a shock envelope boundary, volume grid
+                  cells are typically close together near the shock in the off-
+                  wall direction, yet relatively large in the surface index
+                  directions. This means that cell centroids can be a poor
+                  measure of the correct cells within which to refine the
+                  interpolation coefficients.  Method 1 (ADT searching) has
+                  been adjusted to cope with occasional matrix singularity
+                  observed in boundary layer regions, and is strongly
+                  recommended as the preferred method where practical.
+                  The advice presented above under "Intended application"
+                  remains valid.
 Author:
 
    David Saunders, ELORET Corporation/NASA Ames Research Center, CA
-                   (now with ERC, Inc./NASA ARC).
+                   (later with ERC, Inc. and now with AMA, Inc. at NASA ARC).

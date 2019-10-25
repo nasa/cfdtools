@@ -24,6 +24,9 @@ Please note that the application should still allocate %z(ni,1,1) for each
 block or zone, because 3-space bounding boxes are still used internally by
 the 2-space curve utilities.
 
+17-Oct-2019  David Saunders  See SEARCH_STRUCTURED_VOLUME_ADT for notes on a
+                             work-around for possible matrix singularity.
+
 Related Note:
 
 If searching for just the nearest data point (cell centroid?) is considered
@@ -31,4 +34,14 @@ good enough, see also the extremely efficient package included here under
 the name KDTREE (distance-based searches for nearest neighbor(s) in k
 dimensions) for optional use by FLOW_INTERP.  (This is the kdtree2.f90 of
 Matthew B. Kennel, Institute for Nonlinear Science, available under the
-terms of the Academic Free Software License.)
+terms of the Academic Free Software License.)  WARNING:  The FLOW_INTERP
+application to lines of sight for radiation calculations has uncovered a
+potential weakness near the wind-side shoulder of a capsule at angle of
+attack.  Cells towards the outer shock boundary have extreme aspect ratios
+and are far from orthogonal to a body-normal line of sight.  The nearest
+centroid to a target point within a cell-centered grid (hybrid method 3
+of FLOW_INTERP = KDTREE + refinement within best cell) can easily pick a
+cell outside the shock envelope for a line of sight point inside the shock.
+Only method 1 (pure ADT) is reliable, and now it should produce reasonable
+results even in boundary layer regions where matrix singularity has been
+observed.

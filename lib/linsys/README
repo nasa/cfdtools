@@ -12,6 +12,10 @@ way forming A'A does.
 For underdetermined linear least squares, the method of HDECOM + HSULVE
 provides the shortest-length solution.
 
+Most recently (10-16-2019), safeguarded_lsqr.f90 has been added as a
+workaround for possible matrix singularity in a 3x3 Newton iteration.
+It ensures full rank for any matrix A(m,n).
+
 bloktr.f             Solve one block tridiagonal system, any block size
 btr4.f               Solve one block tridiagonal system, block size 4
 cholesky.f           Cholesky factorization A = GG' for symmetric A as rows
@@ -32,6 +36,7 @@ hsulve.f             HDECOM companion for m < n cases
 lsqr.f               [Damped] linear least squares or unsymmetric Ax = b
 lusolve.f90          May be more convenient than DECSLV: A(ndim,n) and b(n)
 qrdiag.f             QR factrzn. & soln. of non-diag-dominant tridiag. sys.
+safeguarded_lsqr.f90 Intended to work around rank deficiency for any A(m,n)
 solbt.f              DECBT compantion; completes block tridiagonal solution
 solbtc.f             DECBTC companion; completes cyclic bl. tridiag. soln.
 solve.f90            DECOMP companion for multiple RHS cases
