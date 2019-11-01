@@ -179,9 +179,23 @@
 !                                   later blending on to low-curvature regions
 !                                   should achieve the intended effect at sharp
 !                                   corners as well.
+!        10/31/19     "    "        The 09/25/19 decision seems to be unwise.
+!                                   The handling of vertices has been restored
+!                                   and the capsule on a sting case seems to
+!                                   behave adequately with other CAPSULE_GRID
+!                                   input adjustments.  This troubling case is
+!                                   symptomatic of the difficulty of dealing
+!                                   successfully with every type of generatrix
+!                                   likely to be encountered during automated
+!                                   capsule grid generation.  Arranging to
+!                                   turn on or off the two similar types of
+!                                   curvature broadening here was considered
+!                                   two too many control decisions for users of
+!                                   CAPSULE_GRID at this time.
 !
-!     Authors:  David Saunders, Brian Nishida, Sterling Software
-!               NASA Ames Research Center, Moffett Field, CA
+!     Authors:  David Saunders, Brian Nishida, Sterling Software (1980s-90s).
+!               David Saunders, ERC, Inc. and AMA, Inc. at NASA ARC.
+!               NASA Ames Research Center, Moffett Field, CA.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -320,12 +334,19 @@
 
          call detect_vertices (lunout, ndat, work(ndat+1), nvertmax, ivertex, &
                                nvertex)
-         write (lunerr, '(/, (a))') &
-            '*** Suppressing handling of sharp corners in favor of', &
-            '    flatness blending only, to avoid likely interference. ***'
-         nvertex = 0
 
-         if (nvertex > 0) then  ! Adjust curvature in-place; x/y data untouched
+!        The following was done to aid a capsule-on-a-sting case, but it has
+!        affected a simpler case with a sharp corner badly, so we choose to
+!        retain the broadening of curvature spikes.  The interaction with the
+!        (later) special treatment of flat/low-curvature segments remains
+!        difficult to ascertain.  Stay with it for now.
+
+!!!      write (lunerr, '(/, (a))') &
+!!!         '*** Suppressing handling of sharp corners in favor of', &
+!!!         '    flatness blending only, to avoid likely interference. ***'
+!!!      nvertex = 0
+
+!!!      if (nvertex > 0) then  ! Adjust curvature in-place; x/y data untouched
             nv = min (nvmax, max (nvmin, nint (fractn * real (ndat))))
             if (verbose) write (lunout, '(a, i3, a, i3)') &
                '# vertices found:', nvertex, &
@@ -335,7 +356,7 @@
                call vertex_curvature (ndat, work(1), work(ndat+1), &
                                       ivertex(iv), nv, exponent, fraction)
             end do
-         end if
+!!!      end if
 
 !        Broaden abrupt curvature changes onto low-curvature segments:
 

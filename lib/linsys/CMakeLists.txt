@@ -19,6 +19,7 @@ add_library(linsys
   lsqr.f
   lusolve.f90
   qrdiag.f
+  safeguarded_lsqr.f90
   solbt.f
   solbtc.f
   solve.f90
