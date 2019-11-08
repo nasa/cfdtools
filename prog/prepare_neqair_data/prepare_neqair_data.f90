@@ -5,26 +5,65 @@
 !     This adaptation of prepare_rapid_analysis prompts the user for specifics
 !     about a flow solution and the body point(s) at which radiative heating
 !     calculations are to be performed with NEQAIR, either in tangent-slab mode
-!     or full angular integration mode.
+!     or full angular integration mode.  STRUCTURED GRIDS IN PLOT3D FORMAT ARE
+!     ASSUMED.  For the unstructured case, USLOS is available for constructing
+!     individual or hemispherical collections of lines of sight, but at the time
+!     of writing, interpolation of unstructured flow field data onto those lines
+!     of sight remains an issue, because US3D's nearest-cell (KDTREE-based) form
+!     of interpolation can choose wrong cell centroids in the presence of high-
+!     aspect ratio cells near a flow-field shock.
 !
 !     The working directory should contain (or point to) the vertex-centered
-!     volume grid and the cell-centered volume grid and flow data (three volume
-!     files in PLOT3D multiblock form).  Whether they are 2D or 3D is automatic-
-!     ally determined.  If full integration is specified for a 2D axisymmetric
-!     case, 3D revolved grid and function files will be produced as part of the
-!     automation procedures of which the present utility is the first step
-!     following a flow calculation with the right choice of species.
+!     volume grid and associated flow data (temperature(s) & number densities).
+!     With the utilities that preceded SLOS, cell-centered volume grid and flow
+!     data could also be used, but the vertex-centered grid (without the fn.
+!     file) was still needed because the line-of-sight discretizations were
+!     derived from its off-wall grid lines.  In SLOS, the discretizations follow
+!     the two-stage scheme of DPLR (1-sided stretching with ds1, then 2-sided
+!     restretching with ds2mult applied to the 1-sided outermost interval).
+!     Use of VERTEX-CENTERED grid and function files is now recommended, but
+!     cell-centered data with "halo" cells will produce much the same result,
+!     as only the innner and outer layers at k = 1 and kmax are actually used.
+!     All these files should be in PLOT3D multiblock form, formatted or not.
+!     Whether they are 2D or 3D is automatically determined.
+!
+!     If full integration is specified for a 2D axisymmetric case, 3D revolved
+!     grid and function files will be produced as part of the automation
+!     procedures of which the present utility is the first step following a
+!     flow calculation with the right choice of species.
 !
 !     The output from this utility is a shell script named prepare_LOS_data that
 !     (when sourced) invokes the indicated utilities and control files (also
 !     generated here) to set up line-of-sight data in NEQAIR's LOS.dat form as
 !     LOS-1.dat, LOS-2.dat, ..., LOS-n.dat in the working directory.
 !
-!     A separate script (run_neqair) can then submit NEQAIR batch jobs for the
-!     indicated range of line numbers (one line of sight per PBS job) via a
-!     third script, neqair.pbs, which is expected to contain appropriate
-!     walltime and nodes statements, load the intended NEQAIR module, and
-!     launch NEQAIR on the appropriate number of processors.
+!     After the line(s) of sight have been checked for possible flaws (such as
+!     in the underlying line-surface intersection calculations), a separate
+!     script, set_neqair should be invoked with two first and last line number
+!     arguments.  This generates directories LINE-1, LINE-2 ... containing links
+!     to LOS-1.dat, LOS-2.dat ... as the LOS.dat expected by NEQAIR, and links
+!     to the appropriate neqair.inp control file, and to a neqair.pbs file.
+!     Another shell script can then launch NEQAIR within each LINE-* directory,
+!     and this script is system-dependent.
+!
+!     Note that on the NAS supercomputer facility at Ames Research Center, an
+!     "array" job is recommended.  This automates looping over a range of
+!     indices (which can be the n in the LINE-n directories), with a limit of
+!     500 total at the time of writing.  E.g., neqair.1-325.pbs:
+!
+!        #PBS -W group_list=xxxxx
+!        #PBS -q normal
+!        #PBS -l walltime=0:10:00
+!        #PBS -l select=2:ncpus=20:model=ivy
+!        #PBS -N neqair
+!        #PBS -j oe
+!        #PBS -J 1-325
+!
+!        module use -a /home4/tsa/modulefiles
+!        module load neqair/15.0
+!
+!        cd LINE-$PBS_ARRAY_INDEX
+!        mpiexec neqair < neqair.inp  > neqair.out
 !
 !     Files neqair.inp and neqair.pbs are expected to be in the working
 !     directory along with the body point file (indices or coordinates) and a
@@ -33,8 +72,28 @@
 !     are missing.  The neqair_data step (los.* --> LOS.dat format) can then
 !     be performed explicitly at a later time.
 !
-!     When NEQAIR is run on a range of lines, NEQAIR results will appear in
-!     subdirectores /LINE-1, /LINE-2, ...
+!     This neqair.pbs should not be confused with the array job (or alternative)
+!     shown above.  It should be set to run a single line only, and might be
+!     used in /LINE-1 as a check that all looks as it should before launching a
+!     job that loops over many lines.
+!
+!     More about sample.LOS.dat (see NEQAIR_DATA):
+!
+!        NEQAIR_DATA can now write line-of-sight (LOS) data in both the original
+!        rigid format read by NEQAIR versions up to and including v14 and the
+!        simpler column-oriented format handled from NEQAIR v15 on.  Both data
+!        formats involve a sample.LOS.dat file read here that indicates the
+!        species names.  If a sample file is found with a NEQAIR version number
+!        on line 1, then the later data format is indicated. The sample file is
+!        transcribed as the header of all output LOS data files in either case.
+!
+!     When NEQAIR is run on a range of lines, its results will appear in
+!     neqair.out in subdirectores /LINE-1, /LINE-2, ...  A command such as
+!     grep Total LINE-*/neqair.out > qrad.dat followed by wc qrad.dat will
+!     confirm that all lines have run or that NEQAIR may have failed on some.
+!     The utility sort_rows is one way of ordering qrad.dat, using LINE- as
+!     the sort string, although grep may have a switch that overrides the
+!     default order of LINE-1, LINE-10, LINE-100, LINE-101, ...
 !
 !     Full integration mode should work with a single body point per working
 !     directory.  Since actually performing the integration cannot occur
@@ -58,12 +117,44 @@
 !
 !     The following utilities may be invoked by the script from this program:
 !
+!     Originally:
 !        lines_of_sight       ! One or more lines of sight in a 3D volume grid
 !        lines_of_sight_2d    ! One or more lines of sight in a 2D volume grid
 !        hemispheres_of_sight ! Many lines of sight for one body point
 !        flow_interp          ! 3D flow interpolation at LOS coordinates
 !        flow_interp_2D       ! 2D   "    "    "    "    "    "    "
-!        neqair_data          ! PLOT3D *.g,*.f --> NEQAIR's LOS.dat form
+!        neqair_data          ! PLOT3D *.g/*.f --> NEQAIR's LOS.dat form
+!
+!     Currently:
+!        slos                 ! 1 or more lines, tangent-slab or hemi., 3D vol.
+!        lines_of_sight_2d    ! 1 or more tangent-slab lines in a 2D volume grid
+!        flow_interp          ! 3D flow interpolation at LOS coordinates
+!        flow_interp_2D       ! 2D   "    "    "    "    "    "    "
+!        neqair_data          ! PLOT3D *.g/*.f --> NEQAIR's LOS.dat form
+!
+!        [The more recent SLOS utility was derived from USLOS (for unstructured
+!        grids).  Both of these combine the functions of the LINES_OF_SIGHT and
+!        HEMISPHERES_OF_SIGHT utilities, and make use of the diagonal of the
+!        volume grid bounding box for the line-surface intersection search
+!        intervals in place of earlier heuristics.  They also feature a more
+!        fail-safe (?) way of recovering from an intersection calculation that
+!        has failed because a line-surface distance isn't essentially zero.]
+!
+!  FLOW_INTERP Warning:
+!
+!        Past practice has been to use FLOW_INTERP's hybrid method 3, because
+!        its original preferred method occasionally encounters a singular matrix
+!        believed to be associated with a high aspect ratio cell in a boundary
+!        layer.  The ADT search method now traps singularities and retries with
+!        a perturbed system guaranteed to be full rank.  Method 3 (nearest cell
+!        centroid search via KDTREE, followed by refinement within that cell)
+!        has been found to give seriously wrong interpolations occasionally by
+!        using cells with centroids outside the shock even though the target
+!        points are actually inside the shock.  This explains occasional NEQAIR
+!        failures:  low free-stream temperatures were being interpolated on to
+!        the line of sight inside the shock.  USE FLOW_INTERP METHOD 1 WHENEVER
+!        PRACTICAL; METHODS 2 OR 3 SHOULD BE CONFINED TO LAST RESORTS FOR REALLY
+!        LARGE VOLUME GRIDS.
 !
 !  Assumptions:
 !
@@ -99,6 +190,19 @@
 !                             be found.
 !     05/24/18   "     "      "Same relative distribution" needs to write the
 !                             requested number of points (unlike 2x thinning).
+!     11/01/19   "     "      Invoke SLOS in place of the earlier LINES_OF_SIGHT
+!                             and HEMISPHERES_OF_SIGHT.  See above for why.
+!                             The 2D case (LINES_OF_SIGHT_2D) is still supported
+!                             as is the option to revolve 2D data if hemi-
+!                             spherical lines are required.  The option to
+!                             reflect half-body data remains incomplete.  The
+!                             documentation above has also been expanded to be
+!                             as clear as possible.  These revisions proved
+!                             much messier than expected, partly because of
+!                             the dropping of certain options by SLOS.
+!     11/06/19   "     "      The 2D/revolve case wasn't right.  The revolving
+!                             has to happen before SLOS begins.
+!     11/07/19   "     "      Warn about 2D/3D body point gotcha.
 !
 !  Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
 !                  Now with AMA, Inc. at NASA ARC.
@@ -115,7 +219,7 @@
       lunsh  = 3,        &  ! For the output shell script
       lunkbd = 5,        &  ! For keyboard entries
       luncrt = 6,        &  ! For prompts and diagnostics
-      nc     = 96           ! # characters in file names
+      mxchar = 128          ! File name and body pt. x/y/z[/cone] buffer limit
 
    logical, parameter :: &
       false  = .false.,  &
@@ -126,35 +230,35 @@
 
    character, parameter :: &
 !!!   path*21          = '/share/apps/cfdtools/', &
-      path*20          = '/apps/pkgs/cfdtools/', &
+!!!   path*20          = '/apps/pkgs/cfdtools/', &
+      path*16          = '/home5/dasaund1/', &
       blank*1          = ' ',   &
       n*1              = 'n',   &
       y*1              = 'y',   &
-      file_rev_g*11    = 'revolved.gu', &
-      file_rev_cc_g*14 = 'revolved_cc.gu', &
-      file_rev_cc_f*14 = 'revolved_cc.fu'
+      file_los_f*5     = 'los.f', &
+      file_los_g*5     = 'los.g', &
+      file_rev_flow*11 = 'revolved.fu', &
+      file_rev_grid*11 = 'revolved.gu'
 
 !  Variables:
 
    integer :: &
-      ier, ios, ismooth, ndim, ne, npts, ntokens
+      ier, ios, ismooth, ndim, nbps, ne, npts, ntokens
 
    real :: &
-      cone_angle, power, s1, s2, xbp, ybp, zbp
+      cone_angle, ds1, ds2_mult, power, xbp, ybp, zbp
 
    logical ::   &
-      cr, eof, formatted_cc, formatted_vc, hemisphere, off_center, proceed, &
-      relative, thin2x, towards_body, yes
+      any_angle, body_normal, cr, eof, formatted_in, formatted_out, &
+      hemisphere, off_center, parallel_to_Ox, proceed, relative, shock_normal, &
+      thin2x, towards_body, yes
 
    character (1) :: &
       answer, yesno
 
-   character (nc) :: &
-      filename_BP,   filename_cc_f,  filename_cc_g, &
-      filename_grid, filename_los_f, filename_los_g, buffer
-
-   character (nc-10) :: &
-      identifier        ! May get '.1.lines.g' appended to make a filename <= nc
+   character (mxchar) :: &
+      filename_bp, filename_flow, filename_grid, filename_los_f, &
+      filename_los_g, buffer
 
 !  Execution:
 !  !!!!!!!!!!
@@ -162,28 +266,32 @@
    write (luncrt, '(/, (a))') &
       ' Requirements summary:', ' ', &
       '    Grids and solutions may be 2D or 3D, formatted or not.', &
-      '    If flow data are interpolated to grid vertices (interp = 2), the',  &
-      '    associated grid can be used twice: once for the line-of-sight',     &
-      '    coordinates and once for the flow interpolations.',                 &
-      '    DPLR''s POSTFLOW should have been run once or twice already:',      &
-      '      [(1) vertex-centered volume grid (only)    (interp = 2);]',       &
-      '       (2) volume grid & flow data (interp = 1, but interp = 2 is OK);',&
-      '           ivarp = 0 120 120 125 125 1200   (2 temperatures)   or',     &
-      '           ivarp = 0 120 120 120 120 1200   (1 temperature)',           &
+      '    3D volume grid and flow data may be vertex- or cell-centered, as',  &
+      '    only the inner and outer layers are actually used to construct',    &
+      '    the lines of sight.',                                               &
+      '    2D volume data should be vertex-centered, as the radial grid line', &
+      '    distributions determine the discretization of the lines of sight.', &
+      ' ', &
+      '    DPLR''s POSTFLOW should have been used for two volume files:',      &
+      '     (1&2) vertex-centered volume grid + flow data (interp = 2) or' //  &
+      ' (3D only)', &
+      '           cell-centered grid + flow data with halo cells (interp = 1)',&
+      '           ivarp = 0 120 125 1200  (1-4 temperatures, NEQAIR 15+) or',  &
+      '           ivarp = 0 120 120 125 125 1200  (4 temperatures, NEQAIR 14)',&
+      ' ', &
       '    The working directory should also contain or point to these files:',&
-      '       (3) body pt. file (x/y/z or grid i/j/k [+ optional cone angle]', &
+      '       (3) body pt. file (x/y/z [+ optional cone angle for hemi case]', &
       '       (4) neqair.inp      (tangent-slab or not, regions, etc.)',       &
       '       (5) neqair.pbs      (# nodes, desired NEQAIR version, etc.)',    &
-      '       (6) run_neqair      (first/last LOS numbers as arguments)',      &
-      '       (7) sample.LOS.dat  (top portion indicating relevant species)'
+      '       (6) set_neqair      (first/last LOS numbers as arguments)',      &
+      '       (7) sample.LOS.dat  (indicates NEQAIR version & species names)'
    write (luncrt, '(/, 3a, //, 2a, /, a, /)') &
       ' Examples of files (4)-(7) should be found here: ', path, &
       'PREPARE_NEQAIR_DATA', &
       ' Be sure to enter the right species in sample.LOS.dat and to', &
       ' check neqair.inp and neqair.pbs.', &
-      ' The *.chem file is the best place to get the right species from.', &
-      ' It is OK to use vertex-centered flow data.  This will mean the', &
-      ' same grid name is entered twice.'
+      ' Plotting the los.g lines before running NEQAIR is advised.', &
+      ' Use DPLR''s *.chem file to determine the right species names.'
 
    ier = 0
    call check_existence ('neqair.inp',     luncrt, ios);  if (ios /= 0) ier = 1
@@ -199,159 +307,207 @@
    if (eof) go to 99
    if (.not. proceed) go to 99
 
-!  (1) Vertex-centered volume grid (may be the same as for the flow data):
+!  Open the shell script to be generated:
+
+   open  (lunsh, file='prepare_LOS_data', status='unknown')
+   write (lunsh, '(a)') &
+      '#! /bin/tcsh', &
+      '#  Script for preparing line-of-sight data for NEQAIR analysis.', &
+      'echo '' ''',      &
+      'echo '' Line(s) of sight calculations ...'''
+
+!  (1) Vertex- or cell-centered volume grid (3D); vertex-centered (2D):
 
    filename_grid = 'volrad.gu';  ios = 1
    do while (ios /= 0)
       call reads (luncrt, &
-          'Vertex-centered volume grid? [<CR> = ' // trim (filename_grid) // &
-          ']: ', lunkbd, filename_grid, cr, eof)
+         'Volume grid? (Vertex-centered for 2D, vc or cc for 3D)? [<CR> = ' &
+         // trim (filename_grid) // ']: ', lunkbd, filename_grid, cr, eof)
       if (eof) go to 99
 
-      call determine_grid_form (filename_grid, lunin, formatted_vc, ios)
+      call determine_grid_form (filename_grid, lunin, formatted_in, ios)
    end do
 
-   call determine_grid_dim (filename_grid, lunin, formatted_vc, ndim, ios)
+!  2- or 3-D?
 
-!  (2) Cell- or vertex-centered volume grid and flow data:
+   call determine_grid_dim (filename_grid, lunin, formatted_in, ndim, ios)
 
-   filename_cc_g = 'volrad.gu';  ios = 1
+   write (luncrt, '(a, i2)') ' Apparent volume grid dimension:', ndim
+
+!  (2) Vertex- or cell-centered flow data (3D); vertex-centered (2D):
+
+   filename_flow = 'volrad.fu';  ios = 1
    do while (ios /= 0)
       call reads (luncrt, &
-         'Flow volume grid?            [<CR> = ' // trim (filename_cc_g) // &
-           ']: ', lunkbd, filename_cc_g, cr, eof)
+         'Flow volume data file?                                  [<CR> = ' &
+         // trim (filename_flow) // ']: ', lunkbd, filename_flow, cr, eof)
       if (eof) go to 99
 
-      call determine_grid_form (filename_cc_g, lunin, formatted_cc, ios)
-   end do
-
-   filename_cc_f = 'volrad.fu';  ios = 1
-   do while (ios /= 0)
-      call reads (luncrt, &
-         'Flow volume data?            [<CR> = ' // trim (filename_cc_f) // &
-           ']: ', lunkbd, filename_cc_f, cr, eof)
-      if (eof) go to 99
-
-      call determine_grid_form (filename_cc_f, lunin, formatted_cc, ios)
+      call determine_grid_form (filename_flow, lunin, formatted_in, ios)
    end do
 
 !  (3) Body point file:
 
-   filename_BP = 'bp.inp';  ios = 1
+   filename_bp = 'bp.inp';  ios = 1
    do while (ios /= 0)
       call reads (luncrt, &
-            'Target body point file? [<CR> = ' // trim (filename_BP) // ']: ', &
-                  lunkbd, filename_BP, cr, eof)
+            'Target body point file? [<CR> = ' // trim (filename_bp) // ']: ', &
+                  lunkbd, filename_bp, cr, eof)
       if (eof) go to 99
 
-      open (lunin, file=filename_BP, status='old', iostat=ios)
-
+      open (lunin, file=filename_bp, status='old', iostat=ios)
    end do
 
-!  Catch a possible user error (originally, but now cone_angle may be present):
+!  Count the body points:
 
-   read  (lunin, '(a)') buffer
-   close (lunin)
+   nbps = 0
+   do
+      read (lunin, '(a)', iostat=ios) buffer
+      if (ios /= 0) exit
+      nbps = nbps + 1
+   end do
+   rewind (lunin)
 
-   call token_count (buffer, blank, ntokens)
+   write (luncrt, '(/, a, i4)') ' # body points specified: ', nbps
 
-!  Suppress this because it prevents trailing descriptive text.
-!  The LOS codes will read only ndim items per line of body point data, except
-!  now the hemisphere option looks for an optional fourth (cone angle) token.
+!  More than one body point means this is not a hemisphere case.
+!  What type of line(s) of sight?
 
-!! if (ntokens /= ndim) then
-!!    write (luncrt, '(a, 2i4)') &
-!!       '*** Likely error: ndim /= # body pt. coords./indices:', ndim, ntokens
-!!    go to 99
-!! end if
-
-!  Hemisphere(s)-of-sight, tangent-slab towards body, or integrate away from
-!  the body as for meteor studies?
-
-   answer = 't'  ! Most likely tangent-slab towards body
-   if (ndim == 2) then
-      call readc (luncrt, &
-                 'Tangent-slab/towards body (t), or out from body (o)? [t]: ', &
-                  lunkbd, answer, cr, eof)
-      if (eof) go to 99
-   else
-      call readc (luncrt, &
-   'Tangent-slab (t), hemisphere lines (h), or out from body (o)? [<CR>=t]: ', &
-                  lunkbd, answer, cr, eof)
-      if (eof) go to 99
-   end if
-
-   towards_body = answer /= 'O'
-   hemisphere   = answer == 'H'
+   towards_body = true       ! But NEQAIR_DATA can reverse this if told to
+   hemisphere   = nbps == 1  ! But allow for a single LOS
 
    if (hemisphere) then
-       off_center = false
-       call ready (luncrt, 'Any off-center body points? [y|n; <CR> = n] ', &
-                   lunkbd, off_center, cr, eof)
-       if (eof) go to 99
+      call ready (luncrt, &
+     'One body point found. Do you want hemispherical lines? [y/n; <cr>=y]: ', &
+                  lunkbd, hemisphere, cr, eof)
+     if (eof) go to 99
    end if
-
-!  It looks as though all set-up files are ready.  Go ahead with the scripting:
-
-   open  (lunsh, file='prepare_LOS_data', status='unknown')
-   write (lunsh, '(a)') '#! /bin/tcsh', &
-      '#  Script for preparing line-of-sight data for NEQAIR analysis.'
-
-   write (lunsh,  '(a)') &
-      'echo '' ''',      &
-      'echo '' Lines-of-sight calculations ...'''
-
-!  LINES_OF_SIGHT[_2D]:
-!  !!!!!!!!!!!!!!!!!!!!
-
-   if (.not. hemisphere) then
-
-      filename_los_g = 'los.g'  ! No need for them to be variable (?)
-      filename_los_f = 'los.f'
-
+      
+   if (hemisphere) then
       if (ndim == 2) then
-         write (lunsh, '(a)') &
-            path // 'LINES_OF_SIGHT_2D/lines_of_sight_2d << LINES_OF_SIGHT'
-      else
-         write (lunsh, '(a)') &
-            path // 'LINES_OF_SIGHT/lines_of_sight << LINES_OF_SIGHT'
+         proceed = true
+         call ready (luncrt, &
+                '*** WARNING: The body pt. file must have 3 coordinates. ' // &
+                     'Continue?  [y|n=^D=quit; y=<cr>=continue]: ', &
+                     lunkbd, proceed, cr, eof)
+         if (eof .or. .not. proceed) go to 99
       end if
-
-      answer = 'b'
-      call reads (luncrt, &
-       'Make lines body-normal (b), shock-normal (s), parallel to -Ox (x)?' // &
-       ' [<CR> = b] ', lunkbd, answer, cr, eof)
+      body_normal    = false
+      shock_normal   = false
+      parallel_to_Ox = false
+      any_angle      = false
+      off_center     = false
+      call ready (luncrt, 'Any off-center body points? [y|n; <CR> = n] ', &
+                  lunkbd, off_center, cr, eof)
       if (eof) go to 99
 
-      if (formatted_vc) then
-         yesno = y
-      else
-         yesno = n
+      ne = 25
+      call readi (luncrt, &
+        '# hemisphere points, pole to equator? [<CR> = 25 = 650/1300 lines] ', &
+                  lunkbd, ne, cr, eof)
+      if (eof) go to 99
+   else  ! Tangent-slab lines, or other possibilities from the past
+      write (luncrt, '(/, (a))') &
+          ' Make the line(s) body-normal                          (b)', &
+          '                 shock-normal                          (s)', &
+          '              parallel to -Ox                          (x)', &
+          ' or at the angle(s) with Ox found in the body pt. file (a)?'
+      answer = 'B'
+      call readc (luncrt, 'Line type? [b|s|x|a; <cr>=b=body-normal]: ', &
+                  lunkbd, answer, cr, eof)
+      body_normal    = answer == 'B'
+      shock_normal   = answer == 'S'
+      parallel_to_Ox = answer == 'X'
+      any_angle      = answer == 'A'
+      call ready (luncrt, &
+              'Should NEQAIR integrate towards the body? [y|n; <CR> = yes]: ', &
+               lunkbd, towards_body, cr, eof)
+      write (luncrt, '(a, l2)') 'Towards body:', towards_body
+      if (eof) go to 99
+   end if
+
+!  Line discretization details (except for the 2D case), which still reuses the
+!  volume grid's relative discretization of off-wall radial lines:
+
+   if (hemisphere .or. ndim == 3) then
+
+      write (luncrt, '(a)') &
+        'Define the point distribution for the intersected hemisphere lines.', &
+        'Remember that NEQAIR_DATA also has the option to redistribute the', &
+        'points based on |dTv/ds| and/or change their number.', &
+        'If you intend to do that, retain the flow resolution here.', &
+        'Preserving full resolution is probably preferable to coarsening.'
+      npts = 121
+      call readi (luncrt, &
+                'Desired # points along los.g lines of sight? [<CR> = 121] ', &
+                  lunkbd, npts, cr, eof)
+         if (eof) go to 99
+
+      write (luncrt, '(a)') &
+         'LOS discretization is controlled as in DPLR'' grid alignment:', &
+      'wall spacing ds1 with 1-sided-stretching; ds2_mult applied to outer ds2.'
+
+      ds1 = 1.e-5
+      call readr (luncrt, 'ds1 [<CR> = 1.e-5]: ', lunkbd, ds1, cr, eof)
+      if (eof) go to 99
+      ds2_mult = 0.1
+      call readr (luncrt, 'ds2_mult [<CR> = 0.1]: ', lunkbd, ds2_mult, cr, eof)
+      if (eof) go to 99
+
+   end if
+
+   if (hemisphere) then
+
+      if (off_center) then
+         call set_up_reflect_blocks ()  ! Not complete
+         if (ios /= 0) go to 99
       end if
-
-      write (lunsh, '(a)') &
-         answer,                &
-         trim (filename_BP),    &
-         trim (filename_grid),  &
-         yesno,                 &
-         trim (filename_los_g), &
-         'LINES_OF_SIGHT',      &
-         blank
-
-   else  ! Full angular integration
 
       if (ndim == 2) then
          call set_up_revolve_grid ()
          if (ios /= 0) go to 99
-      else
-         if (off_center) then
-            call set_up_reflect_blocks ()  ! For half a forebody at nonzero AoA
-            if (ios /= 0) go to 99
-         end if
       end if
 
-      call set_up_hemispheres_of_sight ()
-      if (ios /= 0) go to 99
+   end if
+
+   filename_los_g = 'los.g'  ! No need for them to be variable (?)
+   filename_los_f = 'los.f'
+   formatted_out  = true
+
+!  Lines of sight (LINES_OF_SIGHT_2D or SLOS):
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   if (hemisphere) then
+
+      write (lunsh, '(a)') &
+         path // 'SLOS/slos << LOS', &
+         trim (filename_bp), &
+         y, &     ! "Yes" to the question about hemisphere|not hemi. (nbps = 1)
+         trim (filename_grid)
+      write (lunsh, '(i3, /, i3, /, es10.3, /, f6.3)') ne, npts, ds1, ds2_mult
+      write (lunsh, '(a)') 'LOS'
+
+   else ! Not hemispherical
+
+      if (ndim == 2) then  ! LINES_OF_SIGHT_2D
+         yesno = n
+         if (formatted_in) yesno = y
+         write (lunsh, '(a)')      &
+            path // 'LINES_OF_SIGHT_2D/lines_of_sight_2d << LOS', &
+            answer,                &  ! Type of line (B|S|X|A)
+            trim (filename_bp),    &
+            trim (filename_grid),  &
+            yesno,                 &  ! Formatted or not
+            trim (filename_los_g)
+      else  ! SLOS and not hemispherical
+         write (lunsh, '(a)') &
+            path // 'SLOS/slos << LOS', &
+            trim (filename_bp)
+         if (nbps == 1) write (lunsh, '(a)') n  ! No the question hemi? question
+         write (lunsh, '(a)') trim (filename_grid)
+         write (lunsh, '(i3, /, es10.3, /, f6.3)') npts, ds1, ds2_mult
+      end if
+      write (lunsh, '(a)') 'LOS', blank
 
    end if
 
@@ -360,15 +516,15 @@
 
    if (.not. hemisphere .and. ndim == 2) then  ! No control file
 
-      write (lunsh, '(a)') &
+      write (lunsh, '(a)')  &
          'echo '' ''',      &
          'echo '' 2-D flow interpolation at LOS points ...''', &
          path // 'FLOW_INTERP_2D/flow_interp_2d << FLOW_INTERP_2D', &
-         trim (filename_cc_g),  &
-         trim (filename_cc_f),  &
-         trim (filename_los_g), &
-         trim (filename_los_f), &
-         'FLOW_INTERP_2D',      &
+         trim (filename_grid),  &
+         trim (filename_flow),  &
+         file_los_g, &
+         file_los_f, &
+         'FLOW_INTERP_2D', &
          blank
 
    else  ! 3-D and/or full angular integration
@@ -410,18 +566,18 @@
             'echo '' ''',      &
             'echo '' Converting LOS data to NEQAIR format ...''', &
             path // 'NEQAIR_DATA/neqair_data << NEQAIR_DATA', &
-            trim (filename_los_g), &
-            trim (filename_los_f)
+            file_los_g, &
+            file_los_f
          write (luncrt, '(a)') &
           ' Redistribute the line of sight points?', &
           '    n = no', &
-          '    y = yes via dT/ds (gradient-based, normally satisfactory)', &
+          '    y = yes via dT/ds (gradient-based, unnormalized)', &
           '    h = hybrid dT/ds + Vinokur scheme (forebody, extreme T, p)', &
           '    c = curvature-based along the (normalized) T profile', &
           '    r = same relative spacing'
-         answer = y
+         answer = n
          call reads (luncrt, &
-           '   t = simple 2x thinning: [n|y|h|r|t; <CR> = y = dT/ds-based]: ', &
+         '   t = simple 2x thinning: [n|y|h|r|t; <CR>=n=no redistribution]: ', &
                      lunkbd, answer, cr, eof)
          if (eof) go to 99
 
@@ -434,9 +590,9 @@
             npts = 0
             if (.not.  thin2x) then
                do while (npts <= 0)
-                  npts = 120
+                  npts = 121
                   call readi (luncrt, &
-                  'Desired # pts. along output lines of sight? [<CR> = 120] ', &
+                  'Desired # pts. along output lines of sight? [<CR> = 121] ', &
                               lunkbd, npts, cr, eof)
                   if (eof) go to 99
                end do
@@ -459,9 +615,9 @@
          end if
 
          if (hemisphere .or. towards_body) then
-            write (lunsh, '(a)') 'y'
+            write (lunsh, '(a)') y
          else  ! Option to integrate out from the body
-            write (lunsh, '(a)') 'n'
+            write (lunsh, '(a)') n
          end if
 
          write (lunsh, '(a)') &
@@ -488,92 +644,9 @@
 
 99 continue
 
-!  Local procedure for program prepare_neqair_data:
+!  Local procedures for program prepare_neqair_data:
 
    contains
-
-!     .........................................................................
-      subroutine set_up_hemispheres_of_sight ()
-!     .........................................................................
-
-      ios = 1
-      ne = 25
-      call readi (luncrt, &
-                  '# hemisphere points, pole to equator? [<CR> = 25] ', &
-                  lunkbd, ne, cr, eof)
-      if (eof) go to 99
-
-      identifier = 'stag_point'
-      call reads (luncrt, &
-   'Identifier for the hemisphere-related output files? [<CR> = stag-point] ', &
-                  lunkbd, identifier, cr, eof)
-      if (eof) go to 99
-
-      write (luncrt, '(a)') &
-        'Define the point distribution for the intersected hemisphere lines.', &
-        'Remember that NEQAIR_DATA also has the option to redistribute the', &
-        'points based on |dTv/ds| and change their number.', &
-        'If you intend to do that, more is better here.'
-      npts = 129
-      call readi (luncrt, &
-                'Desired # points along los.g lines of sight? [<CR> = 129] ', &
-                  lunkbd, npts, cr, eof)
-         if (eof) go to 99
-
-      write (luncrt, '(a)') &
-      'LOS discretization is controlled by multiples s1 & s2 of the first and',&
-      'last relative grid spacing.  E.g., 1. & 1. (forebody), 2. & 2. (aft).'
-
-      s1 = 1.
-      call readr (luncrt, 's1 [<CR> = 1.]: ', lunkbd, s1, cr, eof)
-      if (eof) go to 99
-      s2 = 1.
-      call readr (luncrt, 's2 [<CR> = 1.]: ', lunkbd, s2, cr, eof)
-      if (eof) go to 99
-
-      if (formatted_cc) then
-         yesno = y
-      else
-         yesno = n
-      end if
-
-      write (lunsh, '(a)') &
-         'echo '' ''',      &
-         'echo '' Generating hemispherical lines of sight ...''', &
-         path // 'HEMISPHERES_OF_SIGHT/hemispheres_of_sight << HEMISPHERE'
-      write (lunsh, *) ne
-      write (lunsh, '(a)') &
-         trim (filename_BP), &
-         trim (filename_grid), &
-         yesno, &
-         trim (identifier)
-      write (lunsh, '(i3, /, f8.4, /, f8.4)') npts, s1, s2
-      write (lunsh, '(a)') 'HEMISPHERE'
-
-!     Radiometer option to process less than a full hemisphere of lines:
-
-      if (ntokens == 3) then  ! Optional cone angle is not present
-         filename_los_g = trim (identifier) // '.1.lines.g'
-         filename_los_f = trim (identifier) // '.1.lines.f'
-         ios = 0
-      else  ! The cone angle appears in the reduced lines of sight file name
-         read (buffer, *, iostat=ios) xbp, ybp, zbp, cone_angle
-         if (ios /= 0) then
-            write (luncrt, '(a, a)') &
-               '*** Trouble reading cone_angle from body point line:', &
-               buffer
-            go to 99
-         end if
-         filename_los_g(1:11) = 'cone.xx.xx.'
-         write (filename_los_g(6:10), '(f5.2)') cone_angle
-         filename_los_g(12:)  = trim (identifier) // '.1.lines.g'
-         filename_los_f(1:11) = filename_los_g(1:11)
-         filename_los_f(12:)  = trim (identifier) // '.1.lines.f'
-      end if
-
- 99   return
-
-      end subroutine set_up_hemispheres_of_sight
 
 !     .........................................................................
 !
@@ -581,9 +654,8 @@
 !
 !     For the case of full angular integration at off-center body points on
 !     half a forebody at AoA, set up reflection of both the half volume grid
-!     and the half volume cell-centered data, ready for HEMISPHERES_OF_SIGHT.
-!     Unsteady wakes are not symmetric, so this is inappropriate for full
-!     bodies.
+!     and the half volume flow data, ready for SLOS.  Unsteady wakes may not
+!     be symmetric, so this may be inappropriate for full bodies.
 !     .........................................................................
 
       proceed = true
@@ -619,60 +691,31 @@
                   lunkbd, total_angle, cr, eof)
       if (eof) go to 99
 
-      npts_rotate = 181
-      call readr (luncrt, '# circumferential grid points? [<CR> = 181]  ', &
+      npts_rotate = 91
+      call readr (luncrt, '# circumferential grid points? [<CR> = 91]  ', &
                   lunkbd, npts_rotate, cr, eof)
       if (eof) go to 99
 
-      if (formatted_vc) then
-         yesno = y
-      else
-         yesno = n
-      end if
-
       write (lunsh, '(a)') &
          'echo '' ''',      &
-         'echo '' Revolving the 2-D volume grid ...''', &
-         path // 'REVOLVE_GRID/revolve_grid << REVOLVE_GRID'
-      write (lunsh, '(a)') &
+         'echo '' Revolving the 2-D volume data ...''', &
+         path // 'REVOLVE_GRID/revolve_grid << REVOLVE'
+      write (lunsh, '(a, /, l1, /, a, /, a)') &
          trim (filename_grid), &
-         yesno, &
-         'n'
-      write (lunsh, '(f4.0, /, i3)') total_angle, npts_rotate
-      write (lunsh, '(a)') &
-         file_rev_g, 'n', &
-         'REVOLVE_GRID'
+         formatted_in, &
+         y, &
+         trim (filename_flow)
 
-      filename_grid = file_rev_g
-      formatted_vc  = false
-
-!     Repeat for the cell-centered grid and flow data:
-
-      if (formatted_cc) then
-         yesno = y
-      else
-         yesno = n
-      end if
-
-      write (lunsh, '(a)') &
-         'echo '' ''',      &
-         'echo '' Revolving the cell-centered 2-D grid and flow data ...''', &
-         path // 'REVOLVE_GRID/revolve_grid << REVOLVE_CC'
-      write (lunsh, '(a)') &
-         trim (filename_cc_g), &
-         yesno, &
-         'y', &
-         trim (filename_cc_f)
       write (lunsh, '(f4.0, /, i3, /, i1)') total_angle, npts_rotate, 0
       write (lunsh, '(a)') &
-         file_rev_cc_g, 'n', &
-         file_rev_cc_f, &
-         'REVOLVE_CC'
+         file_rev_grid, &
+         n, &
+         file_rev_flow, &
+         'REVOLVE'
 
-      filename_cc_g = file_rev_cc_g
-      filename_cc_f = file_rev_cc_f
-      formatted_cc  = false
-
+      filename_grid = file_rev_grid  ! For the FLOW_INTERP control file
+      filename_flow = file_rev_flow
+      formatted_in  = false
       ios = 0
 
  99   return
@@ -687,26 +730,26 @@
       write (lunout, '(a)') &
          'FLOW_INTERP controls', &
          '------------- INPUT SOLUTION GRID -------------', &
-         trim (filename_cc_g)
-      write (lunout, '(l1)') formatted_cc
+         trim (filename_grid)
+      write (lunout, '(l1)') formatted_in
       write (lunout, '(a)') &
          '------------- INPUT FLOW SOLUTION -------------', &
-         trim (filename_cc_f)
-      write (lunout, '(l1)') formatted_cc
+         trim (filename_flow)
+      write (lunout, '(l1)') formatted_in
       write (lunout, '(a)') &
          '------------- TARGET GRID ---------------------', &
          trim (filename_los_g)
-      write (lunout, '(l1)') true  ! Formatted
+      write (lunout, '(l1)') formatted_out
       write (lunout, '(a)') &
          '------------- INTERPOLATED FLOW SOLUTION ------', &
          trim (filename_los_f)
-      write (lunout, '(l1)') true  ! Formatted
+      write (lunout, '(l1)') formatted_out
       write (lunout, '(a)') &
          '------------- MISCELLANEOUS CONTROLS ----------', &
          '0.0001        Search in/out tolerance', &
          '------------- OPTIONAL CONTROLS ---------------', &
          'T             Suppress soln. blocks if possible', &
-         '1             Plain ADT method'
+         '1             Plain ADT method; use 2|3 judiciously'
       close (lunout)
 
       end subroutine write_flow_interp_control_file

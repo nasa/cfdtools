@@ -33,3 +33,23 @@ details.
                           Therefore, do similar to the generatrix, using
                           ni_regrid_aft_body and a heuristic number of
                           uniform points at the end.
+04/05/2018    "    "      An indexing error was found in the above uniform
+                          redistribution of the aft generatrix end.
+08/23/2018    "    "      The analytic aft body case's forcing of uniform
+                          spacing away from the aft stag. point was not
+                          right because x/rgen(:) was being reused for the
+                          aft body (starting from 1, not numi_forebody).
+09/25/2019    "    "      Rerunning on the capsule-on-a-sting analytic
+                          case gave troubling aft-body results, traced to
+                          interference of the vertex-detection scheme in
+                          CURVDIS with the (later) scheme for broadening
+                          the curvature-based shape function on to flat or
+                          low-curvature segments. Better blending on to
+                          such segments (and either side of sharp corners)
+                          is highly desirable, but fraught with potential
+                          difficulties due to the unavoidable heuristics.
+10/30/2019    "    "      Introduced nblend_fore_aft control. The default
+                          of 8 can mean poor results going from tight
+                          spacing on the shoulder to larger spacing on
+                          the aft cone. Spreading the blending over more
+                          points should help.

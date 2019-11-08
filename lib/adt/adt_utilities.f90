@@ -67,6 +67,8 @@
 !                               ADT_DATA where SEARCH_ADT can see it.
 !    13-Apr-2015    "     "     Wrong!  Another glitch caused the failure.
 !                               Therefore, the data rotation has been removed.
+!    17-Oct-2019    "     "     See SEARCH_STRUCTURED_VOLUME_ADT for notes on a
+!                               work-around for possible matrix singularity.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1309,7 +1311,7 @@
 !      *                                                                *
 !      ******************************************************************
 
-       UNUSED = 0.0d0  ! To avoid compiler warnings about unused arguments.
+       UNUSED = .true.  ! To avoid compiler warnings about unused arguments.
 
 !      The commented-out code should be feasible, treating CONN(:,:) as a
 !      pointer instead of as allocatable (here and in the calling program),
@@ -2087,7 +2089,7 @@
 !      *                                                                *
 !      ******************************************************************
 
-       UNUSED = 0.0d0  ! To avoid compiler warnings about unused arguments.
+       UNUSED = .true.  ! To avoid compiler warnings about unused arguments.
 
        ! INITIALIZE NALLOC_BBOX, NALLOC_FRONT_LEAVES AND
        ! NALLOC_FRONT_LEAVES_NEW TO 100 AND ALLOCATE THE MEMORY FOR THE
@@ -4106,6 +4108,18 @@
 !      *                            a single application.               *
 !      * 08-02-13     "       "     Made use of generic procedures and  *
 !      *                            combined all variants into 1 file.  *
+!      * 10-15-19     "       "     Handle the possibility of failure   *
+!      *                            due to matrix singularity via a     *
+!      *                            safeguarded solution that works     *
+!      *                            with the augmented system           *
+!      *                               |       |   | |                  *
+!      *                               |   A   | ~ |b|                  *
+!      *                               |       |   | |                  *
+!      *                               | eps I |   |0|                  *
+!      *                               |       |   | |                  *
+!      *                            as has been observed within the     *
+!      *                            boundary layer regions of 3D CFD    *
+!      *                            volume grids.                       *
 !      *                                                                *
 !      ******************************************************************
 
@@ -4149,6 +4163,7 @@
 
        INTEGER, PARAMETER :: NITER_MAX = 15
        REAL,    PARAMETER :: EPS_STOP  = 1.E-8
+       REAL,    PARAMETER :: LAMBDA    = EPS_STOP  ! ~sqrt (machine eps)
 
 !      Other constants previously obtained from a module:
 
@@ -4165,7 +4180,7 @@
        INTEGER :: NFRONT_LEAVES, NFRONT_LEAVES_NEW
 
        REAL :: X, Y, Z, DX, DY, DZ
-       REAL :: DD1, DD2, DSQ
+       REAL :: DD1, DD2, DSQ, RESIDSQ
        REAL :: AJAC(3,3), DP(3)
        REAL :: PL, QL, RL, POLD, QOLD, ROLD, XP, YP, ZP, XQ, YQ, ZQ
        REAL :: XR, YR, ZR, XPQ, YPQ, ZPQ, XQR, YQR, ZQR, XRP, YRP, ZRP
@@ -4479,8 +4494,41 @@
 
            CALL LUSOLVE (3, 3, AJAC, DP, IERR)       ! Solve J dp = f
 
-           IF (IERR /= 0) &
-             CALL TERMINATE ("SEARCH_STRUCTURED_VOLUME_ADT", "Singular matrix.")
+!          Occasional singularity here is believed to be confined to boundary
+!          layer regions during flow-field interpolations, where the grid cells
+!          can have extremely high aspect ratios.  A consequence for FLOW_INTERP
+!          users has been to favor the hybrid method, namely a KDTREE search for
+!          the nearest cell centroid followed by refinement within that cell
+!          as implemented here and separately in subroutine NEAREST_BRICK_POINT.
+!          However, the nearest centroid can be a poor measure of the correct
+!          cell within which to interpolate.  Consider the outer k planes of a
+!          shock-aligned flow solution, which can be very close in the k dir-
+!          ection while being quite large in the surface directions.  Interp-
+!          olation along a line of sight for setting up a radiation calculation
+!          can all too easily pick a cell in a k-plane outside the shock even
+!          though the target LOS point is inside the shock, giving grossly wrong
+!          free-stream temperatures instead of the correct high temperatures.
+!          Now, with boundary layer situations in mind, we choose not to simply
+!          stop upon encountering singularity but rather return a least squares
+!          result by solving an augmented system guaranteed to be full rank and
+!          promoting a small-norm solution.  This system adds lambda I below A
+!          on the LHS, and the zero vector below b on the RHS, where lambda > 0
+!          is small and ~sqrt (machine eps) should suffice.  If a better cell is
+!          present, this ADT search will still find it.  We can't simply quit
+!          with no way for the calling program to complete the interpolation and
+!          keep searching at further target points as has been the case earlier.
+
+           IF (IERR /= 0) THEN
+!!!          CALL TERMINATE ("SEARCH_STRUCTURED_VOLUME_ADT", "Singular matrix.")
+
+             CALL SAFEGUARDED_LSQR (3, 3, AJAC, DP, LAMBDA, DP, RESIDSQ, IERR)
+             IF (IERR /= 0) THEN   ! This should never happen, but ...
+               CALL TERMINATE ("SEARCH_STRUCTURED_VOLUME_ADT", &
+                               "Allocation error in SAFE_GUARDED_LSQR?")
+             END IF
+             WRITE (*, '(2A, ES14.6)') '*** Singular matrix trapped; ", &
+               squared residual of augmented system:', RESIDSQ
+           END IF
 
            PL = MIN (ONE, MAX (ZERO, PL - DP(1)));  DP(1) = ABS (PL - POLD)
            QL = MIN (ONE, MAX (ZERO, QL - DP(2)));  DP(2) = ABS (QL - QOLD)

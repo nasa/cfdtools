@@ -132,6 +132,8 @@
 !     numi_aft_body = 201,         ! # grid points on aft body generatrix
 !     sting_stretch_multiplier = 2.! Applied to interim end-of-sting spacing
 !     ng_split = 0,                ! Split index for full-body input generatrix
+!                                  ! 0 = max. radius index; < 0 1-piece/no split
+!     nblend_fore_aft = 8,         ! # aft pts. used to match fore/aft spacing
 !     ni_regrid_aft_body = 0,      ! Automated if analytic; enter desired index
 !     i0_umbrella = 0,             ! For fat aft body cases (extra morphing)
 !     i1_umbrella = 0,             ! Inboard index defining aft spoke morphs
@@ -616,6 +618,11 @@
 !                               such segments (and either side of sharp corners)
 !                               is highly desirable, but fraught with potential
 !                               difficulties due to the unavoidable heuristics.
+!     10/30/2019    "    "      Introduced nblend_fore_aft control. The default
+!                               of 8 can mean poor results going from tight
+!                               spacing on the shoulder to larger spacing on
+!                               the aft cone. Spreading the blending over more
+!                               points should help.
 !  Author:
 !
 !     David Saunders, ERC, Inc. at NASA Ames Research Center, Moffett Field, CA
@@ -669,11 +676,12 @@
    integer :: &
       i0_umbrella, i1_umbrella, i2_umbrella, ib, ier, imatch, ios, &
       ismooth_aft, ismooth_fore, lunprint, &
-      nb, nblocks, ncones, nedges, ng_split, ni_outer, ni_regrid, &
-      ni_regrid_aft_body, ni_regrid_forebody, ni_template, ntoroids, ni_spoke, &
-      nj_quarter, nj_semi, nj_spoke, nj_template, numi, numi_aft_body, &
-      numi_forebody, numi_generatrix, numi_internal, numi_total, numf, numj, &
-      nvertices, rounding_mode, ivertex(mxcones), ni_round(mxcones)
+      nb, nblend_fore_aft, nblocks, ncones, nedges, ng_split, ni_outer, &
+      ni_regrid, ni_regrid_aft_body, ni_regrid_forebody, ni_template, &
+      ntoroids, ni_spoke, nj_quarter, nj_semi, nj_spoke, nj_template, &
+      numi, numi_aft_body, numi_forebody, numi_generatrix, numi_internal, &
+      numi_total, numf, numj, nvertices, rounding_mode, ivertex(mxcones), &
+      ni_round(mxcones)
 
    real :: &
       chords(mxcones), cone_angle_aft(mxcones), &
@@ -736,8 +744,9 @@
 
    namelist /AFT_BODY_INPUTS/ &
       sting_case, numi_aft_body, ncones, flat_blend_aft, power_aft, ng_split, &
-      ni_regrid_aft_body, cone_angle_aft, r_aft, rounding_mode, ds_round, &
-      ni_round, sting_stretch_multiplier, i0_umbrella, i1_umbrella, i2_umbrella
+      nblend_fore_aft, ni_regrid_aft_body, cone_angle_aft, r_aft, &
+      rounding_mode, ds_round, ni_round, sting_stretch_multiplier, &
+      i0_umbrella, i1_umbrella, i2_umbrella
 
 !  Execution:
 !  ::::::::::
@@ -850,6 +859,7 @@
       flat_blend_aft = true        ! Puts more points on flat/low curv. segments
       power_aft = 0.5              ! Initial exponent for curvature-based redis.
       ng_split = 0                 ! Full-body input generatrix split index
+      nblend_fore_aft = 8          ! # aft pts. used to match fore/aft spacing
       ni_regrid_aft_body = 33      ! Aft i = 1:ni_regrid is regridded for all j;
       i0_umbrella = 0              ! May be needed for fat ADEPT aft bodies
       i1_umbrella = 0              ! Inboard aft spoke index for morphing
@@ -1497,7 +1507,7 @@
 
 !           Should we try to blend fore and aft?  The user can choose
 !           numi_forebody and numi_aft_body appropriately to help.  See also
-!           ng_split and power_aft.  But blend anyway over a small # points,
+!           ng_split and power_aft.  But blend anyway over a moderate # points,
 !           along the lines of match_forebody elsewhere for analytic cases:
 
             ni = numi_forebody  ! End of forebody = ...
@@ -1506,8 +1516,15 @@
             ds_forebody = sqrt ((xgen(ni) - xgen(ni-1))**2 + &
                                 (rgen(ni) - rgen(ni-1))**2)
 
-            ni = 8   ! Anything reasonable, assuming ng_split is sensible;
-                     ! it's hard to make it scale safely with numi_aft_body
+!!!         ni = 8   ! Anything reasonable, assuming ng_split is sensible;
+!!!                  ! it's hard to make it scale safely with numi_aft_body
+!           The choice of 8 has been found to be poor when tight spacing on the
+!           shoulder is being blended with larger spacing on the aft cone.
+!           Spacing can actually be largest in the middle of the blend interval.
+!           Spreading the blending over a wider range seems to be all we can do,
+!           so now it's a user input.
+
+            ni = nblend_fore_aft
             i2 = i1 + ni - 1
 
             allocate (chords(ni), snew(ni), vnew(ni), vnewp(ni))

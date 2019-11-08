@@ -1,0 +1,208 @@
+
+program prepare_neqair_data
+
+   This adaptation of prepare_rapid_analysis prompts the user for specifics
+   about a flow solution and the body point(s) at which radiative heating
+   calculations are to be performed with NEQAIR, either in tangent-slab mode
+   or full angular integration mode.  STRUCTURED GRIDS IN PLOT3D FORMAT ARE
+   ASSUMED.  For the unstructured case, USLOS is available for constructing
+   individual or hemispherical collections of lines of sight, but at the time
+   of writing, interpolation of unstructured flow field data onto those lines
+   of sight remains an issue, because US3D's nearest-cell (KDTREE-based) form
+   of interpolation can choose wrong cell centroids in the presence of high-
+   aspect ratio cells near a flow-field shock.
+
+   The working directory should contain (or point to) the vertex-centered
+   volume grid and associated flow data (temperature(s) & number densities).
+   With the utilities that preceded SLOS, cell-centered volume grid and flow
+   data could also be used, but the vertex-centered grid (without the fn.
+   file) was still needed because the line-of-sight discretizations were
+   derived from its off-wall grid lines.  In SLOS, the discretizations follow
+   the two-stage scheme of DPLR (1-sided stretching with ds1, then 2-sided
+   restretching with ds2mult applied to the 1-sided outermost interval).
+   Use of VERTEX-CENTERED grid and function files is now recommended, but
+   cell-centered data with "halo" cells will produce much the same result,
+   as only the innner and outer layers at k = 1 and kmax are actually used.
+   All these files should be in PLOT3D multiblock form, formatted or not.
+   Whether they are 2D or 3D is automatically determined.
+
+   If full integration is specified for a 2D axisymmetric case, 3D revolved
+   grid and function files will be produced as part of the automation
+   procedures of which the present utility is the first step following a
+   flow calculation with the right choice of species.
+
+   The output from this utility is a shell script named prepare_LOS_data that
+   (when sourced) invokes the indicated utilities and control files (also
+   generated here) to set up line-of-sight data in NEQAIR's LOS.dat form as
+   LOS-1.dat, LOS-2.dat, ..., LOS-n.dat in the working directory.
+
+   After the line(s) of sight have been checked for possible flaws (such as
+   in the underlying line-surface intersection calculations), a separate
+   script, set_neqair should be invoked with two first and last line number
+   arguments.  This generates directories LINE-1, LINE-2 ... containing links
+   to LOS-1.dat, LOS-2.dat ... as the LOS.dat expected by NEQAIR, and links
+   to the appropriate neqair.inp control file, and to a neqair.pbs file.
+   Another shell script can then launch NEQAIR within each LINE-* directory,
+   and this script is system-dependent.
+
+   Note that on the NAS supercomputer facility at Ames Research Center, an
+   "array" job is recommended.  This automates looping over a range of
+   indices (which can be the n in the LINE-n directories), with a limit of
+   500 total at the time of writing.  E.g., neqair.1-325.pbs:
+
+      #PBS -W group_list=xxxxx
+      #PBS -q normal
+      #PBS -l walltime=0:10:00
+      #PBS -l select=2:ncpus=20:model=ivy
+      #PBS -N neqair
+      #PBS -j oe
+      #PBS -J 1-325
+
+      module use -a /home4/tsa/modulefiles
+      module load neqair/15.0
+
+      cd LINE-$PBS_ARRAY_INDEX
+      mpiexec neqair < neqair.inp  > neqair.out
+
+   Files neqair.inp and neqair.pbs are expected to be in the working
+   directory along with the body point file (indices or coordinates) and a
+   sample.LOS.dat file indicating the correct species, although the user
+   can choose to proceed if any of neqair.inp, neqair.pbs, or sample.LOS.dat
+   are missing.  The neqair_data step (los.* --> LOS.dat format) can then
+   be performed explicitly at a later time.
+
+   This neqair.pbs should not be confused with the array job (or alternative)
+   shown above.  It should be set to run a single line only, and might be
+   used in /LINE-1 as a check that all looks as it should before launching a
+   job that loops over many lines.
+
+   More about sample.LOS.dat (see NEQAIR_DATA):
+
+      NEQAIR_DATA can now write line-of-sight (LOS) data in both the original
+      rigid format read by NEQAIR versions up to and including v14 and the
+      simpler column-oriented format handled from NEQAIR v15 on.  Both data
+      formats involve a sample.LOS.dat file read here that indicates the
+      species names.  If a sample file is found with a NEQAIR version number
+      on line 1, then the later data format is indicated. The sample file is
+      transcribed as the header of all output LOS data files in either case.
+
+   When NEQAIR is run on a range of lines, its results will appear in
+   neqair.out in subdirectores /LINE-1, /LINE-2, ...  A command such as
+   grep Total LINE-*/neqair.out > qrad.dat followed by wc qrad.dat will
+   confirm that all lines have run or that NEQAIR may have failed on some.
+   The utility sort_rows is one way of ordering qrad.dat, using LINE- as
+   the sort string, although grep may have a switch that overrides the
+   default order of LINE-1, LINE-10, LINE-100, LINE-101, ...
+
+   Full integration mode should work with a single body point per working
+   directory.  Since actually performing the integration cannot occur
+   until all the NEQAIR results are in hand, no attempt is made here to
+   deal with the NEQAIR_INTEGRATION step, which is prompt-driven.
+
+Site-Specifics:
+
+   If this program is installed at another site, the following path should
+   be edited appropriately prior to compiling and linking:
+
+      /apps/pkgs/cfdtools/         ! See parameter constant "path" below
+
+   It is assumed that all the utilities invoked here reside in subdirectories
+   with uppercase names and this indicated path.
+
+   E.g., lines_of_sight, flow_interp, ... should be installed here:
+
+      /share/apps/cfdtools/LINES_OF_SIGHT/lines_of_sight
+      /share/apps/cfdtools/FLOW_INTERP/flow_interp   and so on.
+
+   The following utilities may be invoked by the script from this program:
+
+   Originally:
+      lines_of_sight       ! One or more lines of sight in a 3D volume grid
+      lines_of_sight_2d    ! One or more lines of sight in a 2D volume grid
+      hemispheres_of_sight ! Many lines of sight for one body point
+      flow_interp          ! 3D flow interpolation at LOS coordinates
+      flow_interp_2D       ! 2D   "    "    "    "    "    "    "
+      neqair_data          ! PLOT3D *.g/*.f --> NEQAIR's LOS.dat form
+
+   Currently:
+      slos                 ! 1 or more lines, tangent-slab or hemi., 3D vol.
+      lines_of_sight_2d    ! 1 or more tangent-slab lines in a 2D volume grid
+      flow_interp          ! 3D flow interpolation at LOS coordinates
+      flow_interp_2D       ! 2D   "    "    "    "    "    "    "
+      neqair_data          ! PLOT3D *.g/*.f --> NEQAIR's LOS.dat form
+
+      [The more recent SLOS utility was derived from USLOS (for unstructured
+      grids).  Both of these combine the functions of the LINES_OF_SIGHT and
+      HEMISPHERES_OF_SIGHT utilities, and make use of the diagonal of the
+      volume grid bounding box for the line-surface intersection search
+      intervals in place of earlier heuristics.  They also feature a more
+      fail-safe (?) way of recovering from an intersection calculation that
+      has failed because a line-surface distance isn't essentially zero.]
+
+FLOW_INTERP Warning:
+
+      Past practice has been to use FLOW_INTERP's hybrid method 3, because
+      its original preferred method occasionally encounters a singular matrix
+      believed to be associated with a high aspect ratio cell in a boundary
+      layer.  The ADT search method now traps singularities and retries with
+      a perturbed system guaranteed to be full rank.  Method 3 (nearest cell
+      centroid search via KDTREE, followed by refinement within that cell)
+      has been found to give seriously wrong interpolations occasionally by
+      using cells with centroids outside the shock even though the target
+      points are actually inside the shock.  This explains occasional NEQAIR
+      failures:  low free-stream temperatures were being interpolated on to
+      the line of sight inside the shock.  USE FLOW_INTERP METHOD 1 WHENEVER
+      PRACTICAL; METHODS 2 OR 3 SHOULD BE CONFINED TO LAST RESORTS FOR REALLY
+      LARGE VOLUME GRIDS.
+
+Assumptions:
+
+   The line-of-sight calculations assume that the grid has a single layer of
+   blocks, with k = 1 at the geometry surface.
+
+History:
+
+   07/01/14  D.A.Saunders  PREPARE_NEQAIR_DATA design, in the style of
+                           PREPARE_LOCAL_ANALYSIS.
+   07/07/14-  "     "      Initial implementation and ...
+   07/11/14                ... testing.
+   07/17/14   "     "      It wasn't clear to Dinesh that sample.LOS.dat
+                           needs the correct species in it.  Showing the
+                           path to all needed files should help.
+   07/31/14   "     "      Allowing for descriptive text on each body point
+                           input line means suppressing the check on whether
+                           the number of tokens = ndim.
+   11/26/14   "     "      Handle the wider choice of redistribution options
+                           now offered by NEQAIR_DATA (hybrid, relative).
+   12/01/14   "     "      A curvature-based redistribution option has been
+                           added to NEQAIR_DATA.
+   12/04/14   "     "      A simple 2x thinning option as also been added.
+   01/24/14   "     "      NEQAIR_DATA has an extra prompt to allow NEQAIR
+                           to integrate out from the body, as might be
+                           required for meteor studies.
+   02/26/18   "     "      Handled the HEMISPHERES_OF_SIGHT option to output
+                           less than a full hemisphere of lines (if a cone
+                           angle < 90 is entered on the body pt. x/y/z line).
+   04/04/18   "     "      Updated the path of the various utilities. Didn't
+                           eliminate it altogether because of the diagnostic
+                           that points to where certain ancillary files might
+                           be found.
+   05/24/18   "     "      "Same relative distribution" needs to write the
+                           requested number of points (unlike 2x thinning).
+   11/01/19   "     "      Invoke SLOS in place of the earlier LINES_OF_SIGHT
+                           and HEMISPHERES_OF_SIGHT.  See above for why.
+                           The 2D case (LINES_OF_SIGHT_2D) is still supported
+                           as is the option to revolve 2D data if hemi-
+                           spherical lines are required.  The option to
+                           reflect half-body data remains incomplete.  The
+                           documentation above has also been expanded to be
+                           as clear as possible.  These revisions proved
+                           much messier than expected, partly because of
+                           the dropping of certain options by SLOS.
+   11/06/19   "     "      The 2D/revolve case wasn't right.  The revolving
+                           has to happen before SLOS begins.
+   11/07/19   "     "      Warn about 2D/3D body point gotcha.
+
+Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
+                Now with AMA, Inc. at NASA ARC.
+

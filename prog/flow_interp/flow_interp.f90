@@ -134,7 +134,7 @@
 !     0.0001                  Distance tolerance for determining whether a target point is inside the solution grid or not
 !     --------------- OPTIONAL CONTROLS -------------
 !     T                       Suppress solution blocks if possible? [T|F]
-!     3                       Method:  1 = plain ADT; 2 = plain KDTREE; 3 = KDTREE + nearest-centroid-cell refinement
+!     1                       Method:  1 = plain ADT; 2 = plain KDTREE; 3 = KDTREE + nearest-centroid-cell refinement
 !
 !  Sponsor:
 !
@@ -171,10 +171,16 @@
 !     08/05/13   "   All ADT variants have been combined into a module now for distribution reasons (generic build & search calls).
 !     02/22/17   "   Suppress profile tabulation (to standard output) if the target grid seems to be a set of hemisphere lines of
 !                    sight (more than 100 blocks, all 1 x 1 x nk).
+!     10/15/19   "   Mysterious interpolations along lines of sight for radiation calculations revealed that the hybrid method 3 is
+!                    potentially seriously flawed.  At a shock envelope boundary, volume grid cells are typically close together
+!                    near the shock in the off-wall direction, yet relatively large in the surface index directions. This means that
+!                    cell centroids can be a poor measure of the correct cells within which to refine interpolation coefficients.
+!                    Method 1 (ADT searching) has been adjusted to cope with occasional matrix singularity observed in boundary
+!                    layer regions, and is strongly recommended as the preferred method where practical. The advice presented above
+!                    under "Intended application" remains valid.
 !
-!  Author:
-!
-!     David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA  (later with ERC then AMA, Inc./NASA ARC).
+!  Author:           David Saunders, ELORET Corporation at NASA Ames Research Center, Moffett Field, CA
+!                    (later with ERC, Inc. then AMA, Inc. at NASA ARC)
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -760,8 +766,8 @@
    type (grid_type), intent (inout)  :: solution(nblocks_solution)  ! Solution grid and flow blocks input;
                                                                     ! block data ranges are calculated here if initialize = true;
                                                                     ! flow values may be changed (to vertex values if they are
-                                                                    ! input as cell-centered; they are NOT transferred back if
-                                                                    ! cleanup = true.
+                                                                    ! input as cell-centered); they are NOT transferred back if
+                                                                    ! cleanup is true.
    logical, intent (in)              :: cell_centered               ! True means solution flow is initially transferred to the
                                                                     ! solution vertices, and the output flow is transferred from
                                                                     ! the target vertices to the target cell centers
@@ -800,7 +806,7 @@
 !  Local variables:
 !  !!!!!!!!!!!!!!!!
 
-   integer :: i, ib, ic, ihex, j, jc, k, kc, n, ni, ninside, nj, nk, nout
+   integer :: i, ib, ic, icell, ihex, iv, j, jc, jv, k, kc, kv, mi, mj, mk, n, ni, ninside, nj, nk, nout
    logical :: profile
    logical, save :: suppress
    real    :: dsqmin, dsqmax, dtolsq, extra, p, pm1, q, qm1, r, rm1, time1, time2, unused, wall_distance
@@ -957,7 +963,7 @@
                else
                   nout = nout + 1
 !!!               write (luncrt, '(a, 4i4, a, es13.5)') &
-!!!                  ' Tolerance exceeded for new (i,j,k,ib) =', i, j, k, iblock_target, '  min. distance:', sqrt (dsqmin)
+!!!                  ' Tolerance exceeded for target (i,j,k,ib) =', i, j, k, iblock_target, '  min. distance:', sqrt (dsqmin)
                end if
 
 !              Use the fractional coordinates to interpolate the flow solution to the target point:
@@ -1019,9 +1025,9 @@
                n = kdresult(1)%idx  ! Best data point (method 2) or centroid/cell (method 3)
 
                ib = conn(1,n) ! Block #
-               ic = conn(2,n) ! Indices of best point found in the tree searched (vertex for method 2, centroid for method 3)
-               jc = conn(3,n)
-               kc = conn(4,n)
+               ic = conn(2,n) ! Lower-left cell indices of best point found in the grid searched.
+               jc = conn(3,n) ! (Vertex-centered grid for method 2; cell-centered grid for method 3.)
+               kc = conn(4,n) ! These are indices in the vertex-centered grid either way.
 
                if (method == 2) then  ! We accept just the flow solution at the point nearest the target:
 
@@ -1030,6 +1036,21 @@
                   dsqmin = kdresult(1)%dis
 
                else  ! Method 3 refines the search to match the ADT method's result;  n is now the centroid or cell number
+
+!                 WARNING:  This hybrid method is no longer recommended for such applications as setting up up line-of-sight data
+!                 for radiation calculations.  High aspect ratio cells near the shock envelope can mean that cell centroids are a
+!                 poor measure of the correct cells withini which to refine the interpolation coefficients.
+!                 Conceivably, picking the best cell of the eight (or fewer) cells common to a best vertex found via a KDTREE
+!                 search would still prove competitive with ADT searching for large grids, but such a possibility has not been
+!                 implemented here.
+
+!!!               mi = solution(ib)%ni - 1  ! Solution centroid grid dimensions
+!!!               mj = solution(ib)%nj - 1
+!!!               mk = solution(ib)%nk - 1
+!!!               icell = n                                    ! Cell centroid number in list searched by kdtree.
+!!!               kv = (icell - 1)/(mj*mi) + 1                 ! These are the lower left corner indices of that cell,
+!!!               jv = (icell - (kv - 1)*(mj*mi))/mi + 1       ! but we would still need to store the block # for each cell.
+!!!               iv =  icell - (kv - 1)*(mj*mi) - (jv - 1)*mi ! Store all the indices instead, as originally done.
 
                   call nearest_brick_point (solution(ib)%ni, solution(ib)%nj, solution(ib)%nk, &
                                             solution(ib)%x,  solution(ib)%y,  solution(ib)%z, ic, jc, kc, &
@@ -1040,11 +1061,12 @@
                                             coefs(3)*solution(ib)%q(:,ic,jc+1,kc)   + coefs(4)*solution(ib)%q(:,ic+1,jc+1,kc) + &
                                             coefs(5)*solution(ib)%q(:,ic,jc,kc+1)   + coefs(6)*solution(ib)%q(:,ic+1,jc,kc+1) + &
                                             coefs(7)*solution(ib)%q(:,ic,jc+1,kc+1) + coefs(8)*solution(ib)%q(:,ic+1,jc+1,kc+1)
-!!!               delta_coords(:) = target_coords(:) - interp_coords(:)
+                  delta_coords(:) = target_coords(:) - interp_coords(:)
                end if
 
-!!!            write (*, '(a, 4i4, a, i10, a, es13.6, 3es15.7)') &
-!!!               ' ib,i,j,k:', iblock_target, i, j, k, ' ilist:', n, ' dsq, dxyz:', delta_coords
+!!!            write (*, '(a, 4i4, a, 3es15.7, a, i10, a, 4i4, a, es13.6, a, 9es15.7)') 'Target ib,i,j,k:', iblock_target,i,j,k, &
+!!!               ' xyztarg:', target_block%x(i,j,k), target_block%y(i,j,k), target_block%z(i,j,k), ' cell #:', n, &
+!!!               ' ib,iv,jv,kv:', ib,iv,jv,kv, ' dsq:', dsqmin, ' dxyz, txyz, ixyz:', delta_coords, target_coords, interp_coords
 
                dsqmax = max (dsqmin, dsqmax)
 
@@ -1052,8 +1074,8 @@
                   ninside = ninside + 1
                else
                   nout = nout + 1
-!!!               write (luncrt, '(a, 4i4, a, es13.5)') &
-!!!                  ' Tolerance exceeded for new (i,j,k,ib) =', i, j, k, iblock_target, '  min. distance:', sqrt (dsqmin)
+                  write (luncrt, '(a, 4i4, a, es13.5)') &
+                     ' Tolerance exceeded for target (i,j,k,ib) =', i, j, k, iblock_target, '  min. distance:', sqrt (dsqmin)
                end if
 
             end do ! Next i for this target block

@@ -1,4 +1,3 @@
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
    program slos
 !
@@ -127,9 +126,24 @@
 !                               and lines parallel to Ox have also been omitted.
 !                               Use the original LINES_OF_SIGHT for these.
 !     11/07/2018    "    "      Implementation and testing completed.
-!     11/09/2018     "    "     Use 'los.g' for the output file name as part of
+!     11/09/2018    "    "      Use 'los.g' for the output file name as part of
 !                               adjusting NEQAIR_Integration to handle the
 !                               original nomenclature and this simplified form.
+!     10/04/2019    "    "      Resetting the lower intersection search interval
+!                               to zero was not being done for each new line.
+!                               Earlier testing must not have encountered any
+!                               intersection failures that are caused by outer
+!                               grid boundaries that are not strictly convex!
+!     10/05/2019    "    "      Failed intersections prompted another way of
+!                               retrying: discretize the part of the line beyond
+!                               the failed solution and evaluate line-surface
+!                               distances from those points; pick the interval
+!                               containing the smallest distance, and redo the
+!                               line-surface intersection.  REMEMBER THAT THE
+!                               ARC LENGTH INTERVAL PASSED TO INTSEC6 SHOULD BE
+!                               NORMALIZED BY THE LINE LENGTH IF THAT IS THE
+!                               INTERVAL EXPECTED TO CONTAIN THE INTERSECTION,
+!                               AS IT IS HERE, USING THE BOUNDING BOX DIAGONAL.
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 !
@@ -159,7 +173,7 @@
       lunhemi3   = 9,    &   ! Output triangulation of LOS/boundary intersectns.
       luncone    = 10,   &   ! Output lines within the indicated cone angle
       ngeometric = 2,    &   ! Meaning none in the boundary layer
-      nl         = 2         ! 2-point lines are passed to INTSEC8
+      nl         = 2         ! 2-point lines are passed to INTSEC6
 
    real, parameter ::    &
       half      = 0.5,   &
@@ -187,7 +201,7 @@
 
    real :: &
       area, bbox_diagonal, davg, dmax, dmean, d1norm, d2norm, ds1, &
-      ds2_fraction, dsq, dsqmin, dtolsq, p, q, s, xmax, xmin, &
+      ds2_fraction, dsq, dsqmin, dtolsq, length, p, q, s, xmax, xmin, &
       xyz_interp(3), xyz_intersect(3), ymax, ymin, zmax, zmin
 
    logical :: &
@@ -203,7 +217,7 @@
       un, v1, v2           ! For a unit normal and rotation axis end points
 
    real, allocatable, dimension (:) :: &
-      cone_angle,                      & ! 90 or missing => full hemisphere
+      cone_angle, distsq,              & ! 90 or missing => full hemisphere
       sline, xline, yline, zline         ! For one radial volume grid line
 
    real, allocatable, dimension (:,:) :: &
@@ -400,15 +414,12 @@
 
 !  Work space for point distributions:
 
-   allocate (xline(nk), yline(nk), zline(nk), sline(nk), stat=ios)
+   allocate (xline(nk), yline(nk), zline(nk), sline(nk), distsq(nk), stat=ios)
    if (ios /= 0) then
       write (luncrt, '(/, a, i10)') &
          ' Allocation trouble with x/y/z/sline. nk:', nk
       go to 99
    end if
-
-   sl(1)  = zero          ! For all 2-point lines to be intersected
-   sl(nl) = bbox_diagonal
 
 !  Build a new search tree from the outer shock boundary:
 !  ------------------------------------------------------
@@ -427,16 +438,18 @@
 
       do l = 1, nbps
 
-         xl(1)  = xyz_bp(1,l);  xl(2) = xl(1) + bbox_diagonal*unit_norm(1,l)
-         yl(1)  = xyz_bp(2,l);  yl(2) = yl(1) + bbox_diagonal*unit_norm(2,l)
-         zl(1)  = xyz_bp(3,l);  zl(2) = zl(1) + bbox_diagonal*unit_norm(3,l)
-         sl(nl) = bbox_diagonal ! Upper limit on intersection search along line;
-                                ! overkill for forebody; safe for aft body
+         xl(1)  = xyz_bp(1,l);  xl(nl) = xl(1) + bbox_diagonal*unit_norm(1,l)
+         yl(1)  = xyz_bp(2,l);  yl(nl) = yl(1) + bbox_diagonal*unit_norm(2,l)
+         zl(1)  = xyz_bp(3,l);  zl(nl) = zl(1) + bbox_diagonal*unit_norm(3,l)
+         sl(1)  = zero          ! Lower search interval limit
+!!!      sl(nl) = bbox_diagonal ! Upper limit on intersection search along line;
+         sl(nl) = one           ! overkill for forebody; safe for aft body
+                                ! These are NORMALIZED arc lengths
 
          call intsec6 (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl,    &
                        sl, lcs_method, iquad, p, q, s, xyz_intersect, dsqmin)
 
-!        The output t is normalized.
+!        The output s is normalized.
          write (luncrt, '(a,4i10)') 'iquad,conn(:,iquad):', iquad,conn(:,iquad)
          write (luncrt, '(a,4es19.11)') 'p, q, s, bbox:', p, q, s, bbox_diagonal
          write (luncrt, '(a,4es19.11)') 'xyzint, dsqmin:', xyz_intersect, dsqmin
@@ -464,9 +477,9 @@
          call blgrid (nk, d1norm, d2norm, ngeometric, rblayer, sline, luncrt, &
                       ios)
          do k = 1, nk
-            radial_lines(l)%x(1,1,k) = xl(1) + ((xl(2) - xl(1)))*sline(k)
-            radial_lines(l)%y(1,1,k) = yl(1) + ((yl(2) - yl(1)))*sline(k)
-            radial_lines(l)%z(1,1,k) = zl(1) + ((zl(2) - zl(1)))*sline(k)
+            radial_lines(l)%x(1,1,k) = xl(1) + ((xl(nl) - xl(1)))*sline(k)
+            radial_lines(l)%y(1,1,k) = yl(1) + ((yl(nl) - yl(1)))*sline(k)
+            radial_lines(l)%z(1,1,k) = zl(1) + ((zl(nl) - zl(1)))*sline(k)
          end do
 
       end do  ! Next line of sight
@@ -554,8 +567,7 @@
 
       hemisphere = nbps == 1
       if (hemisphere) then  ! Allow for a single body-normal line of sight
-         call ready (luncrt, &
-                     '1 body pt. => hemisphere lines? ' // &
+         call ready (luncrt, & '1 body pt. => hemisphere lines? ' // &
                      'y|n; y=<cr>=yes; n=body-normal line: ', &
                      lunkbd, hemisphere, cr, eof)
          if (eof) then
@@ -592,6 +604,11 @@
       end do
 
       bbox_diagonal = sqrt ((xmax-xmin)**2 + (ymax-ymin)**2 + (zmax-zmin)**2)
+      length = bbox_diagonal  ! Shorter name
+
+      write (luncrt, '(a, 6es14.6)') &
+         'xmin, xmax, ...', xmin, xmax, ymin, ymax, zmin, zmax, &
+         'Bounding box diagonal length:', length
 
 !     For the hemisphere case, it is too awkward to handle either half of the
 !     geometry when the body point is on the centerline.  Insist on the right
@@ -664,8 +681,6 @@
 
       integer :: &
          i, m, nn
-      real :: &
-         length
       real, dimension (3) ::  &
          un, v1, v2              ! For unit normals and rotation axis end pts.
 
@@ -719,7 +734,7 @@
 
 !     Two further triangulations are produced, each with either 2 or 4 quadrant
 !     zones: (a) a unit [half-]hemisphere, tangent to the body at the body pt.;
-!     (b) the surface triangulation produced by intersecting lines throught each
+!     (b) the surface triangulation produced by intersecting lines through each
 !     vertex of (a) with outer boundary mesh.
 
       allocate (transformed_quadrant(1))
@@ -763,7 +778,6 @@
 
       ninside  = 0;  dmax  = zero
       noutside = 0;  dmean = zero
-      length   = bbox_diagonal  ! Shorter name
 
       l = 0
       do m = 1, nquadrants
@@ -782,9 +796,11 @@
 
 !           2-pt. line through this vertex/node more than long enough:
 
-            xl(2) = xl(1) + (transformed_quadrant(1)%xyz(1,nn) - xl(1))*length
-            yl(2) = yl(1) + (transformed_quadrant(1)%xyz(2,nn) - yl(1))*length
-            zl(2) = zl(1) + (transformed_quadrant(1)%xyz(3,nn) - zl(1))*length
+            xl(nl) = xl(1) + (transformed_quadrant(1)%xyz(1,nn) - xl(1))*length
+            yl(nl) = yl(1) + (transformed_quadrant(1)%xyz(2,nn) - yl(1))*length
+            zl(nl) = zl(1) + (transformed_quadrant(1)%xyz(3,nn) - zl(1))*length
+            sl(1)  = zero    ! Intersection search interval limits
+            sl(nl) = one     ! (normalized)
 
 !!!         call xyz_allocate (radial_lines(l), ios) ! Done as for non-hemi case
 !!!         if (ios /= 0) go to 99
@@ -835,8 +851,6 @@
 !     that has been transcribed from LINES_OF_SIGHT.
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      use trigd
 
 !     Argument:
 
@@ -935,6 +949,8 @@
 
 !     Local variables:
 
+      real :: fraction
+
 !     Execution:
 
       call intsec6 (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl, &
@@ -942,7 +958,7 @@
 
 !!!   write (luncrt, '(a, 2i4, 4i10)') &
 !!!      ' vertex, iquad, conn(:,iquad):', nn, iquad, conn(:,iquad)
-!!!   write (luncrt, '(a, 3es19.11)') ' p, q, t:   ', p, q, t, &
+!!!   write (luncrt, '(a, 3es19.11)') ' p, q, s:   ', p, q, s, &
 !!!                                   ' xyz_intersect:', xyz_intersect
 
       if (dsqmin < dtolsq) then ! The nearest triangle was within tolerance
@@ -954,12 +970,17 @@
 
          write (luncrt, '(a)') &
          '     Assume local min. due to boundary concavity.  Do one retry.'
-         sl(1) = s*1.000001
+
+!!!      sl(1) = s*1.000001  ! This has been observed to give a similar bad s
+                             ! and it is unclear why
+
+         call bad_local_min_recovery () ! Simple-minded look at rest of line
+                                        ! returns narrower range [sl(1), sl(2)]
 
          call intsec6 (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl, &
                        sl, lcs_method, iquad, p, q, s, xyz_intersect, dsqmin)
 
-         if (dsqmin < dtolsq) then ! The nearest triangle was within tolerance
+         if (dsqmin < dtolsq) then ! The nearest cell was within tolerance
             ninside  = ninside + 1;  noutside = noutside - 1
             write (luncrt, '(a, i6, 4es13.6)') &
                '     Recovered.       Line #, sa, sb, dsq, s:', l, sl, dsqmin, s
@@ -988,19 +1009,56 @@
       call blgrid (nk, d1norm, d2norm, ngeometric, rblayer, sline, luncrt, ios)
 
       do k = 1, nk
-         radial_lines(l)%x(1,1,k) = xl(1) + ((xl(2) - xl(1)))*sline(k)
-         radial_lines(l)%y(1,1,k) = yl(1) + ((yl(2) - yl(1)))*sline(k)
-         radial_lines(l)%z(1,1,k) = zl(1) + ((zl(2) - zl(1)))*sline(k)
+         radial_lines(l)%x(1,1,k) = xl(1) + ((xl(nl) - xl(1)))*sline(k)
+         radial_lines(l)%y(1,1,k) = yl(1) + ((yl(nl) - yl(1)))*sline(k)
+         radial_lines(l)%z(1,1,k) = zl(1) + ((zl(nl) - zl(1)))*sline(k)
       end do
 
       end subroutine intersect_line
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine bad_local_min_recovery ()  ! Crude search for best interval
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      integer :: iuse, ilocmin(1)
+      real :: dsu, xyz_target(3)
+
+!     Discretize the arc length beyond the bad local minimum,
+!     and look for the point nearest to the outer shock surface:
+
+      dsu = (sl(nl) - s)/real (nk)
+      do i = 2, nk
+         sline(i) = s + dsu*real (i-1)
+         xline(i) = xl(1) + (xl(nl) - xl(1))*(sline(i))
+         yline(i) = yl(1) + (yl(nl) - yl(1))*(sline(i))
+         zline(i) = zl(1) + (zl(nl) - zl(1))*(sline(i))
+
+         xyz_target(1) = xline(i)
+         xyz_target(2) = yline(i)
+         xyz_target(3) = zline(i)
+         call search_adt (xyz_target, iquad, p, q, distsq(i), true, nblocks, &
+                          outer_surface, nquad, conn, xyz_intersect)
+         write (luncrt, '(a, i4, 2es14.6)') 'i, s(i), dsq(i):', &
+            i, sline(i), distsq(i)
+      end do
+
+      distsq(1) = 1.e+6
+      ilocmin = minloc (distsq)
+      i = ilocmin(1)
+      write (luncrt, '(a, i4)') 'Index of minimum distance:', i
+      iuse = max (2, i-1)
+      sl(1) = sline(iuse)
+      iuse = min (nk, i+1)
+      sl(nl) = sline(iuse)
+
+      end subroutine bad_local_min_recovery
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine save_cone_only ()  ! Suppress lines outside the cone angle
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       integer :: i, ncone
-      logical, allocatable :: keep(:)
+      integer, allocatable :: keep(:)
       real :: angle, vnormal(3), v2(3)
       type (grid_type), pointer, dimension (:) :: cone_lines
       character (12) :: filename
