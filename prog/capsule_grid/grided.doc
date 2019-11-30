@@ -1,0 +1,66 @@
+ GRIDED Version 3.4l
+Authors: William M. Chan, Shishir A. Pandya, Pieter G. Buning
+Usage:
+
+      grided
+
+Description:
+The grided program is a menu driven program to perform many operations on one or more PLOT3D grid files. Menu options for single grid include:
+
+ Operations that do not change the grid dimensions
+ -------------------------------------------------
+ 1 = Exit from this menu and program
+ 2 = Interchange J and K grid families
+ 3 = Interchange K and L grid families
+ 4 = Interchange J and L grid families
+ 5 = Reverse index direction in J and/or K and/or L
+ 6 = Scale followed by translate
+ 7 = Mirror about x=0, y=0 or z=0 plane
+ 8 = Rotate about x, y, z or any arbitrary axis
+ 9 = Reset axis/periodic/C-cut/constant-plane boundary points
+10 = Average two or more grids
+
+ Operations that change the grid dimensions
+ ------------------------------------------
+ 11 = Extract a subset
+ 12 = Add extra planes in J, K or L by extrapolation
+      (direction = x/y/z/tangent/smoothed tangent/specified vector)
+ 13 = Add extra planes in J or K by reflected symmetry
+ 14 = Add extra planes to 2D grid to form 3D grid for
+      '2D' or 'axisymmetric' option in OVERFLOW 
+ 15 = Duplicate and mirror reflected symmetry grid to form periodic grid in K
+ 16 = Rotate curve/surface grid to generate surface/volume of revolution
+ 18 = Create centroid curve along J, K or L direction
+ 19 = Insert grid plane between 2 slices in J, K or L at specified arc
+      length location
+ 20 = Concatenate another grid to current grid
+ 21 = Split a grid into 2 grids in J, K, or L direction
+ 22 = Create a new grid by duplicating a grid - 
+      further ops will be performed on duplicated grid
+ 23 = Split a curve into 2 or more segments at specified x/y/z station
+ 24 = Split a curve into 2 pieces at location closest to specified x,y,z point
+ 25 = Remove consecutive coincident points in J/K/L
+ 26 = Sweep curve/surface grid by rotation and translation to generate surface/volume grid
+ 99 = Go to multiple grid menu
+
+Menu options for multiple grids include:
+
+  0 = Exit from this menu and program
+  1 = Go to single grid menu
+  2 = Append grids by reading new grid file
+  3 = Remove grids from current list
+  4 = Substitute a grid by reading new single grid
+  5 = Add/remove iblanks for all grids
+  6 = Swap grid numbers of two grids
+  7 = Rearrange sequence of all grids
+  9 = Write selected grids to file
+ 11 = Extract grid slices within given tolerance to a Cartesian cut plane
+ 12 = Extract N levels of grids using multi-grid algorithm
+ 13 = Auto split curve grids at any interior point if it matches
+      any point from another curve grid
+ 14 = Auto split curve grids at any interior point where the local
+      turning angle exceeds a given value
+ 21 = Check volume mesh local self intersection against L=1 surface
+ 22 = Report bounding box in the other directions given minmax in x, y or z
+
+Last modified: Mon Jul 17 15:19:00 2017 
