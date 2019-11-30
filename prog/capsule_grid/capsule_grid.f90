@@ -623,6 +623,9 @@
 !                               spacing on the shoulder to larger spacing on
 !                               the aft cone. Spreading the blending over more
 !                               points should help.
+!     11/30/2019    "    "      A pitot tube case from Dinesh revealed that an
+!                               input generatrix did not have the scale factor
+!                               applied as for analytic cases. Rectified now.
 !  Author:
 !
 !     David Saunders, ERC, Inc. at NASA Ames Research Center, Moffett Field, CA
@@ -690,8 +693,8 @@
       peak_deflection, peak_ripple, power, power_aft, power_fore, &
       r_aft(mxcones), r_nose, radius_base, radius_cone_juncture, radius_nose, &
       radius_shoulder, radius_vertex, rib_deflection, rib_thickness, &
-      semiangle, skirt_angle, skirt_length, sting_stretch_multiplier, &
-      x_aft(mxcones), x_nose
+      scale_factor, semiangle, skirt_angle, skirt_length, &
+      sting_stretch_multiplier, x_aft(mxcones), x_nose
 
    logical :: &
       aft_body_too, analytic, cell_centered, collapsed, &
@@ -784,8 +787,6 @@
 !     --------------------------------------------------------------------------
 
 !     Local variables:
-
-      real :: scale_factor
 
 !     Execution:
 
@@ -1410,6 +1411,8 @@
       rewind (lungen)
       do i = 1, ng  ! Ignore any 3rd column
          read (lungen, *) xg(i), rg(i)
+         xg(i) = scale_factor * xg(i)
+         rg(i) = scale_factor * rg(i)
       end do
       close  (lungen)
 

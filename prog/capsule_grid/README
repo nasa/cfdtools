@@ -53,3 +53,6 @@ details.
                           spacing on the shoulder to larger spacing on
                           the aft cone. Spreading the blending over more
                           points should help.
+11/30/2019    "    "      A pitot tube case from Dinesh revealed that an
+                          input generatrix did not have the scale factor
+                          applied as for analytic cases. Rectified now.
