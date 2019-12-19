@@ -1276,7 +1276,7 @@
 
        INTEGER, INTENT (OUT) :: CONN(4,NHEX) ! Connectivity information
 
-       REAL,    INTENT (OUT) :: UNUSED  ! Added to make argument list distinct.
+       LOGICAL, INTENT (OUT) :: UNUSED  ! Added to make argument list distinct.
 
 !      CONN(II,N) for the Nth hex cell uses II = 1 : 4 to store the patch
 !      (block) number and the i,j,k of the "lower left" vertex of the cell
@@ -2057,7 +2057,7 @@
 
        REAL,    INTENT (IN) :: COOR(3,NNODE)! (x,y,z)s pointed to by CONN(1:4,*)
 
-       REAL,    INTENT (OUT) :: UNUSED  ! Added to make argument list distinct.
+       LOGICAL, INTENT (OUT) :: UNUSED  ! Added to make argument list distinct.
 
 !      LOCAL CONSTANTS:
 !      ----------------

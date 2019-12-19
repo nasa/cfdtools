@@ -175,6 +175,7 @@
    use tri_zone_structure
    use triangulation_io            ! Tecplot-type triangulation I/O package
    use adt_utilities               ! ADT build & search routines
+   use trigd
 
    implicit none
 
@@ -568,7 +569,8 @@
 
       hemisphere = nbps == 1
       if (hemisphere) then  ! Allow for a single body-normal line of sight
-         call ready (luncrt, & '1 body pt. => hemisphere lines? ' // &
+         call ready (luncrt, &
+                     '1 body pt. => hemisphere lines? ' // &
                      'y|n; y=<cr>=yes; n=body-normal line: ', &
                      lunkbd, hemisphere, cr, eof)
          if (eof) then
@@ -1063,7 +1065,7 @@
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       integer :: i, ncone
-      integer, allocatable :: keep(:)
+      logical, allocatable :: keep(:)
       real :: angle, vnormal(3), v2(3)
       type (grid_type), pointer, dimension (:) :: cone_lines
       character (12) :: filename

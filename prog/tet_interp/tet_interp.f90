@@ -102,7 +102,7 @@
    end if
 
    call vol_read (lunsol, header, solution, ios);  if (ios /= 0) go to 999   !  Read the entire input solution
-   
+
    numf   = header%numf
    nzones = header%nzones
    if (nzones > 1) then
@@ -195,7 +195,7 @@
 !
 !  This routine interpolates the given unstructured flow solution onto one block of a structured target grid.
 !  It is the argument-driven, reusable portion of program tet_interp, q.v.
-!  
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !  Modules:
@@ -235,8 +235,8 @@
 !  !!!!!!!!!!!!!!!!
 
    integer :: i, i1, i2, i3, i4, icell, j, k, ni, ninside, nj, nk, nout
-   logical :: profile
-   real    :: dsqmin, dsqmax, time1, time2, unused, wall_distance
+   logical :: profile, unused
+   real    :: dsqmin, dsqmax, time1, time2, wall_distance
    real, dimension (3) :: delta_coords, interp_coords, target_coords, wall_coords
    real, dimension (4) :: pqrs
 
@@ -354,7 +354,7 @@
                wall_distance = sqrt ((wall_coords(1) - target_coords(1))**2 + &
                                      (wall_coords(2) - target_coords(2))**2 + &
                                      (wall_coords(3) - target_coords(3))**2)
-               write (luncrt, pformat) k, icell, i1, i2, i3, i4, pqrs(:), wall_distance, target_block%q(:,1,1,k) 
+               write (luncrt, pformat) k, icell, i1, i2, i3, i4, pqrs(:), wall_distance, target_block%q(:,1,1,k)
             end if
 
          end do ! Next i for this target block
