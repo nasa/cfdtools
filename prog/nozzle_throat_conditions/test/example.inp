@@ -1,0 +1,48 @@
+========================================================================
+Control file for NOZZLE_THROAT_CONDITIONS (2 flow variables prescribed)
+========================================================================
+V1_V2 specification
+------------------------------------------------------------------------
+Ht_MF         ! Ht_MF, Ht_Ru, Rho_T, Rho_H, Rho_S, P_T, P_H, or P_S
+0.130         ! Frozen Mach number
+------------------------------------------------------------------------
+Iteration controls
+------------------------------------------------------------------------
+0             ! Iterate for target bulk enthalpy?   0 = no | 1 = yes
+18.21E+06     ! Target bulk enthalpy, J/kg
+1             ! Iterate for target bulk mass flow rate?  0 | 1
+0.430         ! Target bulk mass flow rate, kg/s
+------------------------------------------------------------------------
+V_1 specifications
+------------------------------------------------------------------------
+Dataset       ! uniform, linear, parabolic, nthdegree, sinusoid, dataset
+0.            18.21e6   ! (r, V1) at nozzle center-line
+6.03250e-02   18.21e6   ! (r, V1) at nozzle wall
+0.54          ! "Width" control
+HProfileGaussNew.dat ! Dataset file name (if relevant)
+------------------------------------------------------------------------
+V_2 specifications - rho*u
+------------------------------------------------------------------------
+Gaussian      ! Shape
+0.            37.612   ! (r, V2) at nozzle center-line
+6.03250e-02   37.612   ! (r, V2) at nozzle wall
+0.54          ! "Width"
+none    50.   ! Dataset file name or sigmoid steepness
+------------------------------------------------------------------------
+Mixture specifications
+------------------------------------------------------------------------
+ 6            ! # species
+N2   0.702874 ! Species names (DPLR) and mass fraction starting guesses
+O2   0.215374
+NO   0.0
+N    0.0
+O    0.0
+Ar   0.081752
+------------------------------------------------------------------------
+Output specifications
+------------------------------------------------------------------------
+160            ! # uniform points for initial BC evaluations
+inflow.dat     ! File containing target radii for interpolating to | none
+60             ! DPLR's input profile BC code:  60 | 61 | 62
+output.f       ! file name for output throat conditions (PLOT3D function)
+output.dat     ! Plottable results
