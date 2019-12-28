@@ -26,6 +26,7 @@ the 2-space curve utilities.
 
 17-Oct-2019  David Saunders  See SEARCH_STRUCTURED_VOLUME_ADT for notes on a
                              work-around for possible matrix singularity.
+23-Dec-2019      "     "     Fixed a typo in the singularity diagnostic.
 
 Related Note:
 

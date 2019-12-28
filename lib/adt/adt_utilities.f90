@@ -69,6 +69,7 @@
 !                               Therefore, the data rotation has been removed.
 !    17-Oct-2019    "     "     See SEARCH_STRUCTURED_VOLUME_ADT for notes on a
 !                               work-around for possible matrix singularity.
+!    23-Dec-2019    "     "     Fixed a typo in the singularity diagnostic.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -4526,8 +4527,8 @@
                CALL TERMINATE ("SEARCH_STRUCTURED_VOLUME_ADT", &
                                "Allocation error in SAFE_GUARDED_LSQR?")
              END IF
-             WRITE (*, '(2A, ES14.6)') '*** Singular matrix trapped; ", &
-               squared residual of augmented system:', RESIDSQ
+             WRITE (*, '(2A, ES14.6)') '*** Singular matrix trapped; ', &
+               'squared residual of augmented system:', RESIDSQ
            END IF
 
            PL = MIN (ONE, MAX (ZERO, PL - DP(1)));  DP(1) = ABS (PL - POLD)
