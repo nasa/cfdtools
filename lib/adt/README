@@ -27,6 +27,9 @@ the 2-space curve utilities.
 17-Oct-2019  David Saunders  See SEARCH_STRUCTURED_VOLUME_ADT for notes on a
                              work-around for possible matrix singularity.
 23-Dec-2019      "     "     Fixed a typo in the singularity diagnostic.
+28-Dec-2020      "     "     Print the cell vertices as well, once in a
+                             given Newton iteration where the singularity
+                             may appear for multiple iterations.
 
 Related Note:
 
@@ -43,6 +46,7 @@ and are far from orthogonal to a body-normal line of sight.  The nearest
 centroid to a target point within a cell-centered grid (hybrid method 3
 of FLOW_INTERP = KDTREE + refinement within best cell) can easily pick a
 cell outside the shock envelope for a line of sight point inside the shock.
-Only method 1 (pure ADT) is reliable, and now it should produce reasonable
-results even in boundary layer regions where matrix singularity has been
-observed.
+Only method 1 (pure ADT) is reliable, and now it should produce good
+results even for cells with collapsed faces as along Ox in revolved axi-
+symmetric 2D flow solutions, and (it is believed) in boundary layer regions
+where high cell aspect ratios may also produce matrix singularity.

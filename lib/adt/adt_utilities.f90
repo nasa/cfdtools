@@ -70,6 +70,9 @@
 !    17-Oct-2019    "     "     See SEARCH_STRUCTURED_VOLUME_ADT for notes on a
 !                               work-around for possible matrix singularity.
 !    23-Dec-2019    "     "     Fixed a typo in the singularity diagnostic.
+!    28-Dec-2020    "     "     Print the cell vertices as well, once in a
+!                               given Newton iteration where the singularity
+!                               may appear for multiple iterations.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -4180,6 +4183,8 @@
        INTEGER :: ACTIVE_LEAF, NPOS_BBOXES
        INTEGER :: NFRONT_LEAVES, NFRONT_LEAVES_NEW
 
+       LOGICAL :: SHOW_CELL
+
        REAL :: X, Y, Z, DX, DY, DZ
        REAL :: DD1, DD2, DSQ, RESIDSQ
        REAL :: AJAC(3,3), DP(3)
@@ -4458,6 +4463,7 @@
                 GRID(IB)%Z(I+1,J,  K+1) + GRID(IB)%Z(I,J,  K+1) - ZPQ
 
          PL = HALF;  QL = HALF;  RL = HALF
+         SHOW_CELL = .TRUE.
 
          NEWTON:  DO ITER = 1, NITER_MAX
 
@@ -4497,7 +4503,10 @@
 
 !          Occasional singularity here is believed to be confined to boundary
 !          layer regions during flow-field interpolations, where the grid cells
-!          can have extremely high aspect ratios.  A consequence for FLOW_INTERP
+!          can have extremely high aspect ratios.  Correction: the most common
+!          cause is the collapsed cells along Ox in a rotated full-body axi-
+!          symmetric volume grid as needed for hemispherical radiation calcu-
+!          ations at points on the aft body.  A consequence for FLOW_INTERP
 !          users has been to favor the hybrid method, namely a KDTREE search for
 !          the nearest cell centroid followed by refinement within that cell
 !          as implemented here and separately in subroutine NEAREST_BRICK_POINT.
@@ -4527,8 +4536,22 @@
                CALL TERMINATE ("SEARCH_STRUCTURED_VOLUME_ADT", &
                                "Allocation error in SAFE_GUARDED_LSQR?")
              END IF
-             WRITE (*, '(2A, ES14.6)') '*** Singular matrix trapped; ', &
-               'squared residual of augmented system:', RESIDSQ
+             WRITE (*, '(A, I3, A, ES14.6)') &
+               '*** Singular matrix trapped at iteration', ITER, &
+               '; squared residual of augmented system:', RESIDSQ
+             IF (SHOW_CELL) THEN
+               SHOW_CELL = .FALSE.
+               WRITE (*, '(A)') 'Cell vertices:'
+               WRITE (*, '(3ES16.8)') &
+       GRID(IB)%X(I,J,K),      GRID(IB)%Y(I,J,K),      GRID(IB)%Z(I,J,K),     &
+       GRID(IB)%X(I+1,J,K),    GRID(IB)%Y(I+1,J,K),    GRID(IB)%Z(I+1,J,K),   &
+       GRID(IB)%X(I,J+1,K),    GRID(IB)%Y(I,J+1,K),    GRID(IB)%Z(I,J+1,K),   &
+       GRID(IB)%X(I+1,J+1,K),  GRID(IB)%Y(I+1,J+1,K),  GRID(IB)%Z(I+1,J+1,K), &
+       GRID(IB)%X(I,J,K+1),    GRID(IB)%Y(I,J,K+1),    GRID(IB)%Z(I,J,K+1),   &
+       GRID(IB)%X(I+1,J,K+1),  GRID(IB)%Y(I+1,J,K+1),  GRID(IB)%Z(I+1,J,K+1), &
+       GRID(IB)%X(I,J+1,K+1),  GRID(IB)%Y(I,J+1,K+1),  GRID(IB)%Z(I,J+1,K+1), &
+       GRID(IB)%X(I+1,J+1,K+1),GRID(IB)%Y(I+1,J+1,K+1),GRID(IB)%Z(I+1,J+1,K+1)
+             END IF
            END IF
 
            PL = MIN (ONE, MAX (ZERO, PL - DP(1)));  DP(1) = ABS (PL - POLD)

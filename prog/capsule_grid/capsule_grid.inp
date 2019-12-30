@@ -1,0 +1,291 @@
+ $FOREBODY_INPUTS
+ verbose = F,
+ aft_body_too = T,
+ units_in_inches = F,
+ geometric_scale = 1.,
+ input_generatrix = 'none',
+ spherecone = T,
+ numi_forebody = 201,
+ numj = 145,
+ x_nose = 0.,
+ r_nose = 0.,
+ radius_nose = 0.058166,
+ radius_base = 0.1778,
+ radius_shoulder = 0.014224,
+ radius_vertex = 99.,
+ half_cone_angle = 55.,
+ half_cone_angle_fore = 99.,
+ half_cone_angle_aft = 99.,
+ radius_cone_juncture = 99.,
+ skirt_angle = 15.,
+ skirt_length = 0.031214,
+ nose_patch_file_name = 'NosePatch61B.p3da',
+ output_generatrix = 'gen.dat',
+ surface_grid_file_name = 'surface_grid.g',
+ flat_blend_fore = T,
+ power_fore = 0.5,
+ ni_regrid_forebody = 33,
+ ripple_case = F,
+ ntoroids = 6,
+ peak_ripple = 0.05,
+ umbrella_case = F,
+ nedges = 8,
+ peak_deflection = 0.01,
+ rib_deflection = 0.,
+ frustum_radius = 0.,
+ resolve_the_ridges = T,
+ rib_thickness = 0.01,
+ round_the_ridges = T,
+ $END
+
+ $AFT_BODY_INPUTS
+ sting_case = F,
+ ncones = 3,
+ flat_blend_aft = T,
+ r_aft = 0., 0.160913, 0.0508, 0.0508,
+ cone_angle_aft = 15., 90., 0.,
+ rounding_mode = 2,
+ ds_round = 0., 0.00635, 0.00635, 0.00635,
+ ni_round = 0, 21, 21, 21,
+ power_aft = 0.5,
+ ng_split = 0,
+ nblend_fore_aft = 8,
+ numi_aft_body = 201,
+ ni_regrid_aft_body = 21,
+ i0_umbrella = 0,
+ i1_umbrella = 0,
+ i2_umbrella = 0,
+ sting_stretch_multiplier = 3.,
+ $END
+
+! The above inputs define a closed 55-deg SPRITE capsule.
+! See /Standard_Congurations/SPRITE.
+! CAPSULE_GRID Control Input Reminders (Extracted From The Main Program):
+!
+!     $FOREBODY_INPUTS
+!     verbose = F,                 ! T invokes log file output from CURVDIS
+!     aft_body_too = T,            ! Option to suppress the aft body
+!     units_in_inches = F,         ! Option suited to arc-jets in the US of A
+!     geometric_scale = 1.,        ! Option to scale the indicated geometry
+!     input_generatrix = '...',    ! Full generatrix file; 'none' => analytic
+!     spherecone = T,              ! T => half_cone_angle >= 0, else biconic
+!                                  ! T includes CEV-type (see half_cone_angle)
+!     numi_forebody = 201,         ! # grid points on forebody generatrix
+!     numj = 121,                  ! # spokes in body of revolution (4m + 1)
+!     x_nose = 0.,                 ! Nose coordinate
+!     r_nose = 0.,                 ! Nose coordinate; must be 0. if aft body on
+!     radius_nose = 0.0889,        ! Radius of nose circular segment
+!     radius_base = 0.1778,        ! Radius at maximum diameter
+!     radius_shoulder = 0.00889,   ! Radius of shoulder circular segment
+!     radius_vertex = 0.           ! Biconic option to round the cone juncture
+!     half_cone_angle = 55.,       ! 0 => spherical section (Apollo/CEV-type)
+!     half_cone_angle_fore = ...,  ! Forward cone angle, if biconic
+!     half_cone_angle_aft = ...,   ! Aft cone angle, if biconic
+!     radius_cone_juncture = ...,  ! Radius where cones meet, if biconic
+!     skirt_angle = 35.,           ! Semi-angle if cone segment follows shoulder
+!     skirt_length = 0.001,        ! Length in x, normally >= 0.; < 0. may be OK
+!     nose_patch_file_name = '...' ! Grid quadrant used to remove singular point
+!     output_generatrix = '...',   ! For the analytic case
+!     surface_grid_file_name = '.. ! Output surface grid/no singular point(s)
+!     flat_blend_fore = T,         ! T ==> extra blending between high/low curv.
+!     power_fore = 0.5,            ! Initial exponent in curvature-based redist.
+!     ni_regrid_forebody = 33,     ! 1:ni_regrid, 1:numj nose region is replaced
+!     ripple_case = ...,           ! T => simulate inflatable toroid concept
+!     ntoroids = ...,              ! # toroids modeled along cone segment
+!     peak_ripple = ...,           ! Peak deflection between toroids
+!     umbrella_case = ...,         ! T => polygonal forebody/optional deflectns.
+!     nedges = ...,                ! # full polygon edges if umbrella_case
+!     peak_deflection = ...,       ! > 0. => impose catenary-type deflections
+!     rib_deflection = ...,        ! Option to bend ribs (+/- => concave/convex)
+!     frustum_radius = ...,        ! 0. => start fabric/rib deflns. @ tngcy. pt.
+!     resolve_the_ridges = ...,    ! T => adjust spacing either side of ribs
+!     rib_thickness = ...,         ! Off-rib spacing to impose (<= input value)
+!     round_the_ridges = ...,      ! T => loose local cubic spline rounding
+!     $END
+!
+!     $AFT_BODY_INPUTS
+!     sting_case = F,              ! Option to suppress closure of aft body
+!     ncones = 2,                  ! ncones >= 1
+!     flat_blend_aft = T,          ! T ==> extra blending between high/low curv.
+!     r_aft = 99., 0.12, 0.06,     ! Radii from fore/aft juncture (1:ncones+1)
+!                                  ! r_aft(1) automatically matches forebody
+!     cone_angle_aft = 40., 65.,   ! Half cone half angles (1:ncones); 0, 90 OK
+!                                  ! > 90 and > 180 can also be OK
+!     rounding_mode = 2            ! 1 => tangent length; 2 => radius; 0 = none
+!     ds_round = 0., 0.003, 0.003, ! Tangent lengths or rounding radii >= 0.;
+!                                  ! only ds_round(2:ncones+1) are looked at;
+!                                  ! ds_round(ncones) < 0 flags special SRC case
+!     ni_round = 0, 17, 17,        ! # uniform rounding circle arc points >= 0
+!     power_aft = 0.5,             ! Initial exponent in curvature-based redist.
+!     numi_aft_body = 201,         ! # grid points on aft body
+!     sting_stretch_multiplier = 3., ! Applied to interim end-of-sting spacing
+!     ng_split = 0,                ! Full input generatrix index (fore/aft red.)
+!     nblend_fore_aft = 8,         ! # aft pts. used to match fore/aft spacing
+!     ni_regrid_aft_body = 0,      ! Automated if analytic; enter desired index
+!     i0_umbrella = 0,             ! For fat aft body cases (extra morphing)
+!     i1_umbrella = 0,             ! Inboard index defining aft spoke morph
+!     i2_umbrella = 0,             ! Outboard index near shoulder likewise
+!     $END                         ! if automation fails or for input generatrix
+!
+!  Clarification of Input Generatrix Option:
+!
+!     Since an input generatrix may or may not represent the desired point
+!     distribution in the output surface grid, the work-around is as follows:
+!
+!     If the number of points found in the input generatrix matches the spec-
+!     ified grid point count, numi_forebody [+ numi_aft_body - 1], then the
+!     input points are used without change.  Otherwise, the curvature-based
+!     redistribution applied to the analytic case is applied likewise, and
+!     the number of grid points can be adjusted to suit the intended flow
+!     calculation.
+!
+!  Clarification of Curvature-Based Controls:
+!
+!     Fore and aft body generatrices are now redistributed separately for all
+!     cases except a full-body input generatrix case where the output number of
+!     points,  numi_forebody + numi_aft_body - 1, matches the input number.
+!     (Originally, a full body input generatrix was treated as a single curve.)
+!     Curvature-based redistribution may be controlled with exponent inputs
+!     power_fore and power_aft, which default to 0.5 and should be in the range
+!     [0.1, 0.9], with 0.9 maximizing the curvature effect.  If the iterative
+!     solution does not converge, the exponent is lowered by 0.1 until it does.
+!
+!  "Umbrella" Forebodies:  Two Types of Deflection
+!
+!     Originally, faceted outer forebodies were constructed with straight-line,
+!     undeflected ribs matching the cone portion of the underlying sphere-cone
+!     generatrix, and any deflections were confined to the panels between the
+!     ribs.  The "peak_deflection" input controls these catenary-type surface
+!     deflections in both surface directions.  Now, a second rib_deflection
+!     input allows the ribs to be bent in either direction (negative input for
+!     a convex/outwards rib bend).  The initial discretization of the generatrix
+!     is bent with a catenary-type deflection either inwards or outwards.
+!     Blending at the circular shoulder is an awkwardness treated as follows.
+!     The outer end slope of the nominal catenary is used to locate the shoulder
+!     circle point with matching slope.  Then the nominal catenary is morphed
+!     via an arc-length-based technique to move its outer end from the tangent
+!     point of the straight cone line to that matching-slope circle point.  The
+!     resulting blend is not perfectly tangential, but should suffice for small
+!     deflections.
+!
+!  Definition of Frustum Radius:
+!
+!     Originally, "umbrella" cases assumed that the ribs started at the sphere-
+!     cone tangency point.  Now, ribs may be shorter than that, to model an
+!     effectively larger nose cap that includes part of the cone.  The control
+!     input "frustum_radius" defines the start of the ribs where any deflections
+!     may be imposed out to the shoulder tangency location.  Defaulting this
+!     frustum radius to zero leads to use of the original definition, namely the
+!     sphere-cone tangency point.  To be precise, any rib bending will start at
+!     the first point of the eventual (redistributed) generatrix that is at or
+!     nearest to (but downstream of) the location specified by frustum_radius.
+!
+!  Clarification of Aft Body ncones and Collapsed Aft Ends:
+!
+!     To avoid confusion, ncones is expected to be 1 for a single frustrum,
+!     2 for a typical biconic aft body, and so on.  Normally, these cases have
+!     a finite vertical end segment in the generatrix, where a half cone angle
+!     of 90 degrees is implied and ncones+1 radii > 0 should also be entered.
+!     Internally, r_aft(ncones+2) = 0 will be assigned for arc length calcs.
+!
+!     Conversely, if the aft end collapses to a point, r_aft(ncones+1) = 0.
+!
+!  Aft Body Vertex Rounding Options (Analytic Cases Only):
+!
+!     [Note that forebody rounding is limited to the one vertex of a biconic,
+!     and is handled in the capsules.f90 forebody package via the radius_vertex
+!     parameter.  Aft bodies are more general and any rounding of vertices is
+!     handled in this program.]
+!
+!     rounding_mode = 0 turns off any rounding of [aft body] vertices;
+!                   = 1 means input ds_round values > 0 are treated as tangent
+!                       lengths from the vertex to the underlying circle;
+!                   = 2 means input ds_round values > 0 are treated as radii
+!                       of the rounding circle; ALSO: ds_round < 0 means a
+!                       special case of rounding for SRC-type capsules with a
+!                       quarter-circle quadrant for the aft-most segment.
+!
+!     If ds_round > 0 is specified for a vertex, a circular arc with ni_round
+!     uniform points from tangent point to tangent point is inserted.  After
+!     all insertions, the new geometry definition is redistributed to the
+!     original numi_aft_body points using curvature-based techniques.
+!     A collapsed aft body may also be rounded similarly: it is treated just as
+!     for other vertices, but only half the circular points are inserted.
+!
+!     Note that ds_round(1) and ni_round(1) are ignored (no rounding at the
+!     forebody/aft body juncture), but zeros should be entered as place holders.
+!
+!  Special SRC (Sample Return Capsule)-type Option (Full Quadrant Aft Body):
+!
+!     Use of ds_round(ncones) < 0. is the flag for a special case where the aft
+!     body ends with a full quadrant (or a little less) that leaves no room for
+!     normal rounding at the second last vertex.  A vertical segment is also
+!     expected to precede the last vertex to be rounded.  Where that meets the
+!     large aft circle has to be rounded after the normal rounding, because it
+!     involves the vertical segment and what is now a large circular segment,
+!     not a straight segment that would remain after less severe rounding of
+!     the last vertex.  (Hard to explain!)  If the SRC-type aft body is not a
+!     full quadrant, some geometry and trigonometry is required to determine
+!     the last two r_aft inputs and the last cone angle implied by rounding
+!     of the last vertex with the large radius of the less-than-full quadrant:
+!
+!        Rb = ds_round(ncones+1)  ! Large aft body radius of near-quadrant
+!        xe = x_aft(ncones+2)     ! End of body, presumably known a priori
+!        xo = xe - Rb             ! Center of large aft circle
+!        xv = x_aft(ncones)       ! Vertical segment abscissa
+!        tc = arcsin ((xv-xo)/Rb) ! The angle needed for cone_angle_aft(ncones)
+!        ri = Rb*cos(tc)          ! Intersection radius needed for r_aft(ncones)
+!
+!  Handling of Aft Body 0, 180 and 90 Degree Half Cone Angles:
+!
+!     Note that if cone_angle_aft(j) = 0 or 180, the analytic specification is
+!     not well defined.  The work-around is to enter the length of the step (in
+!     the x direction) via r_aft(j+1); this will be reset to r_aft(j) internally
+!     by the program.  For the 180 degree case, make r_aft(j+1) negative.
+!
+!     An interior angle of 90 degrees is also permitted without special handling
+!     other than avoiding the infinite tangent internally.
+!
+!  Skirt Angle = Aft Body Half Cone Angle > 90 With Skirt Length < 0 (SRC-type):
+!
+!     The SRC-type configuration also requires an aft body cone angle > 90, in
+!     combination with an equal skirt angle and a negative skirt length.
+!
+!  Aft Body Angle > 180 For Open SPRITE/ADEPT-Type With Flexible TPS:
+!
+!     The forebody/aft body juncture may need to be placed aft of the true
+!     forebody shoulder via choice of skirt_length > 0 with skirt_angle = 15
+!     say), combined with initial cone angles of 15 (say), 90, and 195 (say).
+!     Looking at a working example is recommended.
+!
+!  Aft Body With "Umbrella" Forebody:
+!
+!     Default i1_umbrella and i2_umbrella = 0 (or umbrella_case = F) initially.
+!     This suppresses the option for morphing an ADEPT-type aft body to an
+!     umbrella-type forebody.
+!     Pick indices on the resulting axisymmetric aft body spokes that make
+!     sense for arc-length-based morphing (defining the essentially straight
+!     line portions).  Outboard of that, the shoulder is simply shifted.
+!
+!     N.B.: These indices should be found from patch 7 of the interim surface
+!     grid, NOT from the single-patch spoked_surface_aft.g file.
+!     Also: for a fat aft body, if i1_umbrella on the aft body corresponds to
+!     a radius that is greater than radius_frustum (where the forebody faceting
+!     starts), use 0 < i0_umbrella < i1 to control additional morphing between
+!     i0 and i1 because of the aft-body x-shifts from i1:i2 that maintain the
+!     fabric thickness.  (Ideally these shifts go to zero at i1, but may not
+!     for a fat payload housing.)  Default:  i0_umbrella = i1_umbrella - 20
+!
+!  Non-Analytic Full Body Case:
+!
+!     The inputs for numi_forebody and numi_aft_body should allow for a common
+!     point where the two portions meet.  E.g., if 401 points are read in the
+!     input generatrix, then 201 and 201 are plausible fore- and aft inputs.
+!     See also "Clarification of Input Generatrix Option" above concerning the
+!     sum of numi_forebody + numi_aft_body - 1.
+!
+!     If curvature-based redistribution is indicated, this is now done in two
+!     parts.  The input geometry is split at the point of maximum radius, but
+!     this can be overridden by entering ng_split > 0.  Keep in mind that the
+!     split should be at or slightly aft of the shoulder max. diameter, for BC
+!     and fore/aft block plotting purposes.
