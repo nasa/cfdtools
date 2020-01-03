@@ -136,7 +136,7 @@
    real :: &
       cutoff, dmax, dmean, dsqmin, dt, dt1, dt2, dtolsq, dx, dy, dz,           &
       freestream, p, pm1, q, qm1, r, rm1, rnk, streamwise_coord, t, total,     &
-      unused, ymax, ymin
+      ymax, ymin
 
    real, dimension (nl) :: &
       tl, xl, yl, zl          ! For 2-point lines passed to INTSEC7
@@ -149,7 +149,7 @@
       fline, tline, xline, yline, zline  ! For one discretized line of sight
 
    logical :: &
-      cell_centered, formatted, formatted_output, not_2D, show
+      cell_centered, formatted, formatted_output, not_2D, show, unused
 
    character :: &
       streamwise_axis * 1
@@ -258,7 +258,7 @@
    dx   = volume_grid(1)%x(i,j,2) - volume_grid(1)%x(i,j,1)  ! Wall spacing is
    dy   = volume_grid(1)%y(i,j,2) - volume_grid(1)%y(i,j,1)  ! not critical --
    dz   = volume_grid(1)%z(i,j,2) - volume_grid(1)%z(i,j,1)  ! block 1 is OK
-   dt1  = sqrt (dx**2 + dy**2 + dz**2) 
+   dt1  = sqrt (dx**2 + dy**2 + dz**2)
    dt2  = dt2 + dt2  ! 2x is safe; avoid excessive smallness for many lines
 
    allocate (conn(3,nquad)) ! For (patch,i,j) of each boundary quad.

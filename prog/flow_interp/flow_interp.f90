@@ -333,7 +333,7 @@
 
       if (ios /= 0) go to 999
 
-   else 
+   else
 
       call read_only_relevant_solution_blocks (ios)  ! Local procedure below
 
@@ -743,7 +743,7 @@
 !                 are probably the many lines in a hemisphere lines of sight dataset.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA (later with ERC and AMA, Inc./NASA ARC).
-!  
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !  Modules:
@@ -807,9 +807,9 @@
 !  !!!!!!!!!!!!!!!!
 
    integer :: i, ib, ic, icell, ihex, iv, j, jc, jv, k, kc, kv, mi, mj, mk, n, ni, ninside, nj, nk, nout
-   logical :: profile
+   logical :: profile, unused
    logical, save :: suppress
-   real    :: dsqmin, dsqmax, dtolsq, extra, p, pm1, q, qm1, r, rm1, time1, time2, unused, wall_distance
+   real    :: dsqmin, dsqmax, dtolsq, extra, p, pm1, q, qm1, r, rm1, time1, time2, wall_distance
    real    :: coefs(8), xvert(3,8)
    real, dimension (3) :: delta_coords, interp_coords, target_coords, wall_coords
 
@@ -874,7 +874,7 @@
 !!!      zmax(ib) =  solution(ib)%zmax + extra
 !!!      zmin(ib) =  solution(ib)%zmin - extra
 !!!   end do
- 
+
 !!!   Mark solution block faces as exterior or interior (now informative only):
 
 !!!   call find_exterior_faces (n, solution, faces)  ! Local procedure below
@@ -993,7 +993,7 @@
                   wall_distance = sqrt ((wall_coords(1) - target_coords(1))**2 + &
                                         (wall_coords(2) - target_coords(2))**2 + &
                                         (wall_coords(3) - target_coords(3))**2)
-                  write (luncrt, pformat) k, n, ic, jc, kc, p, q, r, wall_distance, target_block%q(:,1,1,k) 
+                  write (luncrt, pformat) k, n, ic, jc, kc, p, q, r, wall_distance, target_block%q(:,1,1,k)
                end if
 
             end do ! Next i for this target block
@@ -1151,7 +1151,7 @@
          case (1) ! Centers -> vertices
 
             allocate (t(num_q,ni,nj,nk))
- 
+
             do k = 1, nk
                ka = max (1, k - 1);  kb = min (k, mk)
                do j = 1, nj
@@ -1237,7 +1237,7 @@
       if (method == 2) then  ! Input vertices are searched
 
          allocate (xyz_list(3,nxyz), conn(4,nxyz))  ! We still need conn to grab the nearest flow data from its structured block
- 
+
          do m = 1, nblocks_solution
             do k = 1, solution(m)%nk
                do j = 1, solution(m)%nj
@@ -1272,12 +1272,12 @@
                                       solution(m)%x(ib,ja,ka) + solution(m)%x(ib,ja,kb)  + &
                                       solution(m)%x(ib,jb,ka) + solution(m)%x(ib,jb,kb)) * eighth
                      xyz_list(2,n) = (solution(m)%y(ia,ja,ka) + solution(m)%y(ia,ja,kb)  + &
-                                      solution(m)%y(ia,jb,ka) + solution(m)%y(ia,jb,kb)  + & 
-                                      solution(m)%y(ib,ja,ka) + solution(m)%y(ib,ja,kb)  + & 
+                                      solution(m)%y(ia,jb,ka) + solution(m)%y(ia,jb,kb)  + &
+                                      solution(m)%y(ib,ja,ka) + solution(m)%y(ib,ja,kb)  + &
                                       solution(m)%y(ib,jb,ka) + solution(m)%y(ib,jb,kb)) * eighth
                      xyz_list(3,n) = (solution(m)%z(ia,ja,ka) + solution(m)%z(ia,ja,kb)  + &
-                                      solution(m)%z(ia,jb,ka) + solution(m)%z(ia,jb,kb)  + & 
-                                      solution(m)%z(ib,ja,ka) + solution(m)%z(ib,ja,kb)  + & 
+                                      solution(m)%z(ia,jb,ka) + solution(m)%z(ia,jb,kb)  + &
+                                      solution(m)%z(ib,ja,ka) + solution(m)%z(ib,ja,kb)  + &
                                       solution(m)%z(ib,jb,ka) + solution(m)%z(ib,jb,kb)) * eighth
                      conn(1,n) = m
                      conn(2,n) = i
@@ -1293,9 +1293,9 @@
       end subroutine deconstruct_search_grid
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- 
+
       subroutine find_data_ranges (nblocks, grid, faces)
- 
+
 !     Determine the (x,y,z) data ranges for the blocks of the given multiblock structured grid, and for their faces.
 !     Also, set up the (i,j,k) index ranges defining all faces of the blocks.  Doing this first helps.
 !
@@ -1342,7 +1342,7 @@
          grid(ib)%xmax     = -big;  grid(ib)%ymax     = -big;  grid(ib)%zmax     = -big
          faces(ib)%xmin(:) =  big;  faces(ib)%ymin(:) =  big;  faces(ib)%zmin(:) =  big
          faces(ib)%xmax(:) = -big;  faces(ib)%ymax(:) = -big;  faces(ib)%zmax(:) = -big
-      end do 
+      end do
 
 !     Calculate the data ranges of the faces:
 

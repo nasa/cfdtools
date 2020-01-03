@@ -123,14 +123,14 @@
 !        hemispheres_of_sight ! Many lines of sight for one body point
 !        flow_interp          ! 3D flow interpolation at LOS coordinates
 !        flow_interp_2D       ! 2D   "    "    "    "    "    "    "
-!        neqair_data          ! PLOT3D *.g/*.f --> NEQAIR's LOS.dat form
+!        neqair_data          ! PLOT3D .g/.f --> NEQAIR's LOS.dat form
 !
 !     Currently:
 !        slos                 ! 1 or more lines, tangent-slab or hemi., 3D vol.
 !        lines_of_sight_2d    ! 1 or more tangent-slab lines in a 2D volume grid
 !        flow_interp          ! 3D flow interpolation at LOS coordinates
 !        flow_interp_2D       ! 2D   "    "    "    "    "    "    "
-!        neqair_data          ! PLOT3D *.g/*.f --> NEQAIR's LOS.dat form
+!        neqair_data          ! PLOT3D .g/.f --> NEQAIR's LOS.dat form
 !
 !        [The more recent SLOS utility was derived from USLOS (for unstructured
 !        grids).  Both of these combine the functions of the LINES_OF_SIGHT and
@@ -382,7 +382,7 @@
                   lunkbd, hemisphere, cr, eof)
      if (eof) go to 99
    end if
-      
+
    if (hemisphere) then
       if (ndim == 2) then
          proceed = true

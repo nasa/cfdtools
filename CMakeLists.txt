@@ -34,6 +34,11 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+option(CFDTOOLS_TEST "Build/enable unit tests for CFDTOOLS" ON)
+if(CFDTOOLS_TEST)
+    enable_testing()
+endif()
+
 include(compile_options) # After set CMAKE_BUILD_TYPE
 add_library(global INTERFACE)
 target_compile_options(global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
