@@ -626,6 +626,11 @@
 !     11/30/2019    "    "      A pitot tube case from Dinesh revealed that an
 !                               input generatrix did not have the scale factor
 !                               applied as for analytic cases. Rectified now.
+!     01/17/2019    "    "      Minor tweaks to the "umbrella" case for it to
+!                               work in the absence of a rounded shoulder aft
+!                               of the underlying cone and a nose cap larger
+!                               than that cone.
+!
 !  Author:
 !
 !     David Saunders, ERC, Inc. at NASA Ames Research Center, Moffett Field, CA
@@ -1358,7 +1363,7 @@
             deallocate (spoke_fore%x, spoke_fore%y, spoke_fore%z)
          else
             ! We replace the axisymmetric spokes with the faceted spokes later.
-         end if  ! See the save_results procedure.
+         end if  ! See the save_result procedure.
 
          ni_regrid_aft_body = ni_regrid  ! But any rounding can change it
 
@@ -1411,8 +1416,8 @@
       rewind (lungen)
       do i = 1, ng  ! Ignore any 3rd column
          read (lungen, *) xg(i), rg(i)
-         xg(i) = scale_factor * xg(i)
-         rg(i) = scale_factor * rg(i)
+         xg(i) = scale_factor *  xg(i)
+         rg(i) = scale_factor *  rg(i)
       end do
       close  (lungen)
 
@@ -1633,7 +1638,7 @@
 
 !     Local variables:
 
-      integer :: i, i1, i2, ier, ikeep, nicat, nleft
+      integer :: i, i1, i2, ier, ikeep, mode, nicat, nleft
       real    :: a, deflection, dx, dy, L, semispan, slope, theta
       real    :: x1, y1, xc, yc, xt, yt
       real, allocatable, dimension (:) :: xcat, ycat, xmorph, ymorph
@@ -1669,11 +1674,12 @@
 
       nicat = i2 - i1 + 1
 
-!     Construct both halves of a catenary curve "suspended" from the x-axis:
+!     Construct both halves of a catenary curve "suspended" from the x-axis.
 
       allocate (xcat(nicat), ycat(nicat))
 
-      call catenary_grid (semispan, deflection, zero, 3, nicat, xcat, ycat, &
+      mode = 3
+      call catenary_grid (semispan, deflection, zero, mode, nicat, xcat, ycat, &
                           a, ier)
       if (ier /= 0) stop
 
@@ -2646,7 +2652,7 @@
          spoke_grid%y = spoke_aft%y
          spoke_grid%z = spoke_aft%z
 
-         if (.not. umbrella_case) then  ! Else see the save_results procedure
+         if (.not. umbrella_case) then  ! Else see the save_result procedure
             deallocate (spoke_aft%x, spoke_aft%y, spoke_aft%z)
          end if
 
@@ -2962,12 +2968,12 @@
       real,      parameter :: fraction = 0.50, half = 0.5, one = 1.0, zero = 0.0
       logical,   parameter :: false = .false., true = .true.
       character, parameter :: method*1  = 'B'  ! Loose local cubic interpolation
-      character, parameter :: methodr*1 = 'M'  ! Tight (monotonic) rib rounding
-
+      character, parameter :: methodr*1 = 'B'  ! Tight (monotonic) rib rounding
+                                               ! No--try loose fit instead
 !     Local variables:
 
       integer :: i, ier, ieval, ir, it1, it2, iter, itm, &
-                 j, je1, jo1, je2, jo2, m, n, nicat, njsemim1, npt
+                 j, je1, jo1, je2, jo2, m, mode, n, nicat, njsemim1, npt
       logical :: new, invert
       real    :: a, angle, curvature, ds, dsredo, dz, dzobtained, dztarget, &
                  peak_local_deflection, px, py, pz, qx, r, semispan, &
@@ -3025,6 +3031,8 @@
 !     Identify the first and last spoke indices on the conical flank.
 !     This was done prior to the rib-bending option and before frustum_radius
 !     was introduced as an input, but do it anyway.
+!     No: An ADEPT case with a nose cap larger than the conical flank thwarts
+!     the search backwards for the tangency point that frustum_radius replaces.
 
       allocate (s(n), xs(n), xss(n), ys(n), yss(n), kappa(n))
 
@@ -3052,10 +3060,11 @@
          end if
       end do
 
-      do i = m, n  ! Find the shoulder curvature
+      do i = m, n  ! Find the shoulder curvature (if a shoulder is present)
          curvature = max (curvature, abs (kappa(i)))
       end do
 
+      it2 = numi_forebody  ! If there is no shoulder curvature
       tol = curvature * fraction
       do i = m, n - 1
          if (abs (abs (kappa(i)) - curvature) < tol) then
@@ -3068,7 +3077,7 @@
 
       write (luncrt, '(a, 2i4)') &
          'First & last indices on conical flank:    ', it1, it2
-      if (it1 * it2 == 0) stop
+      if (it1*it2 == 0) stop
 
 !     Determine it1 from the [possibly adjusted] value of input frustum_radius.
 !     Note that we're now working with the curvature-based spoke-wise grid pts.
@@ -3083,7 +3092,7 @@
 !     Substitute straight lines from i = it2:ni_spoke and adjust the rest of
 !     the spokes from i = it1:it2.  Just do it for one semiedge patch:
 
-      do i = it2, ni_spoke
+      do i = it2, ni_spoke  ! Nothing done here if no shoulder is present
          xnew(i,1) = xold(i,nj_semi)
          ynew(i,1) = yold(i,nj_semi)
          znew(i,1) = zero
@@ -3136,12 +3145,14 @@
 !        2-space form of the right-half catenary.  Since we only need this for
 !        the peak deflections in the i direction, set the right end y to be 0.:
 
-         call catenary_grid (semispan, peak_deflection, zero, 2, &
+         mode = 2
+         call catenary_grid (semispan, peak_deflection, zero, mode, &
                              nj_semi, zcat, ycat, a, ier)
          if (ier /= 0) stop
 
          ycat(:) = -ycat(:)  ! Invert the droop
-!!       write (9, '(3f12.7)') (zero, ycat(i), zcat(i), i = 1, nj_semi)
+!!!      write (9, '(a)') '  i           z           x           y'
+!!!      write (9, '(i3, 3f12.7)') (i, zero, ycat(i), zcat(i), i = 1, nj_semi)
 
 !        Uniform catenary spacing is appropriate here for the spanwise points
 !        defining the maximum deflections along each new spoke of this patch.
@@ -3160,32 +3171,41 @@
             call point_A_to_point_B (ni_spoke, nj_semi, it1, j, it2, j, &
                                      xold, yold, zold, semispan)
 
-            semispan = half * semispan
-            peak_local_deflection = ycat(j) + rib_deflection  ! Mid-pt. values
-            invert = peak_local_deflection < zero
+            semispan = half*semispan
+            peak_local_deflection = ycat(j) + rib_deflection ! Mid-pt. values
             peak_local_deflection = abs (peak_local_deflection)
 
-            call catenary_grid (semispan, peak_local_deflection, xold(it1,j), &
-                                3, nicat, yicat, xicat, a, ier)  ! Assumes droop
+            mode = 3
+            call catenary_grid (semispan, peak_local_deflection, &
+                                xold(it1,j), mode, nicat, yicat, xicat, &
+                                a, ier)
             if (ier /= 0) stop
 
-            if (invert) xicat(:) = 2.*xold(it1,j) - xicat(:)
+!!!        write (9, '(a)') '  i           z           x           y'
+!!!        write (9, '(i3, 3f12.7)') (i, zero, xicat(i), yicat(i), i = 1, nicat)
 
-!!          write (9, '(a, i3)') 'j:', j
-!!          write (9, '(3f12.7)') (xicat(i), yicat(i), zero, i = 1, nicat)
+            invert = peak_local_deflection < zero
+            if (invert) xicat(:) = 2.*xold(it1,j) - xicat(:)
+!!!         write (9, '(a, l2)') 'invert:', invert
+!!!         write (9, '(a, i3)') 'j:', j
+!!!         write (9, '(a)') '   i           x           y          z'
+!!!        write (9, '(i3, 3f12.7)') (i, xicat(i), yicat(i), zero, i = 1, nicat)
 
 !           Flip it because we're working on the lower (6'oclock) half-segment:
 
             xicat(:) = 2.*xold(it1,j) - xicat(:)
             zicat(:) = zold(it1,j)
 
-!!          write (9, '(a)') 'Flipped'
-!!          write (9, '(3f12.7)') (xicat(i), yicat(i), zicat(i), i = 1, nicat)
+!!!         write (9, '(a)') 'Flipped   i            x           y           z'
+!!!    write (9, '(i3, 3f12.7)') (i, xicat(i), yicat(i), zicat(i), i = 1, nicat)
 
 !           Reverse the abscissas because they decrease with i on this patch:
 
             call rverse (nicat, xicat, xicat)
             call rverse (nicat, yicat, yicat)
+
+!!!         write (9, '(a)') 'Reversed  i            x           y           z'
+!!!    write (9, '(i3, 3f12.7)') (i, xicat(i), yicat(i), zicat(i), i = 1, nicat)
 
 !           Transform the 2-space catenary to 3-space:
 
@@ -3198,8 +3218,9 @@
 
             call rigid_transform (nicat, xicat, yicat, zicat, xu, yu, zu)
 
-!!          write (9, '(a)') 'Transformed'
-!!          write (9, '(3f12.7)') (xu(i), yu(i), zu(i), i = 1, nicat)
+!!!         write (9, '(a)') 'Transformed'
+!!!         write (9, '(a)') '  i           x           y            z'
+!!!         write (9, '(i3, 3f12.7)') (i, xu(i), yu(i), zu(i), i = 1, nicat)
 
 !           Replace the uniform spacing with the original relative spacing:
 
@@ -3222,10 +3243,10 @@
 
          end do  ! Next spoke-wise deflection
 
-!!       write (51, '(i1)')  1
-!!       write (51, '(3i4)') ni_spoke, nj_semi, 1
-!!       write (51, '(8es15.7)') &
-!!          xnew(:,1:nj_semi), ynew(:,1:nj_semi), znew(:,1:nj_semi)
+!!!      write (51, '(i1)')  1
+!!!      write (51, '(3i4)') ni_spoke, nj_semi, 1
+!!!      write (51, '(8es15.7)') &
+!!!      xnew(:,1:nj_semi), ynew(:,1:nj_semi), znew(:,1:nj_semi)
 
          deallocate (xcat, ycat, zcat, xicat, yicat, zicat, xu, yu, zu, su)
 
