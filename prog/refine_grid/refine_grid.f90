@@ -104,6 +104,7 @@
 !                                does. Therefore, treat all integer multipliers
 !                                the same way.  Remember, even point counts are
 !                                still likely for cell-centered data.
+!        09/23/20 Jeff Hill      Updated file handling to support 2D grids.
 !
 !     Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
 !              Now with AMA, Inc. at NASA ARC.
@@ -114,6 +115,7 @@
 
    use grid_block_structure  ! Derived data type for a grid block
    use xyzq_io_module        ! PLOT3D file I/O package
+   use xyq_io_module         ! 2D grid I/O
 
    implicit none
 
@@ -137,7 +139,7 @@
       ds2_fraction_i, ds2_fraction_j, ds2_fraction_k, scale_i, scale_j, scale_k
 
    logical :: &
-      formatted_in, formatted_out
+      threed, formatted_in, formatted_out
 
    character :: &
       b_format*41
@@ -166,15 +168,30 @@
 
 !  The files are open.  Read the input grid header and allocate work-space:
 
+   threed = .true.
    call xyz_header_io (1, luning, formatted_in, nblocks, gridin, ios)
-   if (ios /= 0) go to 99
+   if (ios /= 0) then
+      write(*,*) "Retry header read assuming 2D Plot3D format."
+      rewind luning
+      call xy_header_io (1, luning, formatted_in, nblocks, gridin, ios)
+      if (ios /= 0) go to 99
+      write(*,*) "The file appears to be two dimensional."
+      gridin(:)%nk = 1  ! Not initialized by xy_header_io
+      threed = .false.
+   end if
 
 !  Read the input function file header, if present, and ensure dimensions match:
 
    if (nf > 0) then
 
-      call q_header_io (1, luninf, formatted_in, nblocks, nf, gridin, ios)
-      if (ios /= 0) go to 99
+      if (threed) then
+         call q_header_io (1, luninf, formatted_in, nblocks, nf, gridin, ios)
+         if (ios /= 0) go to 99
+      else
+         call q_header_io_2d (1, luninf, formatted_in, nblocks, nf, gridin, ios)
+         if (ios /= 0) go to 99
+         gridin(:)%mk = 1
+      end if
 
       do ib = 1, nblocks
          if (gridin(ib)%ni /= gridin(ib)%mi) ios = 1
@@ -202,12 +219,20 @@
      gridout(ib)%mk = gridout(ib)%nk
    end do
 
-   call xyz_header_io (2, lunoutg, formatted_out, nblocks, gridout, ios)
-   if (ios /= 0) go to 99
-
-   if (nf > 0) then
-      call q_header_io (2, lunoutf, formatted_out, nblocks, nf, gridout, ios)
+   if (threed) then
+      call xyz_header_io (2, lunoutg, formatted_out, nblocks, gridout, ios)
       if (ios /= 0) go to 99
+      if (nf > 0) then
+         call q_header_io (2, lunoutf, formatted_out, nblocks, nf, gridout, ios)
+         if (ios /= 0) go to 99
+      end if
+   else
+      call xy_header_io (2, lunoutg, formatted_out, nblocks, gridout, ios)
+      if (ios /= 0) go to 99
+      if (nf > 0) then
+         call q_header_io_2d (2, lunoutf, formatted_out, nblocks, nf, gridout, ios)
+         if (ios /= 0) go to 99
+      end if
    end if
 
    b_format = '(a, i?, ":", ?x, 3i4, a, 3i5, ",", i4, a)'
@@ -237,8 +262,14 @@
       ni = gridin(ib)%ni;  nj = gridin(ib)%nj;  nk = gridin(ib)%nk
       npts = ni * nj * nk
 
-      call xyz_block_io (1, luning, formatted_in, npts, &
-                         gridin(ib)%x, gridin(ib)%y, gridin(ib)%z, ios)
+      if (threed) then
+         call xyz_block_io (1, luning, formatted_in, npts, &
+                            gridin(ib)%x, gridin(ib)%y, gridin(ib)%z, ios)
+      else
+         call xy_block_io (1, luning, formatted_in, npts, &
+                             gridin(ib)%x, gridin(ib)%y, ios)
+         gridin(ib)%z = 0.0d0
+      end if
       if (ios /= 0) go to 99
 
       call xyz_allocate (gridout(ib), ios)
@@ -290,8 +321,13 @@
 
       npts = mi * mj * mk
 
-      call xyz_block_io (2, lunoutg, formatted_out, npts, &
-                         gridout(ib)%x, gridout(ib)%y, gridout(ib)%z, ios)
+      if (threed) then
+         call xyz_block_io (2, lunoutg, formatted_out, npts, &
+                            gridout(ib)%x, gridout(ib)%y, gridout(ib)%z, ios)
+      else
+         call xy_block_io (2, lunoutg, formatted_out, npts, &
+                            gridout(ib)%x, gridout(ib)%y, ios)
+      end if
       if (ios /= 0) go to 99
 
 !     Warn the user if any cells have negative volumes (local procedure below):
@@ -300,7 +336,7 @@
          call volume_check (mi, mj, mk, &
                             gridout(ib)%x, gridout(ib)%y, gridout(ib)%z)
       end if
-                         
+
       deallocate (gridout(ib)%x, gridout(ib)%y, gridout(ib)%z, stat=ios)
 
       if (nf > 0) then

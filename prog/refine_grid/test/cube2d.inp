@@ -1,0 +1,9 @@
+REFINE_GRID
+'cube2d.g'                  ! Input grid name
+'none'                      ! Input function file name, or "none"
+'/tmp/cube2d-fine.g'        ! Output grid name (*.g or *.gu)
+'none'                      ! Output function file name, or "none"
+1.00 3.00 1.00              ! si/sj/sk applied to cell counts; may be < 1.
+1 1 1                       ! mi/mj/mk: 1 retains relative spacing; 2 keeps ds1
+1.00 1.00 1.00              ! ds2_frctns (mi=2): ds2i = 1-sided ds2 * ds2_frctn
+

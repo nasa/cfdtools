@@ -37,6 +37,7 @@ endif()
 option(CFDTOOLS_TEST "Build/enable unit tests for CFDTOOLS" ON)
 if(CFDTOOLS_TEST)
     enable_testing()
+    include(CTest)
 endif()
 
 include(compile_options) # After set CMAKE_BUILD_TYPE
