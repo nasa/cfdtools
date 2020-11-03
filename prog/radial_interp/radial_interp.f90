@@ -89,7 +89,7 @@
 !
 !     The assumptions allow use of surface searches (and possibly radial line searches) in place of volume searches, although
 !     the more general option (ii) for flow field interpolation still uses 3-D searches along the new radial lines.
-! 
+!
 !     >  Read the full original volume (or surface) grid and associated flow solution if present.
 !
 !     >  If an output grid is implied, read the full new surface grid (vertex-centered) and establish common edge info.
@@ -232,7 +232,7 @@
 !     03/23/18   "   The special case of newnk = 2 now means double the current k resolution, as in 65 --> 129.
 !     04/27/18   "   The option to change nk, intended for vertex-centered grids only, led to unassigned flow interpolations.
 !                    Changing nk was supposed to be disallowed for flow solutions all along.
-!
+!     10/21/20   "   Variable newnk was not being defined as [old] nk when a function file is present (redistribution disallowed).
 !  Author:
 !
 !     David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA  (then ERC, Inc./ARC; now AMA, Inc./ARC)
@@ -290,7 +290,7 @@
       initialize, input_f, output_f, output_g, recenter_f, recenter_g
 
    character :: &
-      filename * 80, filename_target * 80
+      filename * 256, filename_target * 256
 
    type (edge_type), allocatable, dimension(:) :: &
       new_edges
@@ -493,8 +493,9 @@
             ' The radial lines will be redistributed: newnk, ds1, ds2fraction =', newnk, ds1, ds2fraction
       end if
    else
-      write (luncrt, '(/, a)') ' Flow grid radial line distribution is disallowed.'
-      ds1 = -99.
+      write (luncrt, '(/, a)') ' Flow grid radial line redistribution is disallowed.'
+      newnk = nk    ! The default is to preserve the input volume grid's distribution in the k direction
+      ds1 = -99.    ! Prevents any redistribution
    end if
 
    close (lunctl)
@@ -542,7 +543,7 @@
             new_grid(ib)%ni = new_grid(ib)%ni + 1 ! Cell-centered with halos
             new_grid(ib)%nj = new_grid(ib)%nj + 1
          end do
-      end if 
+      end if
 
       new_grid(:)%nk = nk  ! Same as "old" grid when just a new surface is provided; may change if newnk /= nk (grid only)
 
@@ -1015,7 +1016,7 @@
 !  03/19/18   "   Allow for changing the number of points in the radial direction.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, CA  (then ERC, Inc./ARC; now AMA, Inc./ARC)
-!  
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !  Modules:
@@ -1688,7 +1689,7 @@
          case (1) ! Centers -> vertices
 
             allocate (t(num_q,ni,nj,nk))
- 
+
             do k = 1, nk
                ka = max (1, k - 1);  kb = min (k, mk)
                do j = 1, nj
