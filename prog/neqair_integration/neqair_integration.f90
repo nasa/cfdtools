@@ -241,6 +241,7 @@
    use tri_header_structure  ! For multizone unstructured Tecplot files
    use tri_zone_structure    ! For one zone of an unstructured Tecplot file
    use triangulation_io      ! I/O package for multizone surface triangulations
+   use trigd
 
    implicit none
 
@@ -942,7 +943,7 @@
 
 !     Arguments:
 
-      integer, intent (in)  :: lun         ! Logical unit on which the NEQAIR 
+      integer, intent (in)  :: lun         ! Logical unit on which the NEQAIR
                                            ! control file is opened/closed here
       integer, intent (out) :: nregion     ! # wavelength regions found;
                                            ! nregion = 6 means there are 7
@@ -1059,7 +1060,7 @@
 
          do i = 1, nregion
             read (lun, *, iostat=ios) range(i), rregion
-            if (ios /= 0) then 
+            if (ios /= 0) then
                write (*, '(a, i3)') 'Trouble reading region line', i
                go to 99
             end if
