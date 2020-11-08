@@ -233,6 +233,7 @@
 !     04/27/18   "   The option to change nk, intended for vertex-centered grids only, led to unassigned flow interpolations.
 !                    Changing nk was supposed to be disallowed for flow solutions all along.
 !     10/21/20   "   Variable newnk was not being defined as [old] nk when a function file is present (redistribution disallowed).
+!     11/7/20   JPH  Added flow solution redistribution logic. Fix bug in grid redistribution at the wall.
 !  Author:
 !
 !     David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA  (then ERC, Inc./ARC; now AMA, Inc./ARC)
@@ -259,9 +260,6 @@
       luncrt  = 6,         & ! Screen diagnostics
       lunvol  = 7            ! Output volume grid if present
 
-   real,    parameter ::   &
-      zero    = 0.
-
    logical, parameter ::   &
       false   = .false.,   &
       true    = .true.
@@ -280,14 +278,14 @@
 !  !!!!!!!!!!!!!!!!
 
    integer :: &
-      i, i1, ib, ios, j, lunflow, method, mi, mj, mk, n, nblocks_old, nblocks_new, newnk, ni, nj, nk, npts, num_q
+      i, i1, ib, ios, j, lunflow, method, mi, mj, mk, nblocks_old, nblocks_new, newnk, newnk_in, ni, nj, nk, npts, num_q
 
    real :: &
-      ds1, ds2fraction, dtol, overall_data_range
+      ds1, ds1_in, ds2fraction, ds2fraction_in, dtol, overall_data_range
 
    logical :: &
       cell_centered, centered_flow, centered_grid, cleanup, extrapolate, formatted, formatted_flow, formatted_grid, formatted_srf, &
-      initialize, input_f, output_f, output_g, recenter_f, recenter_g
+      initialize, input_f, output_f, output_g, recenter_f, recenter_g, redistribute
 
    character :: &
       filename * 256, filename_target * 256
@@ -481,21 +479,33 @@
 !  Read optional redistribution controls:
 !  --------------------------------------
 
-   if (.not. input_f) then
-      read  (lunctl, *, iostat=ios) newnk, ds1, ds2fraction
-      if (ios /= 0) then
-         newnk = nk    ! The default is to preserve the input volume grid's distribution in the k direction
-         ds1   = -99.  ! Prevents any redistribution
-         if (output_g) write (luncrt, '(/, a)') ' The radial lines will not be redistributed.'
-      else
-         if (newnk == 2) newnk = 2*nk - 1 ! Special case for doubling the density
-         if (output_g) write (luncrt, '(/, a, i5, 2f12.7)') &
+   newnk = nk          ! The default is to preserve the input volume grid's distribution in the k direction
+   ds1 = -99.          ! The default is no redistribution
+   ds2fraction = 1.00  ! The default is no outer boundary clustering
+   read (lunctl, *, iostat=ios) newnk_in, ds1_in, ds2fraction_in
+   if (ios == 0) then
+      newnk = newnk_in
+      if (newnk <= 1) newnk = nk
+      if (newnk == 2) newnk = 2*nk - 1 ! Special case for doubling the density
+      ds1 = ds1_in
+      ds2fraction = ds2fraction_in
+   end if
+
+   redistribute = (newnk /= nk) .or. (ds1 > -1.)
+   if (redistribute .and. recenter_g) then
+      write (luncrt, '(/, a)') ' Radial line redistribution disallowed for cell centered grid + flow.'
+      redistribute = .false.
+      newnk = nk
+      ds1 = -99.
+   end if
+
+   if (output_g) then
+      if (redistribute) then
+         write (luncrt, '(/, a, i5, 2f12.7)') &
             ' The radial lines will be redistributed: newnk, ds1, ds2fraction =', newnk, ds1, ds2fraction
+      else
+         write (luncrt, '(/, a)') ' The radial lines will not be redistributed.'
       end if
-   else
-      write (luncrt, '(/, a)') ' Flow grid radial line redistribution is disallowed.'
-      newnk = nk    ! The default is to preserve the input volume grid's distribution in the k direction
-      ds1 = -99.    ! Prevents any redistribution
    end if
 
    close (lunctl)
@@ -545,7 +555,7 @@
          end do
       end if
 
-      new_grid(:)%nk = nk  ! Same as "old" grid when just a new surface is provided; may change if newnk /= nk (grid only)
+      new_grid(:)%nk = nk  ! Same as "old" grid when just a new surface is provided; may change if newnk /= nk
 
       if (.not. recenter_g .and. newnk /= 0) new_grid(:)%nk = newnk
 
@@ -1090,12 +1100,8 @@
 !  Local constants:
 !  !!!!!!!!!!!!!!!!
 
-   real,      parameter :: big  = 1.e+32,   &
-                           dwt  = 0.5,      &  ! Weight for RIPPLE_SURF's distance part of the measure of closeness
-                           dxyz = 1.e-6,    &  ! Scaled by overall data range; used for padding surface patch data ranges
-                           half = 0.5,      &
+   real,      parameter :: dxyz = 1.e-6,    &  ! Scaled by overall data range; used for padding surface patch data ranges
                            one  = 1.0,      &
-                           two  = 2.0,      &
                            zero = 0.0
 
    logical,   parameter :: false = .false., &
@@ -1106,7 +1112,7 @@
 !  Local variables:
 !  !!!!!!!!!!!!!!!!
 
-   integer :: i, i_use, ib, ic, icorner, idim, ie, ier, ie_use, iedge, ip_use, iquad, &
+   integer :: i, i_use, ib, ic, icorner, idim, ie, ier, ie_use, iedge, ip_use, iq, iquad, &
               j, j_use, jc, jdim, k, keval, len, n, ni, ninside, nj, nk, nout_r, nout_s
 
    real    :: cell_volume, d1, decay, ds2, dsqmin, dtolsq, dx, dy, dz, extra, overall_data_range, p, pm1, q, qm1, r, rm1, &
@@ -1131,7 +1137,7 @@
 
    type (pq_map_type), allocatable, dimension (:), save :: pq_map
 
-   real, dimension (:),   allocatable, save :: tline, xline, yline, zline, xmax, xmin, ymax, ymin, zmax, zmin
+   real, dimension (:),   allocatable, save :: tline, xline, yline, zline, qline, xmax, xmin, ymax, ymin, zmax, zmin
    real, dimension (:),   allocatable, save :: tnew,  xnew,  ynew,  znew
    real, dimension (:,:), allocatable, save :: arcs
 
@@ -1191,12 +1197,12 @@
 
       if (save_edge_results) allocate (pq_map(nblocks_new)) ! Some new blocks will use a map for an edge of a previous new block
 
-      allocate (xline(kdim), yline(kdim), zline(kdim), tline(kdim)) ! For interim new radial grid lines
+      allocate (xline(kdim), yline(kdim), zline(kdim), tline(kdim), qline(kdim)) ! For interim new radial grid lines
 
       tline(1) = zero
 
       newnk = new_grid%nk  ! The new volume grid header has already been written
-      redistribute = ds1 >= -one .and. .not. output_f  ! Only the grid can be redistributed; allow newnk = nk
+      redistribute = ds1 >= -one .and. .not. recenter_g  ! Cell centered grid cannot be redistributed; allow newnk = nk
 
       if (redistribute) then
          ngeometric  = 2      ! I.e., no geometric portion
@@ -1232,7 +1238,6 @@
    ni = new_grid%ni
    nj = new_grid%nj
    nk = new_grid%nk
-   if (.not. output_f) nk = new_grid%nk  ! This is now newnk (grid-only case only)
 
    dtolsq  = dtol * dtol
    washout = dtol < zero
@@ -1447,7 +1452,7 @@
 !              Adjust the outer k points by the DECAYED difference in surface xyzs, so the original outer boundary is preserved.
 
                total = one / tline(kdim)
-               do k = 2, kdim
+               do k = 1, kdim
                   decay = (tline(kdim) - tline(k)) * total
                   xline(k) = xline(k) + decay * dx
                   yline(k) = yline(k) + decay * dy
@@ -1456,7 +1461,7 @@
 
             else ! For smooth surfaces with curvature and added resolution, not decaying can actually help the outer boundary.
 
-               do k = 2, kdim
+               do k = 1, kdim
                   xline(k) = xline(k) + dx
                   yline(k) = yline(k) + dy
                   zline(k) = zline(k) + dz
@@ -1493,7 +1498,7 @@
 
                keval = 1;  new = true  ! Arc-length-based local cubic spline interpolation
 
-               do k = 1, newnk
+               do k = 2, newnk
                   call plscrv3d (kdim, xline, yline, zline, tline, lcs_method, new, false, tnew(k), keval, &
                                  xnew(k), ynew(k), znew(k), derivs)
                   new = false
@@ -1501,20 +1506,27 @@
                   new_grid%y(i,j,k) = ynew(k)
                   new_grid%z(i,j,k) = znew(k)
                end do
-
+               if (output_f) then
+                  do iq = 1, num_q
+                     qline = qm1 * pm1 * old_grid(n)%q(iq, ic,   jc,   :) &
+                           + qm1 * p   * old_grid(n)%q(iq, ic+1, jc,   :) &
+                           + q   * pm1 * old_grid(n)%q(iq, ic,   jc+1, :) &
+                           + q   * p   * old_grid(n)%q(iq, ic+1, jc+1, :)
+                     call lcsfit2 (kdim, tline, qline, lcs_method, newnk, tnew, new_grid%q(iq,i,j,:))
+                  end do
+               end if
             else
                do k = 2, kdim
                   new_grid%x(i,j,k) = xline(k)
                   new_grid%y(i,j,k) = yline(k)
                   new_grid%z(i,j,k) = zline(k)
                end do
-            end if
-
-            if (output_f) then ! Interpolate the flow solution similarly for this radial line.
-               do k = 1, nk
-                  new_grid%q(:,i,j,k) = qm1 * (pm1 * old_grid(n)%q(:,ic,jc,  k) + p * old_grid(n)%q(:,ic+1,jc,  k)) + &
-                                          q * (pm1 * old_grid(n)%q(:,ic,jc+1,k) + p * old_grid(n)%q(:,ic+1,jc+1,k))
-               end do
+               if (output_f) then ! Interpolate the flow solution similarly for this radial line.
+                  do k = 1, nk
+                     new_grid%q(:,i,j,k) = qm1 * (pm1 * old_grid(n)%q(:,ic,jc,  k) + p * old_grid(n)%q(:,ic+1,jc,  k)) + &
+                                             q * (pm1 * old_grid(n)%q(:,ic,jc+1,k) + p * old_grid(n)%q(:,ic+1,jc+1,k))
+                  end do
+               end if
             end if
 
             if (save_edge_results) then
@@ -1639,7 +1651,7 @@
 
       if (output_f) deallocate (arcs)
 
-      deallocate (conn, xline, yline, zline, tline)
+      deallocate (conn, xline, yline, zline, tline, qline)
 
       if (redistribute) deallocate (xnew, ynew, znew, tnew)
 
@@ -1675,7 +1687,7 @@
 
 !     Local variables:
 
-      integer :: i, ia, ib, j, ja, jb, k, ka, kb, m, mi, mj, mk, ni, nj, nk
+      integer :: i, ia, ib, j, ja, jb, k, ka, kb, mi, mj, mk, ni, nj, nk
 
       real, allocatable, dimension (:,:,:,:) :: t
 

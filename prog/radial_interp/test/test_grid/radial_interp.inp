@@ -1,0 +1,26 @@
+RADIAL_INTERP controls for simple test case
+------------ INPUT VOLUME (or SURFACE) GRID --------------
+'../data/forebody-coarse.gu' Initial grid
+F                             Formatted? [T|F]
+F                             Cell-centered? [T|F]
+----------- INPUT FLOW SOLUTION (IF PRESENT) -------------
+none                          Associated flow solution, or none.
+F                             Formatted? [T|F]
+F                             Cell-centered? [T|F]
+------------ TARGET SURFACE or VOLUME GRID ---------------
+'../data/forebody-surf.gu'   Input new surface grid
+F                             Formatted? [T|F]
+-------------- INTERPOLATED SURFACE GRID -----------------
+interp-surf.g                 Output surface grid (to check surface searches)
+T                             Formatted? [T|F]
+-------------- INTERPOLATED VOLUME GRID ------------------
+forebody-fine.gu              Output volume grid, or none.
+F                             Formatted? [T|F]
+------------- INTERPOLATED FLOW SOLUTION -----------------
+none                          Output flow field, or none.
+F                             Formatted? [T|F]
+--------------- MISCELLANEOUS CONTROLS -------------------
+1                             Flow interpolation method: 1 assumes consistent radial lines; 2 relaxes this
+T                             T = allow surface cell extrapolation; F = force all surface (p,q)s into the unit square
+0.001                         Distance tolerance for surface cell searches (grid units); dtol < 0. => decay mismatches to zero at k = nk
+-1 -1.0  1.00                 [Optional] newnk, ds1, ds2fraction; if ds1 > 0., radial lines are redistributed as in OUTBOUND/DPLR grid alignment
