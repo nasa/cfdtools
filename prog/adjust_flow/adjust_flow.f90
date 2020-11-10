@@ -146,7 +146,9 @@
                   lunkbd, ns, cr, eof)
       if (eof) go to 999
       if (.not. cr) ios = 0
-      if (ns < 1 .or. ns > 30) ios = 1
+      if (ns < 1) then
+          write (luncrt,*) ' Number of species < 1. Bypassing transformation of velocity variables.'
+      endif
    end do
 
 !  Loop over possibly several transformations per run:
@@ -182,7 +184,7 @@
       else if (choice == -1) then ! "Undo" previous operation:
 
 ! ***    x = xlast
-        
+
          write (luncrt, '(/, a)') ' "undo" is not implemented.  Sorry.'
 
       else if (choice == 0) then  ! "Review": Display the data.
@@ -291,7 +293,7 @@
    do ib = 1, nblock
       deallocate (block(ib)%x, block(ib)%y, block(ib)%z, block(ib)%q)
    end do
- 
+
 999 continue
 
 ! *** STOP ! Avoid system dependencies.
@@ -376,6 +378,7 @@
          end if
 
          x(:) = x(:)*scale
+         if (ns < 1) goto 999
          f(ns+1,:,:,:) = f(ns+1,:,:,:)*scale
 
       case (5) ! "Scale Y and v"
@@ -388,7 +391,8 @@
             cr = .false.
          end if
 
-         y(:) = y(:)*scale 
+         y(:) = y(:)*scale
+         if (ns < 1) goto 999
          f(ns+2,:,:,:) = f(ns+2,:,:,:)*scale
 
       case (6) ! "Scale Z and w"
@@ -402,21 +406,25 @@
          end if
 
          z(:) = z(:)*scale
+         if (ns < 1) goto 999
          f(ns+3,:,:,:) = f(ns+3,:,:,:)*scale
 
       case (7) ! "Reflect Z about the XY-plane":
 
          z(:) = -z(:)
+         if (ns < 1) goto 999
          f(ns+3,:,:,:) = -f(ns+3,:,:,:)
 
       case (8) ! "Reflect X about the YZ-plane":
 
          x(:) = -x(:)
+         if (ns < 1) goto 999
          f(ns+1,:,:,:) = -f(ns+1,:,:,:)
 
       case (9) ! "Reflect Y about the ZX-plane":
 
          y(:) = -y(:)
+         if (ns < 1) goto 999
          f(ns+2,:,:,:) = -f(ns+2,:,:,:)
 
       case (10) ! "Switch X and Y":
@@ -427,6 +435,7 @@
             y(i) = temp
          end do
 
+         if (ns < 1) goto 999
          do k = 1, nk
             do j = 1, nj
                do i = 1, ni
@@ -445,6 +454,7 @@
             z(i) = temp
          end do
 
+         if (ns < 1) goto 999
          do k = 1, nk
             do j = 1, nj
                do i = 1, ni
@@ -463,8 +473,9 @@
             z(i) = temp
          end do
 
+         if (ns < 1) goto 999
          do k = 1, nk
-            do j = 1, nj 
+            do j = 1, nj
                do i = 1, ni
                   temp = f(ns+1,i,j,k)
                   f(ns+1,i,j,k) = f(ns+3,i,j,k)
@@ -487,6 +498,7 @@
 
          call rotate2d (n, x, y, angle, p, q)
 
+         if (ns < 1) goto 999
          allocate (vx(ni,nj,nk), vy(ni,nj,nk))
          vx(:,:,:) = f(ns+1,:,:,:)
          vy(:,:,:) = f(ns+2,:,:,:)
@@ -509,6 +521,7 @@
 
          call rotate2d (n, y, z, angle, p, q)
 
+         if (ns < 1) goto 999
          allocate (vy(ni,nj,nk), vz(ni,nj,nk))
          vy(:,:,:) = f(ns+2,:,:,:)
          vz(:,:,:) = f(ns+3,:,:,:)
@@ -531,6 +544,7 @@
 
          call rotate2d (n, z, x, angle, p, q)
 
+         if (ns < 1) goto 999
          allocate (vx(ni,nj,nk), vz(ni,nj,nk))
          vx(:,:,:) = f(ns+1,:,:,:)
          vz(:,:,:) = f(ns+3,:,:,:)
@@ -555,6 +569,7 @@
 
          call rotate3d (n, x, y, z, angle, px, py, pz, qx, qy, qz)
 
+         if (ns < 1) goto 999
          allocate (vx(ni,nj,nk), vy(ni,nj,nk), vz(ni,nj,nk))
          vx(:,:,:) = f(ns+1,:,:,:)
          vy(:,:,:) = f(ns+2,:,:,:)

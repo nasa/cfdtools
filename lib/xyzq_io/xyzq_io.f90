@@ -29,7 +29,7 @@
 !  03/03/2010    "    "    "     Added "iblank" variants of the grid utilities.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA
-! 
+!
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    use grid_block_structure ! Or equivalent to define "grid_type"
@@ -91,7 +91,7 @@
 
       integer   :: i1, ntries
 
-      character :: answer * 1, filename * 80
+      character :: answer * 1, filename * 256
 
 !     Execution:
 !     ----------
