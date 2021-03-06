@@ -1,7 +1,7 @@
 add_executable(tet_interp
   tet_interp.f90
 )
-target_link_libraries(tet_interp global)
+target_link_libraries(tet_interp cfdtools_global)
 target_link_libraries(tet_interp
   triangulation_io
   interp3d

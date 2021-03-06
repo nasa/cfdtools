@@ -14,7 +14,7 @@ add_library(tecplot_surface_patch_utilities
 )
 target_link_libraries(tecplot_surface_patch_utilities
   PRIVATE
-    global
+    cfdtools_global
   PUBLIC
     geomlib
     linsys

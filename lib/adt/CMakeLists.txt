@@ -3,7 +3,7 @@ add_library(adt
 )
 target_link_libraries(adt
   PRIVATE
-    global
+    cfdtools_global
     geomlib
   PUBLIC
     grid_block_structure

@@ -1,7 +1,7 @@
 add_executable(extract_blocks_2d extract_blocks_2d.f90)
 target_link_libraries(extract_blocks_2d
   PRIVATE
-    global
+    cfdtools_global
     progtools
     xyzq_io
 )

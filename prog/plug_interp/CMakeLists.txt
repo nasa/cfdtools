@@ -2,7 +2,7 @@ add_executable(plug_interp
   plug_interp.f90
 )
 target_link_libraries(plug_interp
-  global
+  cfdtools_global
   geomlib
   interplib
   searchlib

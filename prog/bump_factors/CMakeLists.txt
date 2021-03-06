@@ -1,7 +1,7 @@
 add_executable(bump_factors
   bump_factors.f90
 )
-target_link_libraries(bump_factors global)
+target_link_libraries(bump_factors cfdtools_global)
 target_link_libraries(bump_factors
   geomlib
   linsys

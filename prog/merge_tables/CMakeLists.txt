@@ -1,7 +1,7 @@
 add_executable(merge_tables
   merge_tables.f90
 )
-target_link_libraries(merge_tables global)
+target_link_libraries(merge_tables cfdtools_global)
 target_link_libraries(merge_tables
   progtools
 )

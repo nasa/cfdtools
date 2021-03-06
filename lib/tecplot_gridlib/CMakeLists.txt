@@ -89,7 +89,7 @@ add_library(tecplot_gridlib
 )
 target_link_libraries(tecplot_gridlib
   PRIVATE
-    global
+    cfdtools_global
     intrinsics
     interplib
     progtools

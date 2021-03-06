@@ -1,7 +1,7 @@
 add_executable(compress2d
   compress2d.f90
 )
-target_link_libraries(compress2d global)
+target_link_libraries(compress2d cfdtools_global)
 target_link_libraries(compress2d
   xyzq_io
   interplib

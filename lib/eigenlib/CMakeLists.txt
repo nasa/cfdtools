@@ -6,6 +6,6 @@ add_library(eigenlib
   tred1.f
   tred2.f
 )
-target_link_libraries(eigenlib PRIVATE global)
+target_link_libraries(eigenlib PRIVATE cfdtools_global)
 target_include_directories(eigenlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME eigenlib)

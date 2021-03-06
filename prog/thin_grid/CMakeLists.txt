@@ -1,7 +1,7 @@
 add_executable(thin_grid
   thin_grid.f90
 )
-target_link_libraries(thin_grid global)
+target_link_libraries(thin_grid cfdtools_global)
 target_link_libraries(thin_grid
   xyzq_io
 )

@@ -1,7 +1,7 @@
 add_executable(split_grid
   split_grid.f
 )
-target_link_libraries(split_grid global)
+target_link_libraries(split_grid cfdtools_global)
 target_link_libraries(split_grid
   xyzq_io
 )

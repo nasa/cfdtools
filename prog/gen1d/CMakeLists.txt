@@ -1,7 +1,7 @@
 add_executable(gen1d
   gen1d.f90
 )
-target_link_libraries(gen1d global)
+target_link_libraries(gen1d cfdtools_global)
 target_link_libraries(gen1d
   numodules
   interplib

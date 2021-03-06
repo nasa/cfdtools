@@ -1,7 +1,7 @@
 add_executable(upsequence
   upsequence.f90
 )
-target_link_libraries(upsequence global)
+target_link_libraries(upsequence cfdtools_global)
 target_link_libraries(upsequence
   xyzq_io
 )

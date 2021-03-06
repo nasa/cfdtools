@@ -4,5 +4,5 @@ add_executable(multiplot
   multiplot.f
   psutil.f
 )
-target_link_libraries(multiplot global intrinsics ugridlib)
+target_link_libraries(multiplot cfdtools_global intrinsics ugridlib)
 install(TARGETS multiplot DESTINATION ${CMAKE_INSTALL_BINDIR})

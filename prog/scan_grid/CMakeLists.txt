@@ -1,7 +1,7 @@
 add_executable(scan_grid
   scan_grid.f90
 )
-target_link_libraries(scan_grid global)
+target_link_libraries(scan_grid cfdtools_global)
 target_link_libraries(scan_grid
   gridlib
   progtools

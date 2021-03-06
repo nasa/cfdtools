@@ -1,7 +1,7 @@
 add_executable(radial_interp
   radial_interp.f90
 )
-target_link_libraries(radial_interp global)
+target_link_libraries(radial_interp cfdtools_global)
 target_link_libraries(radial_interp
   xyzq_io
   interp3d

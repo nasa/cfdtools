@@ -2,7 +2,7 @@ add_executable(superellipse
   superellipse.f
 )
 target_link_libraries(superellipse
-  global
+  cfdtools_global
   gridlib
   intrinsics
   integratelib

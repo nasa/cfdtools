@@ -1,7 +1,7 @@
 add_executable(hemispheres_of_sight
   hemispheres_of_sight.f90
 )
-target_link_libraries(hemispheres_of_sight global)
+target_link_libraries(hemispheres_of_sight cfdtools_global)
 target_link_libraries(hemispheres_of_sight
   triangulation_io
   interp3d

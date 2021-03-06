@@ -2,7 +2,7 @@ add_executable(throat_conditions_3d
   throat_conditions_3d.f90
 )
 target_link_libraries(throat_conditions_3d
-  global
+  cfdtools_global
   adt
   geomlib
   gridlib

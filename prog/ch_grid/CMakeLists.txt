@@ -2,7 +2,7 @@ add_executable(ch_grid
   ch_grid.f
   second.f
 )
-target_link_libraries(ch_grid global)
+target_link_libraries(ch_grid cfdtools_global)
 target_link_libraries(ch_grid
   interp3d
   interplib

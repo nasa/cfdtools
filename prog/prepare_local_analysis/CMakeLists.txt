@@ -3,7 +3,7 @@ add_executable(prepare_local_analysis
   upcase.f
   prepare_local_analysis.f90
 )
-target_link_libraries(prepare_local_analysis global)
+target_link_libraries(prepare_local_analysis cfdtools_global)
 target_link_libraries(prepare_local_analysis
   progtools
 )

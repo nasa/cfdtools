@@ -3,7 +3,7 @@ add_executable(capsule_grid
   capsules.f90
   grid_block_structure.f90
 )
-target_link_libraries(capsule_grid global)
+target_link_libraries(capsule_grid cfdtools_global)
 target_link_libraries(capsule_grid
   interp3d
   interplib

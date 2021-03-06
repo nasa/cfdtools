@@ -1,7 +1,7 @@
 add_executable(wingsections
   wingsections.f
 )
-target_link_libraries(wingsections global)
+target_link_libraries(wingsections cfdtools_global)
 target_link_libraries(wingsections
   interplib
   integratelib

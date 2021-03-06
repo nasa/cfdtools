@@ -1,7 +1,7 @@
 add_executable(columnedit
   columnedit.f90
 )
-target_link_libraries(columnedit global)
+target_link_libraries(columnedit cfdtools_global)
 target_link_libraries(columnedit
   progtools
 )

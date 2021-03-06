@@ -2,7 +2,7 @@ add_executable(mpfa
   MEDLI_analysis.f90
 )
 target_link_libraries(mpfa
-  global
+  cfdtools_global
   interplib
   searchlib
   numodules

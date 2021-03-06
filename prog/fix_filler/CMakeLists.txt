@@ -2,7 +2,7 @@ add_executable(fix_filler
   fix_filler.f90
 )
 target_link_libraries(fix_filler
-  global
+  cfdtools_global
   adt
   xyzq_io
   geomlib

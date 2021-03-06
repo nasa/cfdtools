@@ -60,6 +60,6 @@ add_library(geomlib
   vertex_curvature.f90
   xderivs.f
 )
-target_link_libraries(geomlib PRIVATE global linsys intrinsics optlib)
+target_link_libraries(geomlib PRIVATE cfdtools_global linsys intrinsics optlib)
 target_include_directories(geomlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME geomlib)

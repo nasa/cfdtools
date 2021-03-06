@@ -1,7 +1,7 @@
 add_executable(rectify_grid
   rectify_grid.f90
 )
-target_link_libraries(rectify_grid global)
+target_link_libraries(rectify_grid cfdtools_global)
 target_link_libraries(rectify_grid
   gridlib
   progtools

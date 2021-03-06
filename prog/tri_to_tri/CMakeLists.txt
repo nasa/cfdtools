@@ -1,7 +1,7 @@
 add_executable(tri_to_tri
   tri_to_tri.f90
 )
-target_link_libraries(tri_to_tri global)
+target_link_libraries(tri_to_tri cfdtools_global)
 target_link_libraries(tri_to_tri
   triangulation_io
   xyzq_io

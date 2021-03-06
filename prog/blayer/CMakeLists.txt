@@ -1,7 +1,7 @@
 add_executable(blayer
   blayer.f90
 )
-target_link_libraries(blayer global)
+target_link_libraries(blayer cfdtools_global)
 target_link_libraries(blayer
   interplib
   integratelib

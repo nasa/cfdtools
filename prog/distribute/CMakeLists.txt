@@ -2,7 +2,7 @@ add_executable(distribute
   distribute.f
   shockgrid.f
 )
-target_link_libraries(distribute global)
+target_link_libraries(distribute cfdtools_global)
 target_link_libraries(distribute
   numodules
   interplib

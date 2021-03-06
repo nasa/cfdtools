@@ -2,7 +2,7 @@ add_executable(forebody_regrid
   forebody_regrid.f90
   grid_block_structure.f90
 )
-target_link_libraries(forebody_regrid global)
+target_link_libraries(forebody_regrid cfdtools_global)
 target_link_libraries(forebody_regrid
   xyzq_io
   interp3d

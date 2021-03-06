@@ -1,7 +1,7 @@
 add_executable(reshape
   reshape.f
 )
-target_link_libraries(reshape global)
+target_link_libraries(reshape cfdtools_global)
 target_link_libraries(reshape
   progtools
 )

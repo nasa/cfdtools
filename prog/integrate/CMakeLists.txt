@@ -2,7 +2,7 @@ add_executable(integrate
   integrate.f
 )
 target_link_libraries(integrate
-  global
+  cfdtools_global
   geomlib
   integratelib
   linsys

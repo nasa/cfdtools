@@ -1,7 +1,7 @@
 add_executable(filter_rows filter_rows.f90)
 target_link_libraries(filter_rows
   PRIVATE
-    global
+    cfdtools_global
     progtools
     table_io
 )

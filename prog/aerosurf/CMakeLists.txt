@@ -4,7 +4,7 @@ add_executable(aerosurf
   surfer.f
   synch.f
 )
-target_link_libraries(aerosurf global)
+target_link_libraries(aerosurf cfdtools_global)
 target_link_libraries(aerosurf
   interp3d
   interplib

@@ -1,7 +1,7 @@
 add_executable(surface_curvature
   surface_curvature.f90
 )
-target_link_libraries(surface_curvature global)
+target_link_libraries(surface_curvature cfdtools_global)
 target_link_libraries(surface_curvature
   numodules
   progtools

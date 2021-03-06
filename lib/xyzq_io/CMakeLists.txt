@@ -5,7 +5,7 @@ add_library(xyzq_io
 )
 target_link_libraries(xyzq_io
   PRIVATE
-    global
+    cfdtools_global
   PUBLIC
     grid_block_structure
 )

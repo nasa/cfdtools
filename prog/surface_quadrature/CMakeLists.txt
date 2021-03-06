@@ -1,7 +1,7 @@
 add_executable(surface_quadrature surface_quadrature.f90)
 target_link_libraries(surface_quadrature
   PRIVATE
-    global
+    cfdtools_global
     geomlib
     integratelib
     progtools

@@ -1,7 +1,7 @@
 add_executable(gsmooth
   gsmooth.f90
 )
-target_link_libraries(gsmooth global)
+target_link_libraries(gsmooth cfdtools_global)
 target_link_libraries(gsmooth
   geomlib
   gridlib

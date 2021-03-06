@@ -1,7 +1,7 @@
 add_executable(merge_files
   merge_files.f90
 )
-target_link_libraries(merge_files global)
+target_link_libraries(merge_files cfdtools_global)
 target_link_libraries(merge_files
   tecplot_io
   progtools

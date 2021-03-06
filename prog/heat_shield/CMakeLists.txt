@@ -4,7 +4,7 @@ add_executable(heat_shield
   capsules.f90
 )
 target_link_libraries(heat_shield
-  global
+  cfdtools_global
   integratelib
   interplib
   gridlib

@@ -4,7 +4,7 @@ add_executable(cfd_conditions
     cfd_conditions.f90
 )
 target_link_libraries(cfd_conditions PRIVATE
-    global
+    cfdtools_global
     optlib
     numodules
     progtools

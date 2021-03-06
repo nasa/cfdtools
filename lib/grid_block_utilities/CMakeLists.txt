@@ -3,7 +3,7 @@ add_library(grid_block_utilities
 )
 target_link_libraries(grid_block_utilities
   PRIVATE
-    global
+    cfdtools_global
     xyzq_io
   PUBLIC
     grid_block_structure

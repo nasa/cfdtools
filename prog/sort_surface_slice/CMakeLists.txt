@@ -1,7 +1,7 @@
 add_executable(sort_surface_slice
   sort_surface_slice.f90
 )
-target_link_libraries(sort_surface_slice global)
+target_link_libraries(sort_surface_slice cfdtools_global)
 target_link_libraries(sort_surface_slice
   numodules
   progtools

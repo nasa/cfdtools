@@ -1,7 +1,7 @@
 add_executable(extract_functions
   extract_functions.f90
 )
-target_link_libraries(extract_functions global)
+target_link_libraries(extract_functions cfdtools_global)
 target_link_libraries(extract_functions
   progtools
   gridlib

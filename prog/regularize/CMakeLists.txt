@@ -2,7 +2,7 @@ add_executable(regularize
   regularize.f
 )
 target_link_libraries(regularize
-  global
+  cfdtools_global
   progtools
   interplib
   searchlib

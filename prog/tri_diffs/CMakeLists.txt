@@ -1,7 +1,7 @@
 add_executable(tri_diffs tri_diffs.f90)
 target_link_libraries(tri_diffs
   PRIVATE
-    global
+    cfdtools_global
     adt
     eigenlib
     geomlib

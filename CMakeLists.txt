@@ -5,52 +5,59 @@ cmake_minimum_required(VERSION 3.3)
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
-set(CFDTOOLS_VERSION_MAJOR  15)
-set(CFDTOOLS_VERSION_MINOR  1)
-set(CFDTOOLS_VERSION_PATCH  0)
-set(CFDTOOLS_VERSION "${CFDTOOLS_VERSION_MAJOR}.${CFDTOOLS_VERSION_MINOR}.${CFDTOOLS_VERSION_PATCH}")
-
 project(cfdtools
-    VERSION ${CFDTOOLS_VERSION}
+    VERSION 15.1.0
     LANGUAGES Fortran C)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(CMakeDependentOption)
 include(GNUInstallDirs)
 
 
 #------------------------------------------------------------------------------
-# Global Defaults
+# Standalone Project Configuration
 #------------------------------------------------------------------------------
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install"
-        CACHE PATH "DPLR installation directory"
-        FORCE)
-endif()
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    message(STATUS "Setting build type to 'Release' since none specified.")
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-        "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
+    if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+        set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install"
+            CACHE PATH "DPLR installation directory"
+            FORCE)
+        message(STATUS "Setting install prefix to ${CMAKE_INSTALL_PREFIX} since none specified.")
+    endif()
 
-option(CFDTOOLS_TEST "Build/enable unit tests for CFDTOOLS" ON)
-if(CFDTOOLS_TEST)
-    enable_testing()
+    if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+        set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+        set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+            "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+        message(STATUS "Setting build type to 'Release' since none specified.")
+    endif()
+
     include(CTest)
+
 endif()
 
+
+#------------------------------------------------------------------------------
+# Baseline Project Configuration
+#------------------------------------------------------------------------------
+cmake_dependent_option(CFDTOOLS_BUILD_TESTING
+    "Build/enable unit tests for CFDTOOLS" ON
+    "BUILD_TESTING" OFF)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(compile_options) # After set CMAKE_BUILD_TYPE
-add_library(global INTERFACE)
-target_compile_options(global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
+add_library(cfdtools_global INTERFACE)
+target_compile_options(cfdtools_global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
 
 
 #------------------------------------------------------------------------------
 # Supporting File Installation
 #------------------------------------------------------------------------------
 configure_file(cmake/modulefile.in modulefile)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/modulefile DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/modulefile
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/modulefiles/cfdtools)
+install(DIRECTORY samples
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/cfdtools/samples)
 
 
 #------------------------------------------------------------------------------
@@ -217,7 +224,7 @@ add_subdirectory(prog/runtime_control)
 add_subdirectory(prog/sage)
 add_subdirectory(prog/scale_grid)
 add_subdirectory(prog/scan_grid)
-add_subdirectory(prog/shadowgraph)
+#add_subdirectory(prog/shadowgraph)  # Missing structure members
 add_subdirectory(prog/shiftscale)
 add_subdirectory(prog/shock_stand_off)
 add_subdirectory(prog/sixseries)

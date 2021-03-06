@@ -17,9 +17,7 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
     # Common
     list(APPEND options
         -real-size 64       # Default to 64bit reals
-        -fpp                # Run preprocessor on all files
         -extend-source 132  # Allows long lines in source files
-        -assume buffered_io # FCONVERT is hopelessly slow otherwise
     )
 
     # Debug
@@ -40,7 +38,6 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
 
     # Common
     list(APPEND options
-        -cpp                        # Run preprocessor on all files
         -fdefault-real-8            # Default to 64bit reals
         -fdefault-double-8          # Default to 64bit doubles
         -ffixed-line-length-none    # Allow long lines in source files
@@ -73,6 +70,6 @@ endif()
 # Cache Results
 #-----------------------------------------------------------------------
 set(CFDTOOLS_COMPILE_OPTIONS ${options} CACHE STRING
-    "Compiler options added to all DPLR components"
+    "Compiler options added to all CFDTOOLS components"
     FORCE)
 mark_as_advanced(CFDTOOLS_COMPILE_OPTIONS)

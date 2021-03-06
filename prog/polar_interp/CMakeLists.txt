@@ -2,7 +2,7 @@ add_executable(polar_interp
   polar_interp.f90
 )
 target_link_libraries(polar_interp PRIVATE
-  global
+  cfdtools_global
   geomlib
   gridlib
   interplib
@@ -11,7 +11,7 @@ target_link_libraries(polar_interp PRIVATE
 )
 add_executable(reorder_spokes reorder_spokes.f90)
 target_link_libraries(reorder_spokes PRIVATE
-  global
+  cfdtools_global
   table_io
 )
 install(FILES README

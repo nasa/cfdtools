@@ -1,7 +1,7 @@
 add_executable(iblank_move iblank_move.f90)
 target_link_libraries(iblank_move
   PRIVATE
-    global
+    cfdtools_global
     gridlib
     xyzq_io
 )

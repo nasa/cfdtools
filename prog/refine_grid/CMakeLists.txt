@@ -2,7 +2,7 @@ add_executable(refine_grid
   densify_grid_block.f90
   refine_grid.f90
 )
-target_link_libraries(refine_grid global)
+target_link_libraries(refine_grid cfdtools_global)
 target_link_libraries(refine_grid
   interp3d
   interplib

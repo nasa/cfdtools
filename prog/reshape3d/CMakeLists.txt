@@ -1,7 +1,7 @@
 add_executable(reshape3d
   reshape3d.f90
 )
-target_link_libraries(reshape3d global)
+target_link_libraries(reshape3d cfdtools_global)
 target_link_libraries(reshape3d
   numodules
   progtools

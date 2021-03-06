@@ -4,7 +4,7 @@ add_executable(hb_grid
   capsules.f90
 )
 target_link_libraries(hb_grid
-  global
+  cfdtools_global
   gridlib
   interplib
   interp2d

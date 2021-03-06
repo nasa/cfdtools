@@ -23,7 +23,7 @@ add_executable(shadowgraph
   ../../lib/xyzq_io/xyzq_io.f90
   ../../lib/grid_block_utilities/grid_block_utilities.f90
 )
-target_link_libraries(shadowgraph global)
+target_link_libraries(shadowgraph cfdtools_global)
 target_link_libraries(shadowgraph
   interp3d
   intrinsics

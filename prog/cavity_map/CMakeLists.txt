@@ -2,7 +2,7 @@ add_executable(cavity_map
   cavity_map.f90
   rotation_matrix.f90
 )
-target_link_libraries(cavity_map global)
+target_link_libraries(cavity_map cfdtools_global)
 target_link_libraries(cavity_map
   interp3d
   interplib

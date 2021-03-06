@@ -2,7 +2,7 @@ add_executable(surface_cuts
   surface_cuts.f
 )
 target_link_libraries(surface_cuts
-  global
+  cfdtools_global
   gridlib
   geomlib
   interplib

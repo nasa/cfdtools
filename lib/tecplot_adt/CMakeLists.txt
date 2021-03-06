@@ -12,7 +12,7 @@ add_library(tecplot_adt
 )
 target_link_libraries(tecplot_adt
   PRIVATE
-    global
+    cfdtools_global
     geomlib
   PUBLIC
     tecplot_io

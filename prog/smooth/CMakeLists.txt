@@ -3,7 +3,7 @@ add_executable(smooth
   second.f
   smooth.f
 )
-target_link_libraries(smooth global)
+target_link_libraries(smooth cfdtools_global)
 target_link_libraries(smooth
   interp3d
   numodules

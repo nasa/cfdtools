@@ -2,7 +2,7 @@ add_executable(combine
   combine.f
 )
 target_link_libraries(combine
-  global
+  cfdtools_global
   interplib
   searchlib
   numodules

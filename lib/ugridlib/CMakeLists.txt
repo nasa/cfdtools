@@ -20,6 +20,6 @@ add_library(ugridlib
   tri_coefs.f
   triangulate_patches.f
 )
-target_link_libraries(ugridlib PRIVATE global intrinsics triangulation_io)
+target_link_libraries(ugridlib PRIVATE cfdtools_global intrinsics triangulation_io)
 target_include_directories(ugridlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME ugridlib)

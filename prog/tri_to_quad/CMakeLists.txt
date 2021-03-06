@@ -1,7 +1,7 @@
 add_executable(tri_to_quad
   tri_to_quad.f90
 )
-target_link_libraries(tri_to_quad global)
+target_link_libraries(tri_to_quad cfdtools_global)
 target_link_libraries(tri_to_quad
   triangulation_io
   progtools

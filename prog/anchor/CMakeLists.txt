@@ -1,7 +1,7 @@
 add_executable(anchor
   anchor.f90
 )
-target_link_libraries(anchor global)
+target_link_libraries(anchor cfdtools_global)
 target_link_libraries(anchor
   linsys
   numodules

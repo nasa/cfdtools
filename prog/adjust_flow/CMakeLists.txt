@@ -1,7 +1,7 @@
 add_executable(adjust_flow
   adjust_flow.f90
 )
-target_link_libraries(adjust_flow global)
+target_link_libraries(adjust_flow cfdtools_global)
 target_link_libraries(adjust_flow
   grid_block_structure
   gridlib

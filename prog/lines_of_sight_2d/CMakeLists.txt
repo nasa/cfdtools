@@ -1,7 +1,7 @@
 add_executable(lines_of_sight_2d
   lines_of_sight_2d.f90
 )
-target_link_libraries(lines_of_sight_2d global)
+target_link_libraries(lines_of_sight_2d cfdtools_global)
 target_link_libraries(lines_of_sight_2d
   xyzq_io
   interplib

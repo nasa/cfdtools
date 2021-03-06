@@ -1,7 +1,7 @@
 add_executable(table_arithmetic table_arithmetic.f90)
 target_link_libraries(table_arithmetic
   PRIVATE
-    global
+    cfdtools_global
     numodules
     progtools
     searchlib

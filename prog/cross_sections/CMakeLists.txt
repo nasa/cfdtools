@@ -1,7 +1,7 @@
 add_executable(cross_sections
   cross_sections.f90
 )
-target_link_libraries(cross_sections global)
+target_link_libraries(cross_sections cfdtools_global)
 target_link_libraries(cross_sections
   interplib
   integratelib

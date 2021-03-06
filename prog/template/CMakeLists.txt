@@ -12,7 +12,7 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
         COMPILE_FLAGS -fcray-pointer
     )
 endif()
-target_link_libraries(template global)
+target_link_libraries(template cfdtools_global)
 target_link_libraries(template
   progtools
 )

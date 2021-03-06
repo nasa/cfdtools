@@ -365,6 +365,6 @@ add_library(dt_nurbs
   dtwri1.f
   dtwrig.f
 )
-target_link_libraries(dt_nurbs PRIVATE global)
+target_link_libraries(dt_nurbs PRIVATE cfdtools_global)
 target_include_directories(dt_nurbs PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME dt_nurbs)

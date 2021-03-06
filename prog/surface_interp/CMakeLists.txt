@@ -1,7 +1,7 @@
 add_executable(surface_interp
   surface_interp.f90
 )
-target_link_libraries(surface_interp global)
+target_link_libraries(surface_interp cfdtools_global)
 target_link_libraries(surface_interp
   progtools
   linsys

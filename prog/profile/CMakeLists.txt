@@ -1,7 +1,7 @@
 add_executable(profile
   profile.f
 )
-target_link_libraries(profile global)
+target_link_libraries(profile cfdtools_global)
 target_link_libraries(profile
   interp3d
   interplib

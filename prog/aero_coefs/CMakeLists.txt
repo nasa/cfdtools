@@ -5,7 +5,7 @@ add_executable(aero_coefs
 
 target_link_libraries(aero_coefs
   PRIVATE
-    global
+    cfdtools_global
     gridlib
     geomlib
     progtools

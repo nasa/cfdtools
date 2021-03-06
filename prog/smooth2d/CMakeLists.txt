@@ -4,7 +4,7 @@ add_executable(smooth2d
   second.f
   smooth2d.f
 )
-target_link_libraries(smooth2d global)
+target_link_libraries(smooth2d cfdtools_global)
 target_link_libraries(smooth2d
   interplib
   numodules

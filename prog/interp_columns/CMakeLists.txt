@@ -1,7 +1,7 @@
 add_executable(interp_columns
   interp_columns.f90
 )
-target_link_libraries(interp_columns global)
+target_link_libraries(interp_columns cfdtools_global)
 target_link_libraries(interp_columns
   numodules
   interplib

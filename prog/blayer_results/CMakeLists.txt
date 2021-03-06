@@ -2,7 +2,7 @@ add_executable(blayer_results
   blayer_results.f90
 )
 target_link_libraries(blayer_results
-  global
+  cfdtools_global
   geomlib
   integratelib
   interplib

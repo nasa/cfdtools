@@ -1,7 +1,7 @@
 add_executable(sort_rows
   sort_rows.f90
 )
-target_link_libraries(sort_rows global)
+target_link_libraries(sort_rows cfdtools_global)
 target_link_libraries(sort_rows
   table_io
   searchlib

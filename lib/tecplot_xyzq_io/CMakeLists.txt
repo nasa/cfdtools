@@ -15,7 +15,7 @@ add_library(tecplot_xyzq_io
 )
 target_link_libraries(tecplot_xyzq_io
   PRIVATE
-    global
+    cfdtools_global
   PUBLIC
     # But link to tecplot-specific grid_block_structure
     tecplot_io

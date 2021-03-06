@@ -1,7 +1,7 @@
 add_executable(free_stream_conditions free_stream_conditions.f90)
 target_link_libraries(free_stream_conditions
   PRIVATE
-    global
+    cfdtools_global
     progtools
     table_io
 )

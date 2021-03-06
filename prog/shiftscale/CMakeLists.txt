@@ -1,7 +1,7 @@
 add_executable(shiftscale
   shiftscale.f
 )
-target_link_libraries(shiftscale global)
+target_link_libraries(shiftscale cfdtools_global)
 target_link_libraries(shiftscale
   numodules
   progtools

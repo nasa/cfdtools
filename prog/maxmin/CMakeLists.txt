@@ -3,7 +3,7 @@ add_executable(maxmin
   maxmin.f
   second.f
 )
-target_link_libraries(maxmin global)
+target_link_libraries(maxmin cfdtools_global)
 target_link_libraries(maxmin
   interp3d
   numodules

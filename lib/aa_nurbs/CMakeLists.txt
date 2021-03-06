@@ -19,7 +19,7 @@ add_library(aa_nurbs
   lsknots.f
 )
 target_link_libraries(aa_nurbs PRIVATE
-  global
+  cfdtools_global
   dt_nurbs
   geomlib
   gridlib

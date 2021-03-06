@@ -1,7 +1,7 @@
 add_executable(merge_zones merge_zones.f90)
 target_link_libraries(merge_zones
   PRIVATE
-    global
+    cfdtools_global
     progtools
     tecplot_io
 )

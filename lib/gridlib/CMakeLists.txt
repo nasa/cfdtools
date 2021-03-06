@@ -80,7 +80,7 @@ add_library(gridlib
 )
 target_link_libraries(gridlib
   PRIVATE
-    global
+    cfdtools_global
     intrinsics
     interplib
     progtools

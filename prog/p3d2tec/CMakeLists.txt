@@ -1,7 +1,7 @@
 add_executable(p3d2tec
   p3d2tec.f90
 )
-target_link_libraries(p3d2tec global)
+target_link_libraries(p3d2tec cfdtools_global)
 target_link_libraries(p3d2tec
   progtools
   tecplot_io

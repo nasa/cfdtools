@@ -1,7 +1,7 @@
 add_executable(slos slos.f90)
 target_link_libraries(slos
   PRIVATE
-    global
+    cfdtools_global
     adt
     eigenlib
     geomlib

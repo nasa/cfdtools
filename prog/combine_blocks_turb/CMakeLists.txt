@@ -1,7 +1,7 @@
 add_executable(combine_blocks_turb
   combine_blocks_turb.f90
 )
-target_link_libraries(combine_blocks_turb global)
+target_link_libraries(combine_blocks_turb cfdtools_global)
 target_link_libraries(combine_blocks_turb
   adt
   linsys

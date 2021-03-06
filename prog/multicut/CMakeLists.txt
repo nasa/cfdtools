@@ -2,7 +2,7 @@ add_executable(multicut
   multicut.f
 )
 target_link_libraries(multicut
-  global
+  cfdtools_global
   numodules
   ugridlib
 )

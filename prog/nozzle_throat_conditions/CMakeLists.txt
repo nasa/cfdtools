@@ -2,7 +2,7 @@ add_executable(nozzle_throat_conditions
   nozzle_throat_conditions.f90
 )
 target_link_libraries(nozzle_throat_conditions
-  global
+  cfdtools_global
   lewis
   progtools
   integratelib

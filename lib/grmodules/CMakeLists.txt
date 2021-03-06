@@ -33,5 +33,5 @@ add_library(grmodules
   window.f
   xdimtb.f
 )
-target_link_libraries(grmodules PRIVATE global)
+target_link_libraries(grmodules PRIVATE cfdtools_global)
 target_include_directories(grmodules PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

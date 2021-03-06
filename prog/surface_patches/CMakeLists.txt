@@ -1,7 +1,7 @@
 add_executable(surface_patches
   surface_patches.f90
 )
-target_link_libraries(surface_patches global)
+target_link_libraries(surface_patches cfdtools_global)
 target_link_libraries(surface_patches
   xyzq_io
   interplib

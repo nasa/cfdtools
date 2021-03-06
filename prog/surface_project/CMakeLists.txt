@@ -2,7 +2,7 @@ add_executable(surface_project
   surface_project.f90
 )
 target_link_libraries(surface_project
-  global
+  cfdtools_global
   geomlib
   linsys
   progtools

@@ -1,7 +1,7 @@
 add_executable(uslos uslos.f90)
 target_link_libraries(uslos
   PRIVATE
-    global
+    cfdtools_global
     adt
     eigenlib
     geomlib

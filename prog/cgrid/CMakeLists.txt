@@ -2,7 +2,7 @@ add_executable(cgrid
   cgrid.f
 )
 target_link_libraries(cgrid
-  global
+  cfdtools_global
   gridlib
   interplib
   searchlib

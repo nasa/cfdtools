@@ -1,7 +1,7 @@
 add_executable(deconstruct
   deconstruct.f90
 )
-target_link_libraries(deconstruct global)
+target_link_libraries(deconstruct cfdtools_global)
 target_link_libraries(deconstruct
   xyzq_io
 )

@@ -1,7 +1,7 @@
 add_executable(shock_stand_off
   shock_stand_off.f90
 )
-target_link_libraries(shock_stand_off global)
+target_link_libraries(shock_stand_off cfdtools_global)
 target_link_libraries(shock_stand_off
   xyzq_io
   interp3d

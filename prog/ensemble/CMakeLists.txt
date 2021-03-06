@@ -1,7 +1,7 @@
 add_executable(ensemble
   ensemble.f90
 )
-target_link_libraries(ensemble global)
+target_link_libraries(ensemble cfdtools_global)
 target_link_libraries(ensemble
     intrinsics
     tecplot_adt

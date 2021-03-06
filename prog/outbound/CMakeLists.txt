@@ -4,7 +4,7 @@ add_executable(outbound
   permute_block.f90
   swap_ijk_conventions.f90
 )
-target_link_libraries(outbound global)
+target_link_libraries(outbound cfdtools_global)
 target_link_libraries(outbound
   xyzq_io
   interp3d

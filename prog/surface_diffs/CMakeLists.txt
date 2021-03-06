@@ -1,7 +1,7 @@
 add_executable(surface_diffs
   surface_diffs.f90
 )
-target_link_libraries(surface_diffs global)
+target_link_libraries(surface_diffs cfdtools_global)
 target_link_libraries(surface_diffs
   progtools
   linsys

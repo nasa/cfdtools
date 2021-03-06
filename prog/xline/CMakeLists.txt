@@ -1,7 +1,7 @@
 add_executable(xline
   xline.f
 )
-target_link_libraries(xline global)
+target_link_libraries(xline cfdtools_global)
 target_link_libraries(xline
   progtools
 )

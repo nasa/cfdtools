@@ -1,7 +1,7 @@
 add_executable(filter_lines
   filter_lines.f90
 )
-target_link_libraries(filter_lines global)
+target_link_libraries(filter_lines cfdtools_global)
 target_link_libraries(filter_lines
   progtools
 )

@@ -1,7 +1,7 @@
 add_executable(triangulation_tool
   triangulation_tool.f90
 )
-target_link_libraries(triangulation_tool global)
+target_link_libraries(triangulation_tool cfdtools_global)
 target_link_libraries(triangulation_tool
   triangulation_io
   interp3d

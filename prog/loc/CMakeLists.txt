@@ -1,7 +1,7 @@
 add_executable(loc
   loc.f
 )
-target_link_libraries(loc global)
+target_link_libraries(loc cfdtools_global)
 target_link_libraries(loc
   progtools
 )

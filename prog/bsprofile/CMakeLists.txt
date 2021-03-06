@@ -2,7 +2,7 @@ add_executable(bsprofile
   bsprofile.f
   getdis.f
 )
-target_link_libraries(bsprofile global)
+target_link_libraries(bsprofile cfdtools_global)
 target_link_libraries(bsprofile
   interplib
   integratelib

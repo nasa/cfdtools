@@ -1,7 +1,7 @@
 add_executable(curvature3d
   curvature3d.f
 )
-target_link_libraries(curvature3d global)
+target_link_libraries(curvature3d cfdtools_global)
 target_link_libraries(curvature3d
   interp3d
   interplib

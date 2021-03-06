@@ -15,6 +15,6 @@ add_library(optlib
   zerorc.f
   zeros.f
 )
-target_link_libraries(optlib PRIVATE global)
+target_link_libraries(optlib PRIVATE cfdtools_global)
 target_include_directories(optlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME optlib)
