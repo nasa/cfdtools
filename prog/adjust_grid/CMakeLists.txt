@@ -3,7 +3,7 @@ add_executable(adjust_grid
 )
 target_link_libraries(adjust_grid cfdtools_global)
 target_link_libraries(adjust_grid
-  grid_block_structure
+  cfdtools_grid_block_structure
   gridlib
   progtools
   geomlib

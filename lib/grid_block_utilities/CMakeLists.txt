@@ -6,7 +6,7 @@ target_link_libraries(grid_block_utilities
     cfdtools_global
     xyzq_io
   PUBLIC
-    grid_block_structure
+    cfdtools_grid_block_structure
 )
 target_include_directories(grid_block_utilities PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME grid_block_utilities)

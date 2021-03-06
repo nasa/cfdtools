@@ -45,7 +45,8 @@ cmake_dependent_option(CFDTOOLS_BUILD_TESTING
     "BUILD_TESTING" OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-include(compile_options) # After set CMAKE_BUILD_TYPE
+include(cfdtools_helpers)
+include(cfdtools_compile_options) # After set CMAKE_BUILD_TYPE
 add_library(cfdtools_global INTERFACE)
 target_compile_options(cfdtools_global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
 
@@ -55,9 +56,10 @@ target_compile_options(cfdtools_global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
 #------------------------------------------------------------------------------
 configure_file(cmake/modulefile.in modulefile)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/modulefile
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/modulefiles/cfdtools)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/cfdtools/modulefiles/
+    RENAME cfdtools)
 install(DIRECTORY samples
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/cfdtools/samples)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/cfdtools)
 
 
 #------------------------------------------------------------------------------

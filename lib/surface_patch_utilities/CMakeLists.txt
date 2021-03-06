@@ -9,7 +9,7 @@ target_link_libraries(surface_patch_utilities
     geomlib
     linsys
   PUBLIC
-    grid_block_structure
+    cfdtools_grid_block_structure
 )
 target_include_directories(surface_patch_utilities PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 install(FILES README DESTINATION doc RENAME surface_patch_utilities)
