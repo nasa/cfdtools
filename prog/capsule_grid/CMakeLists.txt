@@ -1,10 +1,9 @@
-add_executable(capsule_grid
+cfdtools_add_executable(capsule_grid
   capsule_grid.f90
   capsules.f90
   grid_block_structure.f90
 )
-target_link_libraries(capsule_grid cfdtools_global)
-target_link_libraries(capsule_grid
+target_link_libraries(cfdtools_capsule_grid
   cfdtools_interp3d
   cfdtools_interplib
   cfdtools_numodules
@@ -19,5 +18,3 @@ target_link_libraries(capsule_grid
   cfdtools_geomlib
   cfdtools_intrinsics
 )
-install(FILES README DESTINATION doc RENAME capsule_grid)
-install(TARGETS capsule_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

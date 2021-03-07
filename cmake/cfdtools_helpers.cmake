@@ -20,6 +20,7 @@ function(cfdtools_add_executable exename)
     # Helper to construct properly namespaced executable targets
     set(fullname "cfdtools_${exename}")
     add_executable(${fullname} ${ARGN})
+    target_link_libraries(${fullname} cfdtools_global)
     install(PROGRAMS $<TARGET_FILE:${fullname}>
         DESTINATION ${CMAKE_INSTALL_BINDIR}
         RENAME ${exename})

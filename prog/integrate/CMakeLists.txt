@@ -1,8 +1,7 @@
-add_executable(integrate
+cfdtools_add_executable(integrate
   integrate.f
 )
-target_link_libraries(integrate
-  cfdtools_global
+target_link_libraries(cfdtools_integrate
   cfdtools_geomlib
   cfdtools_integratelib
   cfdtools_linsys
@@ -12,4 +11,3 @@ target_link_libraries(integrate
   cfdtools_searchlib
   cfdtools_table_io
 )
-install(TARGETS integrate DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -1,9 +1,6 @@
-add_executable(upsequence
+cfdtools_add_executable(upsequence
   upsequence.f90
 )
-target_link_libraries(upsequence cfdtools_global)
-target_link_libraries(upsequence
+target_link_libraries(cfdtools_upsequence
   cfdtools_xyzq_io
 )
-install(FILES README DESTINATION doc RENAME upsequence)
-install(TARGETS upsequence DESTINATION ${CMAKE_INSTALL_BINDIR})

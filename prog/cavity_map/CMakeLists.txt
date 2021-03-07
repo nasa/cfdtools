@@ -1,9 +1,8 @@
-add_executable(cavity_map
+cfdtools_add_executable(cavity_map
   cavity_map.f90
   rotation_matrix.f90
 )
-target_link_libraries(cavity_map cfdtools_global)
-target_link_libraries(cavity_map
+target_link_libraries(cfdtools_cavity_map
   cfdtools_interp3d
   cfdtools_interplib
   cfdtools_intrinsics
@@ -19,5 +18,3 @@ target_link_libraries(cavity_map
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME cavity_map)
-install(TARGETS cavity_map DESTINATION ${CMAKE_INSTALL_BINDIR})

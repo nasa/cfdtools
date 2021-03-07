@@ -1,9 +1,8 @@
-add_executable(refine_grid
+cfdtools_add_executable(refine_grid
   densify_grid_block.f90
   refine_grid.f90
 )
-target_link_libraries(refine_grid cfdtools_global)
-target_link_libraries(refine_grid
+target_link_libraries(cfdtools_refine_grid
   cfdtools_interp3d
   cfdtools_interplib
   cfdtools_numodules
@@ -14,8 +13,6 @@ target_link_libraries(refine_grid
   cfdtools_searchlib
   cfdtools_geomlib
 )
-install(FILES README DESTINATION doc RENAME refine_grid)
-install(TARGETS refine_grid DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(CFDTOOLS_TEST)
 

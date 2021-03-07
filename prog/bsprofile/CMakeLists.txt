@@ -1,9 +1,8 @@
-add_executable(bsprofile
+cfdtools_add_executable(bsprofile
   bsprofile.f
   getdis.f
 )
-target_link_libraries(bsprofile cfdtools_global)
-target_link_libraries(bsprofile
+target_link_libraries(cfdtools_bsprofile
   cfdtools_interplib
   cfdtools_integratelib
   cfdtools_numodules
@@ -15,5 +14,3 @@ target_link_libraries(bsprofile
   cfdtools_searchlib
   cfdtools_aa_nurbs
 )
-install(FILES README DESTINATION doc RENAME bsprofile)
-install(TARGETS bsprofile DESTINATION ${CMAKE_INSTALL_BINDIR})

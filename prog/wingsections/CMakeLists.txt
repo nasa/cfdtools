@@ -1,8 +1,7 @@
-add_executable(wingsections
+cfdtools_add_executable(wingsections
   wingsections.f
 )
-target_link_libraries(wingsections cfdtools_global)
-target_link_libraries(wingsections
+target_link_libraries(cfdtools_wingsections
   cfdtools_interplib
   cfdtools_integratelib
   cfdtools_progtools
@@ -11,5 +10,3 @@ target_link_libraries(wingsections
   cfdtools_gridlib
   cfdtools_aa_nurbs
 )
-install(FILES README DESTINATION doc RENAME wingsections)
-install(TARGETS wingsections DESTINATION ${CMAKE_INSTALL_BINDIR})

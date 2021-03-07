@@ -1,8 +1,7 @@
-add_executable(neqair_integration
+cfdtools_add_executable(neqair_integration
     neqair_integration.f90
 )
-target_link_libraries(neqair_integration PRIVATE
-    cfdtools_global
+target_link_libraries(cfdtools_neqair_integration
     cfdtools_eigenlib
     cfdtools_geomlib
     cfdtools_gridlib
@@ -17,11 +16,8 @@ target_link_libraries(neqair_integration PRIVATE
     cfdtools_xyzq_io
 )
 
-add_executable(cone_angles cone_angles.f90)
-target_link_libraries(cone_angles PRIVATE cfdtools_global)
+cfdtools_add_executable(cone_angles cone_angles.f90)
 
-add_executable(response_function response_function.f90)
-target_link_libraries(response_function PRIVATE cfdtools_global cfdtools_interplib cfdtools_table_io)
+cfdtools_add_executable(response_function response_function.f90)
+target_link_libraries(cfdtools_response_function cfdtools_interplib cfdtools_table_io)
 
-install(TARGETS neqair_integration cone_angles response_function
-        DESTINATION ${CMAKE_INSTALL_BINDIR})

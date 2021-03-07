@@ -1,8 +1,7 @@
-add_executable(blayer
+cfdtools_add_executable(blayer
   blayer.f90
 )
-target_link_libraries(blayer cfdtools_global)
-target_link_libraries(blayer
+target_link_libraries(cfdtools_blayer
   cfdtools_interplib
   cfdtools_integratelib
   cfdtools_numodules
@@ -15,5 +14,3 @@ target_link_libraries(blayer
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME blayer)
-install(TARGETS blayer DESTINATION ${CMAKE_INSTALL_BINDIR})

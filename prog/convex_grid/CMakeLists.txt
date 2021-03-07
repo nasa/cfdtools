@@ -1,8 +1,7 @@
-add_executable(convex_grid
+cfdtools_add_executable(convex_grid
   convex_grid.f90
 )
-target_link_libraries(convex_grid cfdtools_global)
-target_link_libraries(convex_grid
+target_link_libraries(cfdtools_convex_grid
   cfdtools_interp3d
   cfdtools_numodules
   cfdtools_progtools
@@ -15,4 +14,3 @@ target_link_libraries(convex_grid
   cfdtools_searchlib
   cfdtools_geomlib
 )
-install(TARGETS convex_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

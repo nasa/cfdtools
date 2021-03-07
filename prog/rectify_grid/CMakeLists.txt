@@ -1,12 +1,9 @@
-add_executable(rectify_grid
+cfdtools_add_executable(rectify_grid
   rectify_grid.f90
 )
-target_link_libraries(rectify_grid cfdtools_global)
-target_link_libraries(rectify_grid
+target_link_libraries(cfdtools_rectify_grid
   cfdtools_gridlib
   cfdtools_progtools
   cfdtools_geomlib
   cfdtools_xyzq_io
 )
-install(FILES README DESTINATION doc RENAME rectify_grid)
-install(TARGETS rectify_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

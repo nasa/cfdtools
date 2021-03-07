@@ -1,9 +1,8 @@
-add_executable(ch_grid
+cfdtools_add_executable(ch_grid
   ch_grid.f
   second.f
 )
-target_link_libraries(ch_grid cfdtools_global)
-target_link_libraries(ch_grid
+target_link_libraries(cfdtools_ch_grid
   cfdtools_interp3d
   cfdtools_interplib
   cfdtools_integratelib
@@ -17,5 +16,3 @@ target_link_libraries(ch_grid
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME ch_grid)
-install(TARGETS ch_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

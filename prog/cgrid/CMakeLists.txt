@@ -1,8 +1,7 @@
-add_executable(cgrid
+cfdtools_add_executable(cgrid
   cgrid.f
 )
-target_link_libraries(cgrid
-  cfdtools_global
+target_link_libraries(cfdtools_cgrid
   cfdtools_gridlib
   cfdtools_interplib
   cfdtools_searchlib
@@ -10,4 +9,3 @@ target_link_libraries(cgrid
   cfdtools_geomlib
   cfdtools_numodules
 )
-install(TARGETS cgrid DESTINATION ${CMAKE_INSTALL_BINDIR})

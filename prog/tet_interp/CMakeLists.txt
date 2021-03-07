@@ -1,8 +1,7 @@
-add_executable(tet_interp
+cfdtools_add_executable(tet_interp
   tet_interp.f90
 )
-target_link_libraries(tet_interp cfdtools_global)
-target_link_libraries(tet_interp
+target_link_libraries(cfdtools_tet_interp
   cfdtools_triangulation_io
   cfdtools_interp3d
   cfdtools_progtools
@@ -13,4 +12,3 @@ target_link_libraries(tet_interp
   cfdtools_xyzq_io
   cfdtools_geomlib
 )
-install(TARGETS tet_interp DESTINATION ${CMAKE_INSTALL_BINDIR})

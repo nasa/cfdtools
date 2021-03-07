@@ -1,11 +1,8 @@
-add_executable(revolve_grid
+cfdtools_add_executable(revolve_grid
   revolve_grid.f90
 )
-target_link_libraries(revolve_grid cfdtools_global)
-target_link_libraries(revolve_grid
+target_link_libraries(cfdtools_revolve_grid
   cfdtools_geomlib
   cfdtools_gridlib
   cfdtools_xyzq_io
 )
-install(FILES README DESTINATION doc RENAME revolve_grid)
-install(TARGETS revolve_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

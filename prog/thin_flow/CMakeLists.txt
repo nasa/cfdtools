@@ -1,9 +1,6 @@
-add_executable(thin_flow
+cfdtools_add_executable(thin_flow
   thin_flow.f90
 )
-target_link_libraries(thin_flow cfdtools_global)
-target_link_libraries(thin_flow
+target_link_libraries(cfdtools_thin_flow
   cfdtools_xyzq_io
 )
-install(FILES README DESTINATION doc RENAME thin_flow)
-install(TARGETS thin_flow DESTINATION ${CMAKE_INSTALL_BINDIR})

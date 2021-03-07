@@ -1,8 +1,7 @@
-add_executable(fix_grid
+cfdtools_add_executable(fix_grid
   fix_grid.f90
 )
-target_link_libraries(fix_grid
-  cfdtools_global
+target_link_libraries(cfdtools_fix_grid
   cfdtools_geomlib
   cfdtools_gridlib
   cfdtools_interp3d
@@ -11,4 +10,3 @@ target_link_libraries(fix_grid
   cfdtools_progtools
   cfdtools_xyzq_io
 )
-install(TARGETS fix_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

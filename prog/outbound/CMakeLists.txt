@@ -1,11 +1,10 @@
-add_executable(outbound
+cfdtools_add_executable(outbound
   outbound.f90
   param2d.f
   permute_block.f90
   swap_ijk_conventions.f90
 )
-target_link_libraries(outbound cfdtools_global)
-target_link_libraries(outbound
+target_link_libraries(cfdtools_outbound
   cfdtools_xyzq_io
   cfdtools_interp3d
   cfdtools_interplib
@@ -19,5 +18,3 @@ target_link_libraries(outbound
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME outbound)
-install(TARGETS outbound DESTINATION ${CMAKE_INSTALL_BINDIR})

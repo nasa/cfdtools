@@ -1,9 +1,6 @@
-add_executable(xline
+cfdtools_add_executable(xline
   xline.f
 )
-target_link_libraries(xline cfdtools_global)
-target_link_libraries(xline
+target_link_libraries(cfdtools_xline
   cfdtools_progtools
 )
-install(FILES README DESTINATION doc RENAME xline)
-install(TARGETS xline DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -1,8 +1,7 @@
-add_executable(hemispheres_of_sight
+cfdtools_add_executable(hemispheres_of_sight
   hemispheres_of_sight.f90
 )
-target_link_libraries(hemispheres_of_sight cfdtools_global)
-target_link_libraries(hemispheres_of_sight
+target_link_libraries(cfdtools_hemispheres_of_sight
   cfdtools_triangulation_io
   cfdtools_interp3d
   cfdtools_numodules
@@ -20,5 +19,3 @@ target_link_libraries(hemispheres_of_sight
   cfdtools_geomlib
   cfdtools_intrinsics
 )
-install(FILES README DESTINATION doc RENAME hemispheres_of_sight)
-install(TARGETS hemispheres_of_sight DESTINATION ${CMAKE_INSTALL_BINDIR})

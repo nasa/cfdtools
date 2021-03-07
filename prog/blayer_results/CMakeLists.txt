@@ -1,7 +1,7 @@
-add_executable(blayer_results
+cfdtools_add_executable(blayer_results
   blayer_results.f90
 )
-target_link_libraries(blayer_results
+target_link_libraries(cfdtools_blayer_results
   cfdtools_global
   cfdtools_geomlib
   cfdtools_integratelib
@@ -17,4 +17,3 @@ target_link_libraries(blayer_results
   cfdtools_tecplot_xyzq_io
   cfdtools_tile_triangulation
 )
-install(TARGETS blayer_results DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -1,8 +1,7 @@
-add_executable(radial_interp
+cfdtools_add_executable(radial_interp
   radial_interp.f90
 )
-target_link_libraries(radial_interp cfdtools_global)
-target_link_libraries(radial_interp
+target_link_libraries(cfdtools_radial_interp
   cfdtools_xyzq_io
   cfdtools_interp3d
   cfdtools_numodules
@@ -13,8 +12,6 @@ target_link_libraries(radial_interp
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME radial_interp)
-install(TARGETS radial_interp DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(CFDTOOLS_TEST)
 

@@ -7,7 +7,7 @@
 # version.  However, the ability to do this sort generic programming is a
 # recent addition to Fortran, so we would have to do an extensive rewrite of
 # xyzq_io and client libraries to do it. Did I mention I love fortran?
-add_executable(shadowgraph
+cfdtools_add_executable(shadowgraph
   FieldView_Data.f90
   flow_gradients.f90
   grid_block_structure.f90
@@ -23,8 +23,7 @@ add_executable(shadowgraph
   ../../lib/xyzq_io/xyzq_io.f90
   ../../lib/grid_block_utilities/grid_block_utilities.f90
 )
-target_link_libraries(shadowgraph cfdtools_global)
-target_link_libraries(shadowgraph
+target_link_libraries(cfdtools_shadowgraph
   cfdtools_interp3d
   cfdtools_intrinsics
   cfdtools_numodules
@@ -33,5 +32,3 @@ target_link_libraries(shadowgraph
   cfdtools_gridlib
   cfdtools_geomlib
 )
-install(FILES README DESTINATION doc RENAME shadowgraph)
-install(TARGETS shadowgraph DESTINATION ${CMAKE_INSTALL_BINDIR})

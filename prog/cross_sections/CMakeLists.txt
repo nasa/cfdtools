@@ -1,8 +1,7 @@
-add_executable(cross_sections
+cfdtools_add_executable(cross_sections
   cross_sections.f90
 )
-target_link_libraries(cross_sections cfdtools_global)
-target_link_libraries(cross_sections
+target_link_libraries(cfdtools_cross_sections
   cfdtools_interplib
   cfdtools_integratelib
   cfdtools_intrinsics
@@ -14,5 +13,3 @@ target_link_libraries(cross_sections
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME cross_sections)
-install(TARGETS cross_sections DESTINATION ${CMAKE_INSTALL_BINDIR})

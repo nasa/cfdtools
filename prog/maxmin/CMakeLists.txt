@@ -1,10 +1,9 @@
-add_executable(maxmin
+cfdtools_add_executable(maxmin
   dummies.f
   maxmin.f
   second.f
 )
-target_link_libraries(maxmin cfdtools_global)
-target_link_libraries(maxmin
+target_link_libraries(cfdtools_maxmin
   cfdtools_interp3d
   cfdtools_numodules
   cfdtools_interplib
@@ -17,5 +16,3 @@ target_link_libraries(maxmin
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME maxmin)
-install(TARGETS maxmin DESTINATION ${CMAKE_INSTALL_BINDIR})

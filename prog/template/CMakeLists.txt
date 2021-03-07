@@ -1,4 +1,4 @@
-add_executable(template
+cfdtools_add_executable(template
   rdlist.f
   reader.f
   scan2.f
@@ -12,9 +12,6 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
         COMPILE_FLAGS -fcray-pointer
     )
 endif()
-target_link_libraries(template cfdtools_global)
-target_link_libraries(template
+target_link_libraries(cfdtools_template
   cfdtools_progtools
 )
-install(FILES README DESTINATION doc RENAME template)
-install(TARGETS template DESTINATION ${CMAKE_INSTALL_BINDIR})

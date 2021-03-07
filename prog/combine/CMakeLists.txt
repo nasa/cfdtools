@@ -1,10 +1,8 @@
-add_executable(combine
+cfdtools_add_executable(combine
   combine.f
 )
-target_link_libraries(combine
-  cfdtools_global
+target_link_libraries(cfdtools_combine
   cfdtools_interplib
   cfdtools_searchlib
   cfdtools_numodules
 )
-install(TARGETS combine DESTINATION ${CMAKE_INSTALL_BINDIR})

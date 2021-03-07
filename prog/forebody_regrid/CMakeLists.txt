@@ -1,9 +1,8 @@
-add_executable(forebody_regrid
+cfdtools_add_executable(forebody_regrid
   forebody_regrid.f90
   grid_block_structure.f90
 )
-target_link_libraries(forebody_regrid cfdtools_global)
-target_link_libraries(forebody_regrid
+target_link_libraries(cfdtools_forebody_regrid
   cfdtools_xyzq_io
   cfdtools_interp3d
   cfdtools_numodules
@@ -16,5 +15,3 @@ target_link_libraries(forebody_regrid
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME forebody_regrid)
-install(TARGETS forebody_regrid DESTINATION ${CMAKE_INSTALL_BINDIR})

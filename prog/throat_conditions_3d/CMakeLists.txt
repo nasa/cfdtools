@@ -1,8 +1,7 @@
-add_executable(throat_conditions_3d
+cfdtools_add_executable(throat_conditions_3d
   throat_conditions_3d.f90
 )
-target_link_libraries(throat_conditions_3d
-  cfdtools_global
+target_link_libraries(cfdtools_throat_conditions_3d
   cfdtools_adt
   cfdtools_geomlib
   cfdtools_gridlib
@@ -19,5 +18,3 @@ target_link_libraries(throat_conditions_3d
   cfdtools_searchlib
   cfdtools_xyzq_io
 )
-install(FILES README DESTINATION doc RENAME throat_conditions_3d)
-install(TARGETS throat_conditions_3d DESTINATION ${CMAKE_INSTALL_BINDIR})

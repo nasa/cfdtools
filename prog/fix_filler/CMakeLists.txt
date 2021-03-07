@@ -1,8 +1,7 @@
-add_executable(fix_filler
+cfdtools_add_executable(fix_filler
   fix_filler.f90
 )
-target_link_libraries(fix_filler
-  cfdtools_global
+target_link_libraries(cfdtools_fix_filler
   cfdtools_adt
   cfdtools_xyzq_io
   cfdtools_geomlib
@@ -12,4 +11,3 @@ target_link_libraries(fix_filler
   cfdtools_searchlib
   cfdtools_numodules
 )
-install(TARGETS fix_filler DESTINATION ${CMAKE_INSTALL_BINDIR})

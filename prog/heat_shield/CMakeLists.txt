@@ -1,10 +1,9 @@
-add_executable(heat_shield
+cfdtools_add_executable(heat_shield
   second.f
   heat_shield.f90
   capsules.f90
 )
-target_link_libraries(heat_shield
-  cfdtools_global
+target_link_libraries(cfdtools_heat_shield
   cfdtools_integratelib
   cfdtools_interplib
   cfdtools_gridlib
@@ -17,5 +16,3 @@ target_link_libraries(heat_shield
   cfdtools_blas2lib
   cfdtools_intrinsics
 )
-install(FILES README DESTINATION doc RENAME heat_shield)
-install(TARGETS heat_shield DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -1,8 +1,7 @@
-add_executable(profile
+cfdtools_add_executable(profile
   profile.f
 )
-target_link_libraries(profile cfdtools_global)
-target_link_libraries(profile
+target_link_libraries(cfdtools_profile
   cfdtools_interp3d
   cfdtools_interplib
   cfdtools_numodules
@@ -17,5 +16,3 @@ target_link_libraries(profile
   cfdtools_geomlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME profile)
-install(TARGETS profile DESTINATION ${CMAKE_INSTALL_BINDIR})

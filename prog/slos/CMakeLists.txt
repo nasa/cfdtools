@@ -1,7 +1,5 @@
-add_executable(slos slos.f90)
-target_link_libraries(slos
-  PRIVATE
-    cfdtools_global
+cfdtools_add_executable(slos slos.f90)
+target_link_libraries(cfdtools_slos
     cfdtools_adt
     cfdtools_eigenlib
     cfdtools_geomlib
@@ -17,5 +15,3 @@ target_link_libraries(slos
     cfdtools_ugridlib
     cfdtools_xyzq_io
 )
-install(TARGETS slos DESTINATION ${CMAKE_INSTALL_BINDIR})
-

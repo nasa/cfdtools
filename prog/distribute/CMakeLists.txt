@@ -1,9 +1,8 @@
-add_executable(distribute
+cfdtools_add_executable(distribute
   distribute.f
   shockgrid.f
 )
-target_link_libraries(distribute cfdtools_global)
-target_link_libraries(distribute
+target_link_libraries(cfdtools_distribute
   cfdtools_numodules
   cfdtools_interplib
   cfdtools_progtools
@@ -11,5 +10,3 @@ target_link_libraries(distribute
   cfdtools_gridlib
   cfdtools_searchlib
 )
-install(FILES README DESTINATION doc RENAME distribute)
-install(TARGETS distribute DESTINATION ${CMAKE_INSTALL_BINDIR})
