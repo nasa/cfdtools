@@ -3,6 +3,6 @@ build
 build*
 **/test/output*
 **.mod
-prog/radial_interp/test/*/*.g*
-prog/radial_interp/test/*/*.f*
-prog/radial_interp/test/*/log.txt
+app/radial_interp/test/*/*.g*
+app/radial_interp/test/*/*.f*
+app/radial_interp/test/*/log.txt
