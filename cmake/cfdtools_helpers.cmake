@@ -1,23 +1,46 @@
+#------------------------------------------------------------------------------
+# Boilerplate for library targets
+#------------------------------------------------------------------------------
 function(cfdtools_add_library libname)
-    # Helper to create properly namespaced library targets
     set(fullname "cfdtools_${libname}")
+    set(doc_dir "${CMAKE_INSTALL_DATADIR}/cfdtools/doc")
+    set(mod_build_dir "${CMAKE_CURRENT_BINARY_DIR}/modules")
+    set(mod_install_dir "${CMAKE_INSTALL_INCLUDEDIR}/cfdtools/${libname}")
+
+    # Basic definition
     add_library(${fullname} ${ARGN})
     add_library("cfdtools::${libname}" ALIAS ${fullname})
-    target_link_libraries(${fullname} PRIVATE cfdtools_global)
-    target_include_directories(${fullname} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
     set_target_properties(${fullname} PROPERTIES
-        EXPORT_NAME ${libname})
+        EXPORT_NAME ${libname}
+        Fortran_MODULE_DIRECTORY ${mod_build_dir}
+    )
+
+    # Default dependencies
+    target_link_libraries(${fullname} PRIVATE cfdtools_global)
+
+    # Expose module files
+    target_include_directories(${fullname} PUBLIC
+        $<BUILD_INTERFACE:${mod_build_dir}>
+        $<INSTALL_INTERFACE:${mod_install_dir}>
+    )
+
+    # Installation
     install(TARGETS ${fullname}
         EXPORT cfdtools
         DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(DIRECTORY "${mod_build_dir}/"  # Trailing slash => copy contents
+        DESTINATION ${mod_install_dir})
     install(FILES README
-        DESTINATION "${CMAKE_INSTALL_DATADIR}/cfdtools/doc"
+        DESTINATION ${doc_dir}
         RENAME ${libname}
         OPTIONAL)
+
 endfunction()
 
+#------------------------------------------------------------------------------
+# Boilerplate for executable targets
+#------------------------------------------------------------------------------
 function(cfdtools_add_executable exename)
-    # Helper to construct properly namespaced executable targets
     set(fullname "cfdtools_${exename}")
     add_executable(${fullname} ${ARGN})
     target_link_libraries(${fullname} cfdtools_global)
