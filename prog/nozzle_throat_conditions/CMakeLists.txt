@@ -3,14 +3,14 @@ add_executable(nozzle_throat_conditions
 )
 target_link_libraries(nozzle_throat_conditions
   cfdtools_global
-  lewis
-  progtools
-  integratelib
-  interplib
-  searchlib
-  numodules
-  optlib
-  linsys
+  cfdtools_lewis
+  cfdtools_progtools
+  cfdtools_integratelib
+  cfdtools_interplib
+  cfdtools_searchlib
+  cfdtools_numodules
+  cfdtools_optlib
+  cfdtools_linsys
 )
 install(FILES README DESTINATION doc RENAME nozzle_throat_conditions)
 install(TARGETS nozzle_throat_conditions DESTINATION ${CMAKE_INSTALL_BINDIR})

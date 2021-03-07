@@ -1,4 +1,4 @@
-add_library(progtools
+cfdtools_add_library(progtools
   alpha.f
   cfd_io_package.f
   check_existence.f90
@@ -59,6 +59,3 @@ add_library(progtools
   upcase.f
   writer.f
 )
-target_link_libraries(progtools PRIVATE cfdtools_global)
-target_include_directories(progtools PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME progtools)

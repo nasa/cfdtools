@@ -3,22 +3,22 @@ add_executable(hemispheres_of_sight
 )
 target_link_libraries(hemispheres_of_sight cfdtools_global)
 target_link_libraries(hemispheres_of_sight
-  triangulation_io
-  interp3d
-  numodules
-  progtools
-  adt
-  linsys
-  surface_patch_utilities
-  eigenlib
-  optlib
-  geomlib
-  gridlib
-  ugridlib
-  xyzq_io
-  searchlib
-  geomlib
-  intrinsics
+  cfdtools_triangulation_io
+  cfdtools_interp3d
+  cfdtools_numodules
+  cfdtools_progtools
+  cfdtools_adt
+  cfdtools_linsys
+  cfdtools_surface_patch_utilities
+  cfdtools_eigenlib
+  cfdtools_optlib
+  cfdtools_geomlib
+  cfdtools_gridlib
+  cfdtools_ugridlib
+  cfdtools_xyzq_io
+  cfdtools_searchlib
+  cfdtools_geomlib
+  cfdtools_intrinsics
 )
 install(FILES README DESTINATION doc RENAME hemispheres_of_sight)
 install(TARGETS hemispheres_of_sight DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -2,10 +2,10 @@ add_executable(table_arithmetic table_arithmetic.f90)
 target_link_libraries(table_arithmetic
   PRIVATE
     cfdtools_global
-    numodules
-    progtools
-    searchlib
-    table_io
+    cfdtools_numodules
+    cfdtools_progtools
+    cfdtools_searchlib
+    cfdtools_table_io
 )
 install(TARGETS table_arithmetic DESTINATION ${CMAKE_INSTALL_BINDIR})
 

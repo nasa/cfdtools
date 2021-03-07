@@ -4,15 +4,15 @@ add_executable(refine_grid
 )
 target_link_libraries(refine_grid cfdtools_global)
 target_link_libraries(refine_grid
-  interp3d
-  interplib
-  numodules
-  linsys
-  optlib
-  gridlib
-  xyzq_io
-  searchlib
-  geomlib
+  cfdtools_interp3d
+  cfdtools_interplib
+  cfdtools_numodules
+  cfdtools_linsys
+  cfdtools_optlib
+  cfdtools_gridlib
+  cfdtools_xyzq_io
+  cfdtools_searchlib
+  cfdtools_geomlib
 )
 install(FILES README DESTINATION doc RENAME refine_grid)
 install(TARGETS refine_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

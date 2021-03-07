@@ -1,4 +1,4 @@
-add_library(numodules
+cfdtools_add_library(numodules
   addnoise.f90
   bessel.f
   bounds.f
@@ -39,6 +39,3 @@ add_library(numodules
   usescale.f
   utcopy.f
 )
-target_link_libraries(numodules PRIVATE cfdtools_global)
-target_include_directories(numodules PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME numodules)

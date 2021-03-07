@@ -3,11 +3,11 @@ add_executable(surface_interp
 )
 target_link_libraries(surface_interp cfdtools_global)
 target_link_libraries(surface_interp
-  progtools
-  linsys
-  tecplot_io
-  tecplot_adt
-  geomlib
+  cfdtools_progtools
+  cfdtools_linsys
+  cfdtools_tecplot_io
+  cfdtools_tecplot_adt
+  cfdtools_geomlib
 )
 install(FILES README DESTINATION doc RENAME surface_interp)
 install(TARGETS surface_interp DESTINATION ${CMAKE_INSTALL_BINDIR})

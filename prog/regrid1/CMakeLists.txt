@@ -3,12 +3,12 @@ add_executable(regrid1
 )
 target_link_libraries(regrid1
   cfdtools_global
-  gridlib
-  interp2d
-  interplib
-  searchlib
-  linsys
-  geomlib
-  numodules
+  cfdtools_gridlib
+  cfdtools_interp2d
+  cfdtools_interplib
+  cfdtools_searchlib
+  cfdtools_linsys
+  cfdtools_geomlib
+  cfdtools_numodules
 )
 install(TARGETS regrid1 DESTINATION ${CMAKE_INSTALL_BINDIR})

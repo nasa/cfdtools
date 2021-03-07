@@ -25,13 +25,13 @@ add_executable(shadowgraph
 )
 target_link_libraries(shadowgraph cfdtools_global)
 target_link_libraries(shadowgraph
-  interp3d
-  intrinsics
-  numodules
-  progtools
-  linsys
-  gridlib
-  geomlib
+  cfdtools_interp3d
+  cfdtools_intrinsics
+  cfdtools_numodules
+  cfdtools_progtools
+  cfdtools_linsys
+  cfdtools_gridlib
+  cfdtools_geomlib
 )
 install(FILES README DESTINATION doc RENAME shadowgraph)
 install(TARGETS shadowgraph DESTINATION ${CMAKE_INSTALL_BINDIR})

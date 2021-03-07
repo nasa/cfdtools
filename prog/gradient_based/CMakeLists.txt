@@ -4,11 +4,11 @@ add_executable(gradient_based
 )
 target_link_libraries(gradient_based cfdtools_global)
 target_link_libraries(gradient_based
-  numodules
-  interplib
-  gridlib
-  geomlib
-  searchlib
+  cfdtools_numodules
+  cfdtools_interplib
+  cfdtools_gridlib
+  cfdtools_geomlib
+  cfdtools_searchlib
 )
 install(FILES README DESTINATION doc RENAME gradient_based)
 install(TARGETS gradient_based DESTINATION ${CMAKE_INSTALL_BINDIR})

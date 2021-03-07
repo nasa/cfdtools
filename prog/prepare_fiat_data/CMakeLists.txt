@@ -3,7 +3,7 @@ add_executable(prepare_fiat_data
 )
 target_link_libraries(prepare_fiat_data cfdtools_global)
 target_link_libraries(prepare_fiat_data
-  table_io
-  progtools
+  cfdtools_table_io
+  cfdtools_progtools
 )
 install(TARGETS prepare_fiat_data DESTINATION ${CMAKE_INSTALL_BINDIR})

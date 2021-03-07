@@ -3,10 +3,10 @@ add_executable(surface_project
 )
 target_link_libraries(surface_project
   cfdtools_global
-  geomlib
-  linsys
-  progtools
-  tecplot_io
-  tecplot_adt
+  cfdtools_geomlib
+  cfdtools_linsys
+  cfdtools_progtools
+  cfdtools_tecplot_io
+  cfdtools_tecplot_adt
 )
 install(TARGETS surface_project DESTINATION ${CMAKE_INSTALL_BINDIR})

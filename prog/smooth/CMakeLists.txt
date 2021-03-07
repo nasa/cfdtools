@@ -5,17 +5,17 @@ add_executable(smooth
 )
 target_link_libraries(smooth cfdtools_global)
 target_link_libraries(smooth
-  interp3d
-  numodules
-  interplib
-  progtools
-  linsys
-  obsolete
-  optlib
-  gridlib
-  forsythe
-  geomlib
-  searchlib
+  cfdtools_interp3d
+  cfdtools_numodules
+  cfdtools_interplib
+  cfdtools_progtools
+  cfdtools_linsys
+  cfdtools_obsolete
+  cfdtools_optlib
+  cfdtools_gridlib
+  cfdtools_forsythe
+  cfdtools_geomlib
+  cfdtools_searchlib
 )
 install(FILES README DESTINATION doc RENAME smooth)
 install(TARGETS smooth DESTINATION ${CMAKE_INSTALL_BINDIR})

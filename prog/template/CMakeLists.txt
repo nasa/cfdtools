@@ -14,7 +14,7 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
 endif()
 target_link_libraries(template cfdtools_global)
 target_link_libraries(template
-  progtools
+  cfdtools_progtools
 )
 install(FILES README DESTINATION doc RENAME template)
 install(TARGETS template DESTINATION ${CMAKE_INSTALL_BINDIR})

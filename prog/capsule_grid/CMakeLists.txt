@@ -5,19 +5,19 @@ add_executable(capsule_grid
 )
 target_link_libraries(capsule_grid cfdtools_global)
 target_link_libraries(capsule_grid
-  interp3d
-  interplib
-  numodules
-  progtools
-  adt
-  linsys
-  surface_patch_utilities
-  gridlib
-  optlib
-  xyzq_io
-  searchlib
-  geomlib
-  intrinsics
+  cfdtools_interp3d
+  cfdtools_interplib
+  cfdtools_numodules
+  cfdtools_progtools
+  cfdtools_adt
+  cfdtools_linsys
+  cfdtools_surface_patch_utilities
+  cfdtools_gridlib
+  cfdtools_optlib
+  cfdtools_xyzq_io
+  cfdtools_searchlib
+  cfdtools_geomlib
+  cfdtools_intrinsics
 )
 install(FILES README DESTINATION doc RENAME capsule_grid)
 install(TARGETS capsule_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

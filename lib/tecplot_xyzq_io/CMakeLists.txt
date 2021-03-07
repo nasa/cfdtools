@@ -7,17 +7,14 @@
 # libraries to do it. Instead, we just compile mulitple versions of the
 # library, since this is how CFDTOOLS has historicall solved the problem.
 
-add_library(tecplot_xyzq_io
+cfdtools_add_library(tecplot_xyzq_io
   # Use same sources as xyzq_io...
   ../xyzq_io/f_io.f90
   ../xyzq_io/xyq_io.f90
   ../xyzq_io/xyzq_io.f90
 )
-target_link_libraries(tecplot_xyzq_io
-  PRIVATE
-    cfdtools_global
+target_link_libraries(cfdtools_tecplot_xyzq_io
   PUBLIC
     # But link to tecplot-specific grid_block_structure
-    tecplot_io
+    cfdtools_tecplot_io
 )
-target_include_directories(tecplot_xyzq_io PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

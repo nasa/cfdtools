@@ -2,8 +2,8 @@ add_executable(iblank_move iblank_move.f90)
 target_link_libraries(iblank_move
   PRIVATE
     cfdtools_global
-    gridlib
-    xyzq_io
+    cfdtools_gridlib
+    cfdtools_xyzq_io
 )
 install(TARGETS iblank_move DESTINATION ${CMAKE_INSTALL_BINDIR})
 

@@ -8,18 +8,15 @@
 # mulitple versions of the library, since this is how CFDTOOLS has historicall
 # solved the problem.
 
-add_library(tecplot_surface_patch_utilities
+cfdtools_add_library(tecplot_surface_patch_utilities
   ../surface_patch_utilities/surface_patch_utilities.f90
   ../surface_patch_utilities/triangulate_patches.f90
 )
-target_link_libraries(tecplot_surface_patch_utilities
-  PRIVATE
-    cfdtools_global
+target_link_libraries(cfdtools_tecplot_surface_patch_utilities
   PUBLIC
-    geomlib
-    linsys
-    tecplot_io
-    triangulation_io
-    numodules
+    cfdtools_geomlib
+    cfdtools_linsys
+    cfdtools_tecplot_io
+    cfdtools_triangulation_io
+    cfdtools_numodules
 )
-target_include_directories(tecplot_surface_patch_utilities PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

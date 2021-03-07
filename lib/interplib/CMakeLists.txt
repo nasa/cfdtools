@@ -1,4 +1,4 @@
-add_library(interplib
+cfdtools_add_library(interplib
   aebxplusc.f90
   axbecx.f90
   axbplusc.f90
@@ -58,6 +58,9 @@ add_library(interplib
   vecfit.f
   wagfit.f
 )
-target_link_libraries(interplib PRIVATE cfdtools_global intrinsics numodules searchlib)
-target_include_directories(interplib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME interplib)
+target_link_libraries(cfdtools_interplib
+  PRIVATE
+    cfdtools_intrinsics
+    cfdtools_numodules
+    cfdtools_searchlib
+)

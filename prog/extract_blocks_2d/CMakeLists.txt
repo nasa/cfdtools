@@ -2,8 +2,8 @@ add_executable(extract_blocks_2d extract_blocks_2d.f90)
 target_link_libraries(extract_blocks_2d
   PRIVATE
     cfdtools_global
-    progtools
-    xyzq_io
+    cfdtools_progtools
+    cfdtools_xyzq_io
 )
 install(TARGETS extract_blocks_2d DESTINATION ${CMAKE_INSTALL_BINDIR})
 

@@ -3,15 +3,15 @@ add_executable(radial_interp
 )
 target_link_libraries(radial_interp cfdtools_global)
 target_link_libraries(radial_interp
-  xyzq_io
-  interp3d
-  numodules
-  adt
-  linsys
-  optlib
-  gridlib
-  geomlib
-  searchlib
+  cfdtools_xyzq_io
+  cfdtools_interp3d
+  cfdtools_numodules
+  cfdtools_adt
+  cfdtools_linsys
+  cfdtools_optlib
+  cfdtools_gridlib
+  cfdtools_geomlib
+  cfdtools_searchlib
 )
 install(FILES README DESTINATION doc RENAME radial_interp)
 install(TARGETS radial_interp DESTINATION ${CMAKE_INSTALL_BINDIR})

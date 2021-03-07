@@ -2,10 +2,10 @@ add_executable(surface_quadrature surface_quadrature.f90)
 target_link_libraries(surface_quadrature
   PRIVATE
     cfdtools_global
-    geomlib
-    integratelib
-    progtools
-    tecplot_io
+    cfdtools_geomlib
+    cfdtools_integratelib
+    cfdtools_progtools
+    cfdtools_tecplot_io
 )
 install(TARGETS surface_quadrature DESTINATION ${CMAKE_INSTALL_BINDIR})
 

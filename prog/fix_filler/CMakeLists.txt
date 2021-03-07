@@ -3,13 +3,13 @@ add_executable(fix_filler
 )
 target_link_libraries(fix_filler
   cfdtools_global
-  adt
-  xyzq_io
-  geomlib
-  gridlib
-  optlib
-  interp3d
-  searchlib
-  numodules
+  cfdtools_adt
+  cfdtools_xyzq_io
+  cfdtools_geomlib
+  cfdtools_gridlib
+  cfdtools_optlib
+  cfdtools_interp3d
+  cfdtools_searchlib
+  cfdtools_numodules
 )
 install(TARGETS fix_filler DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -3,14 +3,14 @@ add_executable(surface_cuts
 )
 target_link_libraries(surface_cuts
   cfdtools_global
-  gridlib
-  geomlib
-  interplib
-  integratelib
-  intrinsics
-  numodules
-  searchlib
-  triangulation_io
-  ugridlib
+  cfdtools_gridlib
+  cfdtools_geomlib
+  cfdtools_interplib
+  cfdtools_integratelib
+  cfdtools_intrinsics
+  cfdtools_numodules
+  cfdtools_searchlib
+  cfdtools_triangulation_io
+  cfdtools_ugridlib
 )
 install(TARGETS surface_cuts DESTINATION ${CMAKE_INSTALL_BINDIR})

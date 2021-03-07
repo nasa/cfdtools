@@ -1,4 +1,4 @@
-add_library(integratelib
+cfdtools_add_library(integratelib
   avint.f
   csquad.f
   fsquad.f
@@ -10,6 +10,8 @@ add_library(integratelib
   trapezoidal_quadrature_2d.f
   trapezoidal_quadrature_3d.f90
 )
-target_link_libraries(integratelib PRIVATE cfdtools_global table_io interplib)
-target_include_directories(integratelib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME integratelib)
+target_link_libraries(cfdtools_integratelib
+  PRIVATE
+    cfdtools_table_io
+    cfdtools_interplib
+)

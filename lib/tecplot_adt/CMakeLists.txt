@@ -7,14 +7,12 @@
 # libraries to do it. Instead, we just compile mulitple versions of the
 # library, since this is how CFDTOOLS has historicall solved the problem.
 
-add_library(tecplot_adt
+cfdtools_add_library(tecplot_adt
   ../adt/adt_utilities.f90
 )
-target_link_libraries(tecplot_adt
+target_link_libraries(cfdtools_tecplot_adt
   PRIVATE
-    cfdtools_global
-    geomlib
+    cfdtools_geomlib
   PUBLIC
-    tecplot_io
+    cfdtools_tecplot_io
 )
-target_include_directories(tecplot_adt PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

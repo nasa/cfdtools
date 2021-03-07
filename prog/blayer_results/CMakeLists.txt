@@ -3,18 +3,18 @@ add_executable(blayer_results
 )
 target_link_libraries(blayer_results
   cfdtools_global
-  geomlib
-  integratelib
-  interplib
-  linsys
-  numodules
-  progtools
-  searchlib
-  optlib
-  tecplot_gridlib
-  tecplot_adt
-  tecplot_io
-  tecplot_xyzq_io
-  tile_triangulation
+  cfdtools_geomlib
+  cfdtools_integratelib
+  cfdtools_interplib
+  cfdtools_linsys
+  cfdtools_numodules
+  cfdtools_progtools
+  cfdtools_searchlib
+  cfdtools_optlib
+  cfdtools_tecplot_gridlib
+  cfdtools_tecplot_adt
+  cfdtools_tecplot_io
+  cfdtools_tecplot_xyzq_io
+  cfdtools_tile_triangulation
 )
 install(TARGETS blayer_results DESTINATION ${CMAKE_INSTALL_BINDIR})

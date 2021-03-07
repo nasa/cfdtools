@@ -3,7 +3,7 @@ add_executable(multicut
 )
 target_link_libraries(multicut
   cfdtools_global
-  numodules
-  ugridlib
+  cfdtools_numodules
+  cfdtools_ugridlib
 )
 install(TARGETS multicut DESTINATION ${CMAKE_INSTALL_BINDIR})

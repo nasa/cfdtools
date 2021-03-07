@@ -2,8 +2,8 @@ add_executable(merge_zones merge_zones.f90)
 target_link_libraries(merge_zones
   PRIVATE
     cfdtools_global
-    progtools
-    tecplot_io
+    cfdtools_progtools
+    cfdtools_tecplot_io
 )
 install(TARGETS merge_zones DESTINATION ${CMAKE_INSTALL_BINDIR})
 

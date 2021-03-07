@@ -1,4 +1,4 @@
-add_library(gridlib
+cfdtools_add_library(gridlib
   adjustn.f90
   adjustn2.f90
   arbdis.f
@@ -78,14 +78,11 @@ add_library(gridlib
   warpq3d2.f90
   xgrid.f
 )
-target_link_libraries(gridlib
+target_link_libraries(cfdtools_gridlib
   PRIVATE
-    cfdtools_global
-    intrinsics
-    interplib
-    progtools
+    cfdtools_intrinsics
+    cfdtools_interplib
+    cfdtools_progtools
   PUBLIC
     cfdtools_grid_block_structure
 )
-target_include_directories(gridlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME gridlib)

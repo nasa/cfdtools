@@ -1,4 +1,4 @@
-add_library(interp3d
+cfdtools_add_library(interp3d
   bilincut.f
   furthest_point.f90
   inside_outside.f90
@@ -24,6 +24,4 @@ add_library(interp3d
   trilint.f
   wbintr.f
 )
-target_link_libraries(interp3d PRIVATE cfdtools_global adt)
-target_include_directories(interp3d PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME interp3d)
+target_link_libraries(cfdtools_interp3d PRIVATE cfdtools_adt)

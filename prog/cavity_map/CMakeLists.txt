@@ -4,20 +4,20 @@ add_executable(cavity_map
 )
 target_link_libraries(cavity_map cfdtools_global)
 target_link_libraries(cavity_map
-  interp3d
-  interplib
-  intrinsics
-  numodules
-  progtools
-  tecplot_adt
-  tecplot_io
-  tecplot_gridlib
-  tecplot_surface_patch_utilities
-  linsys
-  eigenlib
-  optlib
-  geomlib
-  searchlib
+  cfdtools_interp3d
+  cfdtools_interplib
+  cfdtools_intrinsics
+  cfdtools_numodules
+  cfdtools_progtools
+  cfdtools_tecplot_adt
+  cfdtools_tecplot_io
+  cfdtools_tecplot_gridlib
+  cfdtools_tecplot_surface_patch_utilities
+  cfdtools_linsys
+  cfdtools_eigenlib
+  cfdtools_optlib
+  cfdtools_geomlib
+  cfdtools_searchlib
 )
 install(FILES README DESTINATION doc RENAME cavity_map)
 install(TARGETS cavity_map DESTINATION ${CMAKE_INSTALL_BINDIR})

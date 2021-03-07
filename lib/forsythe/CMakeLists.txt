@@ -1,4 +1,4 @@
-add_library(forsythe
+cfdtools_add_library(forsythe
   decomp.f
   fmin.f
   fmin77.f
@@ -11,6 +11,3 @@ add_library(forsythe
   urand.f
   zeroin.f
 )
-target_link_libraries(forsythe PRIVATE cfdtools_global)
-target_include_directories(forsythe PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME forsythe)

@@ -3,8 +3,8 @@ add_executable(dt2iges
 )
 target_link_libraries(dt2iges
   cfdtools_global
-  aa_nurbs
-  dt_nurbs
-  progtools
+  cfdtools_aa_nurbs
+  cfdtools_dt_nurbs
+  cfdtools_progtools
 )
 install(TARGETS dt2iges DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -1,4 +1,4 @@
-add_library(interp2d
+cfdtools_add_library(interp2d
   akima.f
   bicubmat.f
   bilinear.f
@@ -28,6 +28,8 @@ add_library(interp2d
   tfif2d.f
   tpspln.f
 )
-target_link_libraries(interp2d PRIVATE cfdtools_global adt numodules)
-target_include_directories(interp2d PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME interp2d)
+target_link_libraries(cfdtools_interp2d
+  PRIVATE
+    cfdtools_adt
+    cfdtools_numodules
+)

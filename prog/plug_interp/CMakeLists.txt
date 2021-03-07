@@ -3,10 +3,10 @@ add_executable(plug_interp
 )
 target_link_libraries(plug_interp
   cfdtools_global
-  geomlib
-  interplib
-  searchlib
-  numodules
-  xyzq_io
+  cfdtools_geomlib
+  cfdtools_interplib
+  cfdtools_searchlib
+  cfdtools_numodules
+  cfdtools_xyzq_io
 )
 install(TARGETS plug_interp DESTINATION ${CMAKE_INSTALL_BINDIR})

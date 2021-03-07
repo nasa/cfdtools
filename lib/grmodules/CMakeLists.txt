@@ -1,4 +1,4 @@
-add_library(grmodules
+cfdtools_add_library(grmodules
   annotate.f
   classif.f
   clipit.f
@@ -33,5 +33,3 @@ add_library(grmodules
   window.f
   xdimtb.f
 )
-target_link_libraries(grmodules PRIVATE cfdtools_global)
-target_include_directories(grmodules PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

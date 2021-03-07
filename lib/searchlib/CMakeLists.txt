@@ -1,4 +1,4 @@
-add_library(searchlib
+cfdtools_add_library(searchlib
   asrch3d.f
   bsrchr.f
   hsortcc.f
@@ -23,6 +23,8 @@ add_library(searchlib
   unique_ri.f90
   xsort.f
 )
-target_link_libraries(searchlib PRIVATE cfdtools_global interp2d interp3d)
-target_include_directories(searchlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME searchlib)
+target_link_libraries(cfdtools_searchlib
+  PRIVATE
+    cfdtools_interp2d
+    cfdtools_interp3d
+)

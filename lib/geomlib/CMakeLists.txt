@@ -1,4 +1,4 @@
-add_library(geomlib
+cfdtools_add_library(geomlib
   angle2d.f90
   angle_between_planes.f90
   angle_between_vectors.f90
@@ -60,6 +60,9 @@ add_library(geomlib
   vertex_curvature.f90
   xderivs.f
 )
-target_link_libraries(geomlib PRIVATE cfdtools_global linsys intrinsics optlib)
-target_include_directories(geomlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME geomlib)
+target_link_libraries(cfdtools_geomlib
+  PRIVATE
+    cfdtools_linsys
+    cfdtools_intrinsics
+    cfdtools_optlib
+)

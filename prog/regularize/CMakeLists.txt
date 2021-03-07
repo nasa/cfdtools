@@ -3,9 +3,9 @@ add_executable(regularize
 )
 target_link_libraries(regularize
   cfdtools_global
-  progtools
-  interplib
-  searchlib
-  numodules
+  cfdtools_progtools
+  cfdtools_interplib
+  cfdtools_searchlib
+  cfdtools_numodules
 )
 install(TARGETS regularize DESTINATION ${CMAKE_INSTALL_BINDIR})

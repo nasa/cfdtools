@@ -1,15 +1,12 @@
-add_library(surface_patch_utilities
+cfdtools_add_library(surface_patch_utilities
   surface_patch_utilities.f90
   triangulate_patches.f90
 )
-target_link_libraries(surface_patch_utilities
+target_link_libraries(cfdtools_surface_patch_utilities
   PRIVATE
-    cfdtools_global
-    numodules
-    geomlib
-    linsys
+    cfdtools_numodules
+    cfdtools_geomlib
+    cfdtools_linsys
   PUBLIC
     cfdtools_grid_block_structure
 )
-target_include_directories(surface_patch_utilities PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME surface_patch_utilities)

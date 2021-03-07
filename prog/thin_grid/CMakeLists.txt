@@ -3,7 +3,7 @@ add_executable(thin_grid
 )
 target_link_libraries(thin_grid cfdtools_global)
 target_link_libraries(thin_grid
-  xyzq_io
+  cfdtools_xyzq_io
 )
 install(FILES README DESTINATION doc RENAME thin_grid)
 install(TARGETS thin_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -4,18 +4,18 @@ add_executable(ch_grid
 )
 target_link_libraries(ch_grid cfdtools_global)
 target_link_libraries(ch_grid
-  interp3d
-  interplib
-  integratelib
-  intrinsics
-  numodules
-  progtools
-  interp2d
-  linsys
-  optlib
-  gridlib
-  geomlib
-  searchlib
+  cfdtools_interp3d
+  cfdtools_interplib
+  cfdtools_integratelib
+  cfdtools_intrinsics
+  cfdtools_numodules
+  cfdtools_progtools
+  cfdtools_interp2d
+  cfdtools_linsys
+  cfdtools_optlib
+  cfdtools_gridlib
+  cfdtools_geomlib
+  cfdtools_searchlib
 )
 install(FILES README DESTINATION doc RENAME ch_grid)
 install(TARGETS ch_grid DESTINATION ${CMAKE_INSTALL_BINDIR})

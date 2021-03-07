@@ -3,8 +3,8 @@ add_executable(mpfa
 )
 target_link_libraries(mpfa
   cfdtools_global
-  interplib
-  searchlib
-  numodules
+  cfdtools_interplib
+  cfdtools_searchlib
+  cfdtools_numodules
 )
 install(TARGETS mpfa DESTINATION ${CMAKE_INSTALL_BINDIR})

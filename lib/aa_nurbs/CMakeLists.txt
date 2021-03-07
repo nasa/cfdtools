@@ -1,4 +1,4 @@
-add_library(aa_nurbs
+cfdtools_add_library(aa_nurbs
   bsaf2xy.f
   bsafgeom.f
   bsafnorm.f
@@ -18,14 +18,12 @@ add_library(aa_nurbs
   dtsepp.f
   lsknots.f
 )
-target_link_libraries(aa_nurbs PRIVATE
-  cfdtools_global
-  dt_nurbs
-  geomlib
-  gridlib
-  interplib
-  integratelib
-  optlib
+target_link_libraries(cfdtools_aa_nurbs
+  PRIVATE
+    cfdtools_dt_nurbs
+    cfdtools_geomlib
+    cfdtools_gridlib
+    cfdtools_interplib
+    cfdtools_integratelib
+    cfdtools_optlib
 )
-target_include_directories(aa_nurbs PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME aa_nurbs)

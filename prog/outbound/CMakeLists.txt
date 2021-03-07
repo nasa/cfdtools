@@ -6,18 +6,18 @@ add_executable(outbound
 )
 target_link_libraries(outbound cfdtools_global)
 target_link_libraries(outbound
-  xyzq_io
-  interp3d
-  interplib
-  numodules
-  progtools
-  adt
-  interp2d
-  linsys
-  optlib
-  gridlib
-  geomlib
-  searchlib
+  cfdtools_xyzq_io
+  cfdtools_interp3d
+  cfdtools_interplib
+  cfdtools_numodules
+  cfdtools_progtools
+  cfdtools_adt
+  cfdtools_interp2d
+  cfdtools_linsys
+  cfdtools_optlib
+  cfdtools_gridlib
+  cfdtools_geomlib
+  cfdtools_searchlib
 )
 install(FILES README DESTINATION doc RENAME outbound)
 install(TARGETS outbound DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -1,4 +1,4 @@
-add_library(linsys
+cfdtools_add_library(linsys
   bloktr.f
   btr4.f
   cholesky.f
@@ -30,6 +30,3 @@ add_library(linsys
   trid3r.f
   trip.f
 )
-target_link_libraries(linsys PRIVATE cfdtools_global)
-target_include_directories(linsys PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME linsys)

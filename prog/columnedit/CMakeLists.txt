@@ -3,7 +3,7 @@ add_executable(columnedit
 )
 target_link_libraries(columnedit cfdtools_global)
 target_link_libraries(columnedit
-  progtools
+  cfdtools_progtools
 )
 install(FILES README DESTINATION doc RENAME columnedit)
 install(TARGETS columnedit DESTINATION ${CMAKE_INSTALL_BINDIR})

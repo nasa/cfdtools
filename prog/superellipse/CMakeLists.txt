@@ -3,12 +3,12 @@ add_executable(superellipse
 )
 target_link_libraries(superellipse
   cfdtools_global
-  gridlib
-  intrinsics
-  integratelib
-  interplib
-  progtools
-  numodules
-  searchlib
+  cfdtools_gridlib
+  cfdtools_intrinsics
+  cfdtools_integratelib
+  cfdtools_interplib
+  cfdtools_progtools
+  cfdtools_numodules
+  cfdtools_searchlib
 )
 install(TARGETS superellipse DESTINATION ${CMAKE_INSTALL_BINDIR})

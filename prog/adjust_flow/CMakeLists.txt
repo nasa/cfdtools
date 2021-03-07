@@ -4,8 +4,8 @@ cfdtools_add_executable(adjust_flow
 target_link_libraries(cfdtools_adjust_flow
   cfdtools_global
   cfdtools_grid_block_structure
-  gridlib
-  progtools
-  geomlib
-  xyzq_io
+  cfdtools_gridlib
+  cfdtools_progtools
+  cfdtools_geomlib
+  cfdtools_xyzq_io
 )

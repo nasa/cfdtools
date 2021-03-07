@@ -6,16 +6,16 @@ add_executable(aerosurf
 )
 target_link_libraries(aerosurf cfdtools_global)
 target_link_libraries(aerosurf
-  interp3d
-  interplib
-  numodules
-  progtools
-  interp2d
-  linsys
-  optlib
-  gridlib
-  geomlib
-  searchlib
+  cfdtools_interp3d
+  cfdtools_interplib
+  cfdtools_numodules
+  cfdtools_progtools
+  cfdtools_interp2d
+  cfdtools_linsys
+  cfdtools_optlib
+  cfdtools_gridlib
+  cfdtools_geomlib
+  cfdtools_searchlib
 )
 install(FILES README DESTINATION doc RENAME aerosurf)
 install(TARGETS aerosurf DESTINATION ${CMAKE_INSTALL_BINDIR})

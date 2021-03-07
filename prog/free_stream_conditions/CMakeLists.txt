@@ -2,8 +2,8 @@ add_executable(free_stream_conditions free_stream_conditions.f90)
 target_link_libraries(free_stream_conditions
   PRIVATE
     cfdtools_global
-    progtools
-    table_io
+    cfdtools_progtools
+    cfdtools_table_io
 )
 install(TARGETS free_stream_conditions DESTINATION ${CMAKE_INSTALL_BINDIR})
 

@@ -7,7 +7,7 @@
 # libraries to do it. Instead, we just compile mulitple versions of the
 # library, since this is how CFDTOOLS has historicall solved the problem.
 
-add_library(tecplot_gridlib
+cfdtools_add_library(tecplot_gridlib
   # Use same sources grid_lib
   ../gridlib/adjustn.f90
   ../gridlib/adjustn2.f90
@@ -87,14 +87,12 @@ add_library(tecplot_gridlib
   ../gridlib/warpq3d2.f90
   ../gridlib/xgrid.f
 )
-target_link_libraries(tecplot_gridlib
+target_link_libraries(cfdtools_tecplot_gridlib
   PRIVATE
-    cfdtools_global
-    intrinsics
-    interplib
-    progtools
+    cfdtools_intrinsics
+    cfdtools_interplib
+    cfdtools_progtools
   PUBLIC
     # Link against Tecplot-customized verions of grid_block_structure
-    tecplot_io
+    cfdtools_tecplot_io
 )
-target_include_directories(tecplot_gridlib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

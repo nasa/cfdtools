@@ -1,9 +1,6 @@
-add_library(obsolete
+cfdtools_add_library(obsolete
   curv1.f
   htdis.f
   splint.f
   xformx.f
 )
-target_link_libraries(obsolete PRIVATE cfdtools_global)
-target_include_directories(obsolete PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME obsolete)

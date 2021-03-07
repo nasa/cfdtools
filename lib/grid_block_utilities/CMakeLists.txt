@@ -1,12 +1,9 @@
-add_library(grid_block_utilities
+cfdtools_add_library(grid_block_utilities
   grid_block_utilities.f90
 )
-target_link_libraries(grid_block_utilities
+target_link_libraries(cfdtools_grid_block_utilities
   PRIVATE
-    cfdtools_global
-    xyzq_io
+    cfdtools_xyzq_io
   PUBLIC
     cfdtools_grid_block_structure
 )
-target_include_directories(grid_block_utilities PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-install(FILES README DESTINATION doc RENAME grid_block_utilities)

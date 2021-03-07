@@ -4,7 +4,7 @@ add_executable(precision
 )
 target_link_libraries(precision cfdtools_global)
 target_link_libraries(precision
-  optlib
+  cfdtools_optlib
 )
 install(FILES README DESTINATION doc RENAME precision)
 install(TARGETS precision DESTINATION ${CMAKE_INSTALL_BINDIR})
