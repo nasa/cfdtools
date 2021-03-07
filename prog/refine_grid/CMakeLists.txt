@@ -14,7 +14,7 @@ target_link_libraries(cfdtools_refine_grid
   cfdtools_geomlib
 )
 
-if(CFDTOOLS_TEST)
+if(CFDTOOLS_BUILD_TESTING)
 
   add_test(
     NAME refine_grid_cube3d

@@ -13,7 +13,7 @@ target_link_libraries(cfdtools_radial_interp
   cfdtools_searchlib
 )
 
-if(CFDTOOLS_TEST)
+if(CFDTOOLS_BUILD_TESTING)
 
   add_test(
     NAME radial_interp_grid
