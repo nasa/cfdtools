@@ -1,4 +1,11 @@
 #------------------------------------------------------------------------------
+# Global properties target
+#------------------------------------------------------------------------------
+add_library(cfdtools_global INTERFACE)
+install(TARGETS cfdtools_global EXPORT cfdtools-config)
+
+
+#------------------------------------------------------------------------------
 # Boilerplate for library targets
 #------------------------------------------------------------------------------
 function(cfdtools_add_library libname)
@@ -26,7 +33,7 @@ function(cfdtools_add_library libname)
 
     # Installation
     install(TARGETS ${fullname}
-        EXPORT cfdtools
+        EXPORT cfdtools-config
         DESTINATION ${CMAKE_INSTALL_LIBDIR})
     install(DIRECTORY "${mod_build_dir}/"  # Trailing slash => copy contents
         DESTINATION ${mod_install_dir})

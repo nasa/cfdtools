@@ -45,25 +45,13 @@ cmake_dependent_option(CFDTOOLS_BUILD_TESTING
     "BUILD_TESTING" OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-include(cfdtools_helpers)
 include(cfdtools_compile_options) # After set CMAKE_BUILD_TYPE
-add_library(cfdtools_global INTERFACE)
+include(cfdtools_helpers)
 target_compile_options(cfdtools_global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
 
 
 #------------------------------------------------------------------------------
-# Supporting File Installation
-#------------------------------------------------------------------------------
-configure_file(cmake/modulefile.in modulefile)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/modulefile
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/cfdtools/modulefiles/
-    RENAME cfdtools)
-install(DIRECTORY samples
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/cfdtools)
-
-
-#------------------------------------------------------------------------------
-# Include Project Subdirectories
+# Component Subdirectories
 #------------------------------------------------------------------------------
 add_subdirectory(lib/aa_nurbs)
 add_subdirectory(lib/adt)
@@ -270,3 +258,20 @@ add_subdirectory(app/wingsections)
 add_subdirectory(app/xdeck)
 add_subdirectory(app/xline)
 add_subdirectory(app/zb_fix)
+
+
+#------------------------------------------------------------------------------
+# Installation
+#------------------------------------------------------------------------------
+configure_file(cmake/modulefile.in modulefile)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/modulefile
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/cfdtools/modulefiles/
+    RENAME cfdtools)
+install(DIRECTORY samples
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/cfdtools)
+install(EXPORT cfdtools-config
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cfdtools
+    NAMESPACE cfdtools::
+    FILE cfdtoos-config.cmake
+)
+
