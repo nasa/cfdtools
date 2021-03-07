@@ -226,7 +226,7 @@ add_subdirectory(prog/runtime_control)
 add_subdirectory(prog/sage)
 add_subdirectory(prog/scale_grid)
 add_subdirectory(prog/scan_grid)
-#add_subdirectory(prog/shadowgraph)  # Missing structure members
+add_subdirectory(prog/shadowgraph)
 add_subdirectory(prog/shiftscale)
 add_subdirectory(prog/shock_stand_off)
 add_subdirectory(prog/sixseries)

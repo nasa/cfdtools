@@ -28,7 +28,4 @@ target_link_libraries(cfdtools_shadowgraph
   cfdtools_intrinsics
   cfdtools_numodules
   cfdtools_progtools
-  cfdtools_linsys
-  cfdtools_gridlib
-  cfdtools_geomlib
 )
