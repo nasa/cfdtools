@@ -1,39 +1,72 @@
-# Outline and Formalities
+# CFDTOOLS
 
-On January 24, 2014, this project received final approval from NASA to
-upload actual software.  This process was completed on February 5, 2014,
-although a few items in the one-liners have been held back for now.
-Provided are 30+ subroutine libraries (mostly lowercase library names, with
-a total of about 1200 *.f and *.f90 subroutine files) and more than 100
-application programs (uppercase names), almost all in Fortran [90]. Most
-have been developed at NASA Ames Research Center over several decades of
-work in the Aerodynamics Division and Space Technology Division.  Most are
-computational fluid dynamics-related (CFD), and many apply to multiblock
-structured data in PLOT2D/3D form (grids and function files).  A number of
-the applications work with datasets in Tecplot format.  (Tecplot is a de
-facto standard at NASA.)  The mixture of generalized and specialized
-functionality offered is apparent from the one-liners below.  Subroutine
-one-liner READMEs also appear with each library, while each application
-folder contains a README adapted from the main program header.
+## Overview
+The CFD Utility Software Library, a.k.a. CFDTOOLS, contains nearly 30 general
+purpose libraries and close to 100 utility applications built upon those
+libraries. These utilities were developed over a rougly fifty year span to
+support aerospace research and development activities at NASA Ames Research
+Center (ARC). They are mostly written in Fortran 90 or 77 and are designed with
+potential reuse in mind. The library also include C translations of roughly a
+dozen numerics routines in the `C_utilities` module.
 
-## Use and Change Notice
+The library began as the ARC Aerodynamics Division Software Library, and is
+currently maintained by ARC Entry Systems and Technology Division. David
+Saunders and Robert Kennelly are the primary authors, with miscellaneous
+contributions from many others over the years. CFDTOOLS is expected to grow
+slowly as new functionality is required.
 
-Most of the subroutines and application programs are single-purpose
-utilities that are unlikely to warrant modification.  If any would-be user
-chooses to make changes, the present authors urge that the History section
-found in each file be updated appropriately, along with other in-line
-documentation such as argument description or purpose outline that is
-affected by such changes.  We do not require notification of any such
-changes, but would welcome any associated feedback.
 
-## Contacts
+## Feature Summary
+* Single-function tools for manipulating multiblock grids and flow solutions
+* Rapid searching/interpolation for structured or unstructured grids (ADT methods)
+* Automated gridding for axisymmetric capsules with curvature-based discretization
+* Generic optimization frameworks with various applications
+* General-purpose numerics subroutines and character-manipulation subroutines
+
+A detailed summary of each library/application is provided below.
+
+
+## Points of Contacts
 
 * david.a.saunders@nasa.gov
-* todd.r.white@nasa.gov
 * jeffrey.p.hill@nasa.gov
 
 
-# Libraries/Modules
+## Build and Install
+The CFDTOOLS software archive is available for download on NASA's public
+(Github)[https://www.github.com/nasa/cfdtools]. The software may be cloned
+using `git` in the typical fashion:
+
+    git clone https://www.github.com/nasa/cfdtools.git
+
+Once downloaded, the software is compiled and installed using CMake. The
+software has no dependencies, and build is known to build successfully using
+relatively recent compilers from Intel and GNU on Ubuntu and SUSE Linux. The
+basic installation process is as follows:
+
+    cd <cfdtools_source_dir>
+    mkdir build && cd build
+    cmake -DCMAKE_INSTALL_PREFIX=<cfdtools_install_dir> ..
+    cmake --build .
+    cmake --install .
+
+Upon installation, all that is required to use the CFDTOOLS applications is to
+add `<cfdtools_install_dir>/bin` to the PATH environment variable. If you are
+building software that links against the CFDTOOLS library using CMake, simply
+add `-DCMAKE_PREFIX_PATH=<cfdtools_install_dir>` to the initial CMake
+configuration command for your project. Then, in your projects `CMakeLists.txt`,
+add the following:
+
+    find_package(cfdtools REQUIRED)
+
+    add_executable(my_program ...)
+    target_link_libraries(my_program cfdtools::<libname>)
+
+CFDTOOLS also supports direct inclusion as a project submodules using CMake's
+``add_subdirectory`` command.
+
+
+## Library Summary
 
 | Component                     | Description |
 |-------------------------------|-------------------------------------------------------------------------|
@@ -70,7 +103,7 @@ changes, but would welcome any associated feedback.
 | **xyq_io**                    | PLOT2D-type multiblock structured grid I/O utilities, in xyzq_io folder |
 | **xyzq_io**                   | PLOT3D-type multiblock structured grid I/O utilities; see also f_io.f90 |
 
-# Applications
+## Application Summary
 
 C = CFD, G = General Numerics, P = Programming Tool
 
@@ -195,135 +228,93 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **xline**                     | P    | Remove lines starting with a target string |
 
 
-# Downloading Guidelines
+## History
 
-Presently, it is assumed that would-be users will not want the entire
-heterogeneous collection gathered here, but rather some application(s) and
-the libraries required for linking.  Therefore, a *.tar.gz file is provided
-for each library with a simple build script.  Each application folder
-contains the main program, a sample control file if any, a simple build
-script, and any other source files not in one of the libraries.
-
-Use of a directory structure reflecting the folder structure of this web
-page is recommended.  Suppose /xxx is the root of such a directory
-structure, and program CURVATURE is the application of interest:
-
-1. From /xxx enter "mkdir CURVATURE" and download the files curvature.f,
-build, and any others into /xxx/CURVATURE.  The simple build script shows
-that the needed libraries are gridlib, geomlib, interplib, interp3d,
-linsys, numodules, searchlib, and prmodules from the progtools folder.
-
-2. Therefore, directories /xxx/geomlib, /xxx/gridlib, and so on need to
-be set up first if they are not already there from downloading some other
-application.  E.g., place geomlib.tar.gz into /xxx/geomlib and extract the
-geomlib files into that directory using "tar -xvozf geomlib.tar.gz".
-
-3. Edit the file "build" to suit your compiler.  **64-bit arithmetic is
-strongly recommended, via the -r8 switch or equivalent.**  Note that all
-the source code uses **real** declarations, but real*8 or double precision
-is intended via the appropriate compiler switch.
-
-4. "./build" compiles all subroutines, places the .o files into an
-object library such as f90geomlib.a, then removes the .o files.
-
-5. In the case of Fortran 90 modules, such as /xxx/adt/adt_utilities.f90,
-.mod and .o files are **not** removed, but they can be once successful
-compilation has been demonstrated.  **(Such modules are compiled into the
-application directory by the build file provided for the application.)**
-
-6. Once all the needed libraries have been built, adjust the "build" in
-/xxx/CURVATURE similarly, and "./build" should link the application.
-
-7. Optionally, a directory /xxx/bin might be added, placed in the path
-of the user, and assigned symbolic links to each application, via commands
-such as "ln -s /xxx/CURVATURE/curvature ."
-
-
-# History
-
-V13.08
-
-    Aug 30 2013  Initial preparation.
-    Sep 20 2013  Initial summary uploads to SourceForge.
-    Sep 30 2013  Still awaiting final NASA approval to upload software.
-    Oct 17 2013  CAPSULE_GRID document uploaded following 2.5-week government
-                 shutdown hiatus.
-    Oct 22 2013  Folders for all libraries are now set up with subroutine one-
-                 liner READMEs.
-    Oct 30 2013  Folders for all applications are now set up with README files.
-    Jan 24 2014  NASA approval for uploading the software proper.
-    Jan 29 2014  All the library *.tar.gz files are now in place; applications
-                 still to do.
-    Feb 05 2014  All straightforward applications have been uploaded with simple
-                 build scripts.
-    Feb 10 2014  UPDATE_GRID has been added; it and GSMOOTH now use xyzq_io, not
-                 the earlier cfd_io_package.
-    Jun 30 2014  Someone needed the DECONSTRUCT utility.  A few updates since
-                 Feb 10 include solid angle utilities in ugridlib, a handful of
-                 functions in special_functions, and a reworked form of the
-                 HEMISPHERES_OF_SIGHT application that defines lines of sight
-                 at a point on a convex body via a triangulated quadrant of a
-                 hemisphere rather than via latitude/longitude discretization.
-    Jul 03 2014  TRI_TO_TRI has been added; a triangulation_io glitch has been
-                 corrected.
-    Aug 07 2014  EXTRACT_BLAYER_DATA has been added to the BLAYER folder.
-    Aug 14 2014  Optimal_Interpolation now contains the package for treating
-                 unstructured data as modified at NASA Ames from Alexander
-                 Barth's original, following NASA approval of its added
-                 BSD 2-Clause License.
-    Sep 05 2014  FILTER_LINES and MERGE_TABLES have been added.
-    Sep 24 2014  Traj_Fit has been added.  It curve-fits heat flux or pressure
-                 pulse data using f(rho(t),V(t)) = C rho(t)**m V(t)**n within
-                 the QNMDRIVER2 framework, as might be needed for TPS sizing
-                 at an entry vehicle body point from selected CFD data points.
-    Oct 03 2014  The table_io module used by Traj_Fit has been updated.
-    Oct 22 2014  The triangulation_io package has been extended with options
-                 for calculation of area, volume, CM, and moments of inertia.
-                 See the new TRIANGULATION_TOOL for driving these options
-                 along with shift/scale/rotate options.
-    Nov 17 2014  Unstructured volume analogues of unstructured surface
-                 utilities have been added to triangulation_io and are
-                 driven by TRIANGULATION_TOOL.
-    Mar 18 2015  An apparently inconsequential glitch in BLAYER has been
-                 remedied.  This version can also read [unformatted] volume
-                 datasets to speed processing of large-grid cases.
-    Mar 13 2015  OUTBOUND now has an option to applied a CONSTANT margin
-                 as a way of moving the forebody boundary a little while
-                 barely affecting the wake boundary.
-    Apr 15 2015  The ADT rapid search package (/adt) now has 2-space multi-
-                 block curve analogues of the 3-space structured multiblock
-                 surface grid utilities.  LINES_OF_SIGHT_2D uses these to
-                 deal with reflected axisymmetric 2-space volume grid.
-                 SURFACE_INTERP_2D has been added, using the same 2-space
-                 ADT utilities.
-    Aug 23 2016  TET_INTERP has been added to interpolate tetrahedral volume
-                 data to a structured multiblock grid.
-    Mar 17 2017  SORT_ROWS (added Feb 14) has been extended to allow more
-                 than one numeric string in a text column, and to allow
-                 output in descending order if desired.
-                 Other recent refinements: COLUMNEDIT now allows extraction
-                 of more than one column at a time; the table_io module has
-                 an updated table_io_read_alpha utility prompted by SORT_ROWS
-                 that handles the case of all lines/rows treated as text and
-                 having the same number of columns (with no header records
-                 assumed).  Previously, all rows were interpreted as header
-                 records, meaning the table appeared empty.
-    Jun 23 2017  NEQAIR_DATA, NEQAIR_Integration, and PREPARE_NEQAIR_DATA
-                 have been added to assist radiation calculations with
-                 NEQAIR.  NEQAIR itself should be obtained through the
-                 Commercial Technology Office at NASA Ames Research Center.
-    Jan 04 2018  Added A2B utility.  Since June, minor changes have been
-                 made to GU, BLAYER, LINES_OF_SIGHT, SHOCK_STAND_OFF, and
-                 OUTBOUND.
-    Jun 06 2018  Added Aero_Coefs application (supplement to DPLR's Postflow).
-                 Since January, updates have been made to geomlib, gridlib,
-                 progtools, searchlib, CAPSULE_GRID, CONVERTQ, GU, HEMISPHERES_-
-                 OF_SIGHT, NEQAIR_Integration, RADIAL_INTERP, and RESHAPE3D.
-    Sep 19 2018  Added EXTRACT_BLOCKS_2D and EXTRACT_FUNCTIONS; xyq_io and f_io
-                 were missing from the xyzq_io folder; since June, several
-                 triangulation utilities have been extended to overcome any
-                 single-zone assumptions, NEQAIR_Integration has been improved,
-                 and POLAR_INTERP has had an option added to generate spoked
-                 body points (but see also CAPSULE_SPOKES, which had been over-
-                 looked here as well).
-    Nov 07 2018  Added SLOS (structured grid form of USLOS for lines of sight).
+* **Aug 30 2013**: Initial preparation.
+* **Sep 20 2013**: Initial summary uploads to SourceForge.
+* **Sep 30 2013**: Still awaiting final NASA approval to upload software.
+* **Oct 17 2013**: CAPSULE_GRID document uploaded following 2.5-week government
+                   shutdown hiatus.
+* **Oct 22 2013**: Folders for all libraries are now set up with subroutine one-
+                   liner READMEs.
+* **Oct 30 2013**: Folders for all applications are now set up with README files.
+* **Jan 24 2014**: NASA approval for uploading the software proper.
+* **Jan 29 2014**: All the library *.tar.gz files are now in place; applications
+                   still to do.
+* **Feb 05 2014**: All straightforward applications have been uploaded with simple
+                   build scripts.
+* **Feb 10 2014**: UPDATE_GRID has been added; it and GSMOOTH now use xyzq_io, not
+                   the earlier cfd_io_package.
+* **Jun 30 2014**: Someone needed the DECONSTRUCT utility.  A few updates since
+                   Feb 10 include solid angle utilities in ugridlib, a handful of
+                   functions in special_functions, and a reworked form of the
+                   HEMISPHERES_OF_SIGHT application that defines lines of sight
+                   at a point on a convex body via a triangulated quadrant of a
+                   hemisphere rather than via latitude/longitude discretization.
+* **Jul 03 2014**: TRI_TO_TRI has been added; a triangulation_io glitch has been
+                   corrected.
+* **Aug 07 2014**: EXTRACT_BLAYER_DATA has been added to the BLAYER folder.
+* **Aug 14 2014**: Optimal_Interpolation now contains the package for treating
+                   unstructured data as modified at NASA Ames from Alexander
+                   Barth's original, following NASA approval of its added
+                   BSD 2-Clause License.
+* **Sep 05 2014**: FILTER_LINES and MERGE_TABLES have been added.
+* **Sep 24 2014**: Traj_Fit has been added.  It curve-fits heat flux or pressure
+                   pulse data using f(rho(t),V(t)) = C rho(t)**m V(t)**n within
+                   the QNMDRIVER2 framework, as might be needed for TPS sizing
+                   at an entry vehicle body point from selected CFD data points.
+* **Oct 03 2014**: The table_io module used by Traj_Fit has been updated.
+* **Oct 22 2014**: The triangulation_io package has been extended with options
+                   for calculation of area, volume, CM, and moments of inertia.
+                   See the new TRIANGULATION_TOOL for driving these options
+                   along with shift/scale/rotate options.
+* **Nov 17 2014**: Unstructured volume analogues of unstructured surface
+                   utilities have been added to triangulation_io and are
+                   driven by TRIANGULATION_TOOL.
+* **Mar 18 2015**: An apparently inconsequential glitch in BLAYER has been
+                   remedied.  This version can also read [unformatted] volume
+                   datasets to speed processing of large-grid cases.
+* **Mar 13 2015**: OUTBOUND now has an option to applied a CONSTANT margin
+                   as a way of moving the forebody boundary a little while
+                   barely affecting the wake boundary.
+* **Apr 15 2015**: The ADT rapid search package (/adt) now has 2-space multi-
+                   block curve analogues of the 3-space structured multiblock
+                   surface grid utilities.  LINES_OF_SIGHT_2D uses these to
+                   deal with reflected axisymmetric 2-space volume grid.
+                   SURFACE_INTERP_2D has been added, using the same 2-space
+                   ADT utilities.
+* **Aug 23 2016**: TET_INTERP has been added to interpolate tetrahedral volume
+                   data to a structured multiblock grid.
+* **Mar 17 2017**: SORT_ROWS (added Feb 14) has been extended to allow more
+                   than one numeric string in a text column, and to allow
+                   output in descending order if desired.
+                   Other recent refinements: COLUMNEDIT now allows extraction
+                   of more than one column at a time; the table_io module has
+                   an updated table_io_read_alpha utility prompted by SORT_ROWS
+                   that handles the case of all lines/rows treated as text and
+                   having the same number of columns (with no header records
+                   assumed).  Previously, all rows were interpreted as header
+                   records, meaning the table appeared empty.
+* **Jun 23 2017**: NEQAIR_DATA, NEQAIR_Integration, and PREPARE_NEQAIR_DATA
+                   have been added to assist radiation calculations with
+                   NEQAIR.  NEQAIR itself should be obtained through the
+                   Commercial Technology Office at NASA Ames Research Center.
+* **Jan 04 2018**: Added A2B utility.  Since June, minor changes have been
+                   made to GU, BLAYER, LINES_OF_SIGHT, SHOCK_STAND_OFF, and
+                   OUTBOUND.
+* **Jun 06 2018**: Added Aero_Coefs application (supplement to DPLR's Postflow).
+                   Since January, updates have been made to geomlib, gridlib,
+                   progtools, searchlib, CAPSULE_GRID, CONVERTQ, GU, HEMISPHERES_-
+                   OF_SIGHT, NEQAIR_Integration, RADIAL_INTERP, and RESHAPE3D.
+* **Sep 19 2018**: Added EXTRACT_BLOCKS_2D and EXTRACT_FUNCTIONS; xyq_io and f_io
+                   were missing from the xyzq_io folder; since June, several
+                   triangulation utilities have been extended to overcome any
+                   single-zone assumptions, NEQAIR_Integration has been improved,
+                   and POLAR_INTERP has had an option added to generate spoked
+                   body points (but see also CAPSULE_SPOKES, which had been over-
+                   looked here as well).
+* **Nov 07 2018**: Added SLOS (structured grid form of USLOS for lines of sight).
+* **Mar 07 2021**: Release updated CMake build system. Move repository to NASA's
+                   public [GitHub](https://www.github.com/nasa/cfdtools). Various
+                   small improvements to `radial_interp`, `refine`, `capsule_grid`,
+                   and `prepare_neqair_data`.
