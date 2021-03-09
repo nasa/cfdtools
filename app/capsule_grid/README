@@ -56,7 +56,7 @@ details.
 11/30/2019    "    "      A pitot tube case from Dinesh revealed that an
                           input generatrix did not have the scale factor
                           applied as for analytic cases. Rectified now.
-01/17/2019    "    "      Minor tweaks to the "umbrella" case for it to
+01/17/2020    "    "      Minor tweaks to the "umbrella" case for it to
                           work in the absence of a rounded shoulder aft
                           of the underlying cone and a nose cap larger
                           than that cone.
