@@ -11,6 +11,8 @@ as columns or for use as a PLOT3D file.
                           generating a normal from adjacent radial grid
                           points.
 06/30/16    "      "      2D/3D choice now; higher-precision output.
+06/04/20    "      "      Added two-sided stretching alternative to uniform
+                          point distribution.
 
 David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
                 Now with AMA, Inc. at ARC.
