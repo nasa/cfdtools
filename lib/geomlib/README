@@ -30,6 +30,7 @@ and handle_flatness, for broadening high-curvature regions onto flat regions.
 
 angle2d.f90          ! 2-space angle at point i between adjacent segments
 angle_between_planes ! Angle between planes defined by two triangles
+angle_between_vectors! Angle between two vectors in 3-space
 arcs2d.f             ! Normalized arcs for a surface grid stored as triples
 arcs3d.f             ! Normalized arcs for a volume  grid stored as triples
 area3.f              ! 3-space triangle area; cross-products/determinants
@@ -47,6 +48,7 @@ circle_slope.f90     ! Find the point on a circle with a specified slope
 cross.f              ! Cross product vector of two 3-space vectors
 curv2d.f             ! Signed curvature(s) for a 2-space curve
 curv3d.f             ! Arc-length-based curvature(s) for a 3-space curve
+curve_diffs          ! Shortest distances between two 2-space curves
 detect_flatness.f90  ! Detect low/zero-curvature regions in a distribtion
 detect_vertices.f90  ! Detect 1-point spikes in a curvature distribution
 distptol.f           ! Perpendicular dist. from a point to an n-space line
@@ -80,6 +82,7 @@ rotate2d.f           ! Rotate 2-space point(s) about a 2-sp. pt. in place
 rotate3d.f           ! Rotate 3-space point(s) about a 3-sp. pt. in place
 rotate_xyz.f90       ! Variant of ROTATE3D for xyz(1:3) triple(s)
 solid_angle_quad.f90 ! Solid angle element at a point for quad. cell (i,j)
+solid_angle_quadrature_4  ! Integn. w.r.t. solid angle at P over a quad. patch 
 surface_normal.f90   ! (Careful) unit normal to a structured surface
 tri_normal_and_area.f90   ! Unit normal, area of surface triangulation cell
 unitnorm.f           ! Unit normals at points defining a 2-space curve
