@@ -27,6 +27,10 @@
 !                            to the grid coordinates (only) to improve
 !                            curvature continuity on geometric surfaces.
 !                            Block boundary effects are still likely.
+!  07/28/20     "      "     The algebraic method 1 does not preserve smoothly
+!                            varying cell spacings.  Introduce the technique of
+!                            ARBDIS in an attempt to do so.  It seems to work
+!                            well with the algebraic results as a starting soln.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -74,7 +78,7 @@
    integer,   parameter :: lunerr = 6
    integer,   parameter :: ngeometric = 2      ! No option for partial geometric
    real,      parameter :: growth_rate = 1.01  ! Not used
-   real,      parameter :: one = 1., zero = 0.
+   real,      parameter :: half = 0.5, one = 1., zero = 0.
    logical,   parameter :: false  = .false., true = .true.
    character, parameter :: routine * 20 = 'densify_grid_block: '
    character, parameter :: method * 1 = 'M'    ! Monotonic spline fits safeguard
@@ -87,6 +91,7 @@
    logical :: flowdata, new
    real, allocatable, dimension (:)       :: sold, xold, yold, zold, qold
    real, allocatable, dimension (:)       :: snew, xnew, ynew, znew, qnew, fp
+   real, allocatable, dimension (:)       :: smid_in, spacing_in, work
    real, allocatable, dimension (:,:,:)   :: xi, yi, zi, xij, yij, zij
    real, allocatable, dimension (:,:,:,:) :: qi, qij
 
@@ -137,6 +142,7 @@
 
       if (method_i == 1) then  ! Same relative spacing/different arc lengths
          r = real (ni - 1) / real (mi - 1)
+         allocate (smid_in(ni+1), spacing_in(ni+1), work(5*mi))
       else
          ! Method 2: retain input d1s; adjust d2s appropriately
       end if
@@ -163,6 +169,37 @@
                      snew(i) = (one - p) * sold(ip) + p * sold(ip+1)
                   end do
                   snew(mi) = s_total
+
+!                 The above does not guarantee preservation of the smoothly
+!                 varying cell growth rates/cell spacings that are presumed
+!                 to exist in the input grid.  Use the input cell spacings as
+!                 the shape function ARBDIS employs to impose a desired type
+!                 of point distribution (as in CURVDIS).  Moreover, use the
+!                 above algebraic result as a starting guess:
+
+                  do i = 2, ni
+                     smid_in(i)    = (sold(i) + sold(i-1))*half
+                     spacing_in(i) =  sold(i) - sold(i-1)
+                  end do
+
+!                 Avoid extrapolation off the ends of the shape function:
+
+                  smid_in(1) = zero;  smid_in(ni+1) = s_total
+                  call linear_interp (smid_in(2),    spacing_in(2),    &
+                                      smid_in(3),    spacing_in(3),    &
+                                      smid_in(1),    spacing_in(1))
+                  call linear_interp (smid_in(ni-1), spacing_in(ni-1), &
+                                      smid_in(ni),   spacing_in(ni),   &
+                                      smid_in(ni+1), spacing_in(ni+1))
+
+                  call arbdis (mi, zero, s_total, ni+1, smid_in, &
+                              spacing_in, 'I', -lunerr, work, snew, ier)
+                  if (ier /= 0) then
+                     write (lunerr, '(a, i2, /, a, 3i5)') &
+                        ' *** densify_grid_block: Bad ier from arbdis:', ier, &
+                        '     i direction; block, j, k:', ib, j, k
+                     go to 99
+                  end if
 
                case (2) ! Existing d1 everywhere
 
@@ -221,6 +258,7 @@
       end do ! Next k
 
       deallocate (xold, yold, zold, sold, xnew, ynew, znew, snew)
+      if (method_i == 1) deallocate (smid_in, spacing_in, work)
 
       if (flowdata) deallocate (qold, qnew, fp)
 
@@ -265,6 +303,7 @@
 
       if (method_j == 1) then  ! Same relative spacing/different arc lengths
          r = real (nj - 1) / real (mj - 1)
+         allocate (smid_in(nj+1), spacing_in(nj+1), work(5*mj))
       else
          ! Method 2: retain input d1s; adjust d2s appropriately
       end if
@@ -291,6 +330,37 @@
                      snew(j) = (one - p) * sold(jp) + p * sold(jp+1)
                   end do
                   snew(mj) = s_total
+
+!                 The above does not guarantee preservation of the smoothly
+!                 varying cell growth rates/cell spacings that are presumed
+!                 to exist in the input grid.  Use the input cell spacings as
+!                 the shape function ARBDIS employs to impose a desired type
+!                 of point distribution (as in CURVDIS).  Moreover, use the
+!                 above algebraic result as a starting guess:
+
+                  do j = 2, nj
+                     smid_in(j)    = (sold(j) + sold(j-1))*half
+                     spacing_in(j) =  sold(j) - sold(j-1)
+                  end do
+
+!                 Avoid extrapolation off the ends of the shape function:
+
+                  smid_in(1) = zero;  smid_in(nj+1) = s_total
+                  call linear_interp (smid_in(2),    spacing_in(2),    &
+                                      smid_in(3),    spacing_in(3),    &
+                                      smid_in(1),    spacing_in(1))
+                  call linear_interp (smid_in(nj-1), spacing_in(nj-1), &
+                                      smid_in(nj),   spacing_in(nj),   &
+                                      smid_in(nj+1), spacing_in(nj+1))
+
+                  call arbdis (mj, zero, s_total, nj+1, smid_in, &
+                              spacing_in, 'I', -lunerr, work, snew, ier)
+                  if (ier /= 0) then
+                     write (lunerr, '(a, i2, /, a, 3i5)') &
+                        ' *** densify_grid_block: Bad ier from arbdis:', ier, &
+                        '     j direction; block, k, i:', ib, k, i
+                     go to 99
+                  end if
 
                case (2) ! Existing d1 everywhere
 
@@ -355,6 +425,7 @@
       end do ! Next k
 
       deallocate (xold, yold, zold, sold, xnew, ynew, znew, snew)
+      if (method_j == 1) deallocate (smid_in, spacing_in, work)
 
       if (flowdata) deallocate (qold, qnew, fp)
 
@@ -384,6 +455,7 @@
 
       if (method_k == 1) then  ! Same relative spacing/different arc lengths
          r = real (nk - 1) / real (mk - 1)
+         allocate (smid_in(nk+1), spacing_in(nk+1), work(5*mk))
       else
          ! Method 2: retain input d1s; adjust d2s appropriately
       end if
@@ -410,6 +482,37 @@
                      snew(k) = (one - p) * sold(kp) + p * sold(kp+1)
                   end do
                   snew(mk) = s_total
+
+!                 The above does not guarantee preservation of the smoothly
+!                 varying cell growth rates/cell spacings that are presumed
+!                 to exist in the input grid.  Use the input cell spacings as
+!                 the shape function ARBDIS employs to impose a desired type
+!                 of point distribution (as in CURVDIS).  Moreover, use the
+!                 above algebraic result as a starting guess:
+
+                  do k = 2, nk
+                     smid_in(k)    = (sold(k) + sold(k-1))*half
+                     spacing_in(k) =  sold(k) - sold(k-1)
+                  end do
+
+!                 Avoid extrapolation off the ends of the shape function:
+
+                  smid_in(1) = zero;  smid_in(nk+1) = s_total
+                  call linear_interp (smid_in(2),    spacing_in(2),    &
+                                      smid_in(3),    spacing_in(3),    &
+                                      smid_in(1),    spacing_in(1))
+                  call linear_interp (smid_in(nk-1), spacing_in(nk-1), &
+                                      smid_in(nk),   spacing_in(nk),   &
+                                      smid_in(nk+1), spacing_in(nk+1))
+                  
+                  call arbdis (mk, zero, s_total, nk+1, smid_in, &
+                              spacing_in, 'I', -lunerr, work, snew, ier)
+                  if (ier /= 0) then
+                     write (lunerr, '(a, i2, /, a, 3i5)') &
+                        ' *** densify_grid_block: Bad ier from arbdis:', ier, &
+                        '     k direction; block, i, j:', ib, i, j
+                     go to 99
+                  end if
 
                case (2) ! Existing d1 everywhere
 
@@ -473,6 +576,7 @@
       end do ! Next j
 
       deallocate (xold, yold, zold, sold, xnew, ynew, znew, snew)
+      if (method_k == 1) deallocate (smid_in, spacing_in, work)
 
       if (flowdata) deallocate (qold, qnew, fp)
 
@@ -483,5 +587,29 @@
    if (flowdata) deallocate (qij)
 
 99 return
+
+!  Internal procedure:
+
+   contains
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine linear_interp (x1, y1, x2, y2, xinterp, yinterp)  ! Obvious ...
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!     Arguments:
+
+      real, intent (in)  :: x1, y1, x2, y2, xinterp
+      real, intent (out) :: yinterp
+
+!     Local variables:
+
+      real :: slope
+
+!     Execution:
+
+      slope   = (y2 - y1)/(x2 - x1)
+      yinterp = y1 + slope*(xinterp - x1)
+
+      end subroutine linear_interp
 
    end subroutine densify_grid_block

@@ -100,6 +100,10 @@ History:
                            does. Therefore, treat all integer multipliers
                            the same way.  Remember, even point counts are
                            still likely for cell-centered data.
+  07/28/20     "      "    The algebraic method 1 does not preserve smoothly
+                           varying cell spacings.  Introduce the technique of
+                           ARBDIS in an attempt to do so.  It seems to work
+                           well with the algebraic results as a starting soln.
 
 Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
          Now with AMA, Inc. at NASA ARC.
