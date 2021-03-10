@@ -59,6 +59,7 @@ inverse_parabola.f Variant of QINTRP for upper arm of parabola y^2 = ax + b
 lcsfit.f           Local cubic spline for (x,y) data; monotonic option
 lcsfit2.f90        Normalizes/denormalizes (x,y) data around an LCSFIT call
 lcsinverse.f90     Inverse form of monotonic LCSFIT (x for y in [y2, y3])
+legendre.f90       Linear least squares fir of legendre polynomials 0:n
 line1d.f           TABLE1 in subroutine form; linear interpln. | extrapoln.
 lint1d.f           Multifunction variant of LINE1D
 lintrp.f           Variant suited to linear lofting between wing sections
