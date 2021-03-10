@@ -23,7 +23,7 @@
 !  History:
 !
 !     01/11/00  D. Saunders  Initial implementation (PLOT3D grid data range),
-!                            using Mark Rimlinger's CFD_IO_PACKAGE.
+!               ELORET Corp. using Mark Rimlinger's CFD_IO_PACKAGE.
 !     08/27/03   "      "    Provide data range for each block in addition to
 !                            the data range over the block range.
 !                            This can help identify (say) which surface
@@ -37,10 +37,12 @@
 !     12/17/10  D. Saunders  Switch from cfd_io_package to xyzq_io package,
 !               ERC, Inc.    and add handling of function files as needed to
 !               NASA ARC     locate maximum residuals.
+!     03/28/20  D. Saunders  Tabulate function minima as well as maxima,
+!               AMA, Inc.    prompted by a mystery involving FLOW_INTERP output.
 !
 !  Author:
 !
-!     David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+!     David Saunders, AMA, Inc. at NASA Ames Research Center, CA
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -58,7 +60,9 @@
       lunf   = 2, &
       luntab = 3, &
       lunkbd = 5, &
-      luncrt = 6
+      luncrt = 6, &
+      lunmax = 7, &
+      lunmin = 8
 
    real, parameter :: &
       one  = 1.0, &
@@ -76,7 +80,7 @@
    integer :: &
       i, i1, i2, ic, ios, iq, j, j1, j2, jc, k1, k2, lun, n, n1, n2, nblock, &
       nf, ni, nj, nk, &
-      imat, jmat, kmat, imax, jmax, kmax
+      imat, jmat, kmat, imax, jmax, kmax, imit, jmit, kmit, imin, jmin, kmin
 
    real :: &
       overall_length_scale, p, q, unit_normal(3), &
@@ -270,7 +274,7 @@
             call scan_grid_block (grid(n))
 
             do lun = luntab, luncrt, luncrt - luntab
-               write (lun, '(i4, 1p, 3(e18.7, e16.7))') &
+               write (lun, '(i4, 3(es18.7, es16.7))') &
                   n, xmin, xmax, ymin, ymax, zmin, zmax
             end do
 
@@ -283,15 +287,15 @@
       end if
 
       overall_length_scale = &
-         sqrt ((xmat - xmit) ** 2 + (ymat - ymit) ** 2 + (zmat - zmit) ** 2)
+         sqrt ((xmat - xmit)**2 + (ymat - ymit)**2 + (zmat - zmit)**2)
 
       do lun = luntab, luncrt, luncrt - luntab
 
-         write (lun, '(/, (2x, a, 1p, e16.7, e18.7))') &
+         write (lun, '(/, (2x, a,  es16.7, es18.7))') &
             'Overall Xmin & Xmax:', xmit, xmat, &
             '        Ymin & Ymax:', ymit, ymat, &
             '        Zmin & Zmax:', zmit, zmat
-         write (lun, '(/, a, 1p, e15.7)') &
+         write (lun, '(/, a, es15.7)') &
             '  Overall length scale:', overall_length_scale
       end do
 
@@ -347,20 +351,26 @@
 
 !     Processing one grid and function block at a time, tabulate the maximum
 !     value of the indicated function for each block, and its coordinates.
+!     Tabulate the minimum value similarly.
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !     Local variables:
 
-      integer :: i, j, k, n, nf, nmat, npts
+      integer :: i, j, k, n, nf, nmat, nmit, npts
       real    :: f, fmat  ! Max. over all blocks (t = total)
+      real    ::    fmit  ! Min. over all blocks (t = total)
       real    :: fmax     ! Max. within a block
+      real    :: fmin     ! Min. within a block
 
 !     Execution:
 
-      open (luntab, file='max_function_values.txt', status='unknown')
+      open (lunmax, file='max_function_values.txt', status='unknown')
+      open (lunmin, file='min_function_values.txt', status='unknown')
 
-      write (luntab, '(2a)') 'Block         Maximum    I    J    K',           &
+      write (lunmax, '(2a)') 'Block         Maximum    I    J    K',           &
+                 '               X               Y               Z'
+      write (lunmin, '(2a)') 'Block         Minimum    I    J    K',           &
                  '               X               Y               Z'
 
       call xyz_header_io (1, lung, formatted_g, nblock, grid, ios)
@@ -369,7 +379,7 @@
       call q_header_io (1, lunf, formatted_f, nblock, nf, grid, ios)
       if (ios /= 0) go to 99
 
-      fmat = -huge (fmat)
+      fmat = -huge (fmat);  fmit = -fmat
 
       do n = 1, nblock
 
@@ -392,7 +402,7 @@
          call q_block_io (1, lunf, formatted_f, nf, ni, nj, nk, grid(n)%q, ios)
          if (ios /= 0) go to 99
 
-         fmax = -huge (fmax)
+         fmax = -huge (fmax);  fmin = -fmax
          do k = 1, nk
             do j = 1, nj
                do i = 1, ni
@@ -402,27 +412,42 @@
                       xmax = grid(n)%x(i,j,k)
                       ymax = grid(n)%y(i,j,k)
                       zmax = grid(n)%z(i,j,k)
+                  else if (f < fmin) then
+                      fmin = f;  imin = i;  jmin = j;  kmin = k
+                      xmin = grid(n)%x(i,j,k)
+                      ymin = grid(n)%y(i,j,k)
+                      zmin = grid(n)%z(i,j,k)
                   end if
                end do
             end do
          end do
 
-         write (luntab, '(i5, 1p, e16.8, 3i5, 3e16.8)') &
+         write (lunmax, '(i5, es16.8, 3i5, 3es16.8)') &
             n, fmax, imax, jmax, kmax, xmax, ymax, zmax
+         write (lunmin, '(i5, es16.8, 3i5, 3es16.8)') &
+            n, fmin, imin, jmin, kmin, xmin, ymin, zmin
 
          if (fmax > fmat) then
              fmat = fmax;  imat = imax;  jmat = jmax;  kmat = kmax;  nmat = n
              xmat = xmax;  ymat = ymax;  zmat = zmax
          end if
 
+         if (fmin < fmit) then
+             fmit = fmin;  imit = imin;  jmit = jmin;  kmit = kmin;  nmit = n
+             xmit = xmin;  ymit = ymin;  zmit = zmin
+         end if
+
          deallocate (grid(n)%x, grid(n)%y, grid(n)%z, grid(n)%q)
 
       end do
 
-      write (luntab, '(/, i5, 1p, e16.8, 3i5, 3e16.8)') &
+      write (lunmax, '(/, i5, es16.8, 3i5, 3es16.8)') &
          nmat, fmat, imat, jmat, kmat, xmat, ymat, zmat
+      write (lunmin, '(/, i5, es16.8, 3i5, 3es16.8)') &
+         nmit, fmit, imit, jmit, kmit, xmit, ymit, zmit
 
-      close (luntab)
+      close (lunmax)
+      close (lunmin)
 
       deallocate (grid)
 
@@ -663,7 +688,7 @@
             edgek = sqrt (edgek)
          end if
 
-         write (luntab, '(i4, 3x, 1p, 3i4, 3(e15.6, 3i4))')      &
+         write (luntab, '(i4, 3x, 3i4, 3(es15.6, 3i4))')      &
             n, ni, nj, nk, edgei, ii, ji, ki, edgej, ij, jj, kj, &
             edgek, ik, jk, kk
 

@@ -19,22 +19,22 @@ Implementation Notes:
 
 History:
 
-   01/11/00  D. Saunders  Initial implementation (PLOT3D grid data range),
-                          using Mark Rimlinger's CFD_IO_PACKAGE.
-   08/27/03   "      "    Provide data range for each block in addition to
-                          the data range over the block range.
-                          This can help identify (say) which surface
-                          patches are which in a surface paneling.
-   10/14/03   "      "    Tabulate block face corner (x,y,z)s as a visual
-                          aid to determining connectivity.
-   12/03/03   "      "    Tabulate the shortest cell edges for all blocks
-                          in all index directions.
-   10/20/04   "      "    Show the local normal if a single surface point
-                          is specified when a subblock is scanned.
-   12/17/10  D. Saunders  Switch from cfd_io_package to xyzq_io package,
-             ERC, Inc.    and add handling of function files as needed to
-             NASA ARC     locate maximum residuals.
-
-Author:
-
-   David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+!     01/11/00  D. Saunders  Initial implementation (PLOT3D grid data range),
+!               ELORET Corp. using Mark Rimlinger's CFD_IO_PACKAGE.
+!     08/27/03   "      "    Provide data range for each block in addition to
+!                            the data range over the block range.
+!                            This can help identify (say) which surface
+!                            patches are which in a surface paneling.
+!     10/14/03   "      "    Tabulate block face corner (x,y,z)s as a visual
+!                            aid to determining connectivity.
+!     12/03/03   "      "    Tabulate the shortest cell edges for all blocks
+!                            in all index directions.
+!     10/20/04   "      "    Show the local normal if a single surface point
+!                            is specified when a subblock is scanned.
+!     12/17/10  D. Saunders  Switch from cfd_io_package to xyzq_io package,
+!               ERC, Inc.    and add handling of function files as needed to
+!               NASA ARC     locate maximum residuals.
+!     03/28/20  D. Saunders  Tabulate function minima as well as maxima,
+!               AMA, Inc.    prompted by a mystery involving FLOW_INTERP output.
+!
+!  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center
