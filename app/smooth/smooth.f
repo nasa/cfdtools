@@ -195,6 +195,7 @@ C    ICSSCU     IMSL     Simple smoothing spline.
 C    ICSVKU     IMSL     Least squares spline - variable knots.
 C    IQHSCU     IMSL     Interpolation by quasi-Hermite piecewise polynomials.
 C    LCSFIT   INTERPLIB  Local cubic spline method (nonparam. ver. of PLSFIT).
+C    LEGENDRE INTERPLIB  Fit/evaluate a linear combination of Legendre polynoms.
 C    LINE1D   INTERPLIB  Subroutine form of TABLE1.
 C    LSFIT1   INTERPLIB  Local least squares spline method.
 C    MSFIT    INTERPLIB  Monotonic cubic spline fit.  See also PLSFIT.
@@ -232,7 +233,7 @@ C    Fortran 90 (OpenVMS, IRIX, Linux)
 C
 C  HISTORY:
 C
-C    DAS   06/10/83   Initial design and code (ICSSCU, PNFIT; new frame
+C    DAS   06/10/83   Initial design and code (ICSSCU, PNFIT; new plot frame
 C                     for each method - multiple curves per frame).
 C    CLH   06/16/83   Added ICSFKU option.
 C    DAS   06/20/83   Added FSFIT  option for periodic data.
@@ -366,6 +367,7 @@ C                     No more use of 1P: ES formatting is preferable.
 C    DAS   11/23/16   Make the comment character # instead of !, for Tecplot
 C                     compatibility.  This required RDXYZ2 variant with COMMENT
 C                     as an argument.  Suppress output of deviations by default.
+C    DAS   07/01/20   Added LEGENDRE option.
 C
 C  AUTHOR:  David Saunders, Sterling Software/NASA Ames, Moffett Field, CA
 C                  Now with AMA, Inc. at NASA ARC.
@@ -391,8 +393,9 @@ C     ----------
       INTEGER, PARAMETER ::
      >   IMODE = 0, IOMIT = 0, LUNDAT = 1, LUNXGR = 2, LUNPLT = 3,
      >   LUNDEV = 4, LUNKBD = 5, LUNCRT = 6, LUNLOG = 7, LUNOUT = 8,
-     >   MXFSFIT = 20, MXLTYP = 6, MXMENU = 22, MXNXK = 28, MXNDEG = 12,
-     >   MXLSFIT1 = 100, ! Must match hard-coded limit in LSFIT1
+     >   MXFSFIT = 20, MXLTYP = 6, MXMENU = 23, MXNXK = 28, MXNDEG = 12,
+     >   MXLEGENDRE = 20, ! Presumably too-high a degree isn't wise
+     >   MXLSFIT1 = 100,  ! Must match hard-coded limit in LSFIT1
      >   MXPTS = 100000, MXPLOT = MXPTS, MXVEC = 10, MXWAG = 20,
      >   MXWORK = 2000000, MXFCOF = (MXPTS-1)/2, NDIM = 2
 
@@ -418,6 +421,7 @@ C     ----------
 
       REAL
      >   A (0:MXFCOF), B (0:MXFCOF), C (0:MXWAG), COEFS (MXPTS,3),
+     >   LEGENDRE_COEFS(0:MXLEGENDRE), ! For linear combination of P0:PN
      >   SCALE (2), SHIFT (2), WGHTS (MXPTS), WORK (MXWORK), X (MXPTS),
      >   X0 (MXPTS), XEVAL (MXPTS), XEVAL0 (MXPTS), XPLOT (MXPLOT),
      >   XK (MXNXK), XNORM (MXPTS), Y (MXPTS), Y0 (MXPTS), YDEV (MXPTS),
@@ -459,15 +463,16 @@ C     -----------
      >   ALPHA
 
       EXTERNAL
-     >   ALPHA,    AEBXPLUSC, AXBECX,   BEVAL,     BOUNDS,   COPY,
-     >   CSEVAL,   CSFIT,     CURV1,    CURV2,     FSCOEF,   FSEVAL,
-     >   FSFIT,    GETLINE,   GETSCALE, GETXFORM,  ICSEVU,   ICSFKU,
-     >   ICSSCU,   ICSVKU,    LCSFIT,   LINE1D,    LSFIT1,   MSFIT,
-     >   OPENER,   PLSFIT,    PNEVAL,   PNFIT,     PROTECT,  PSFIT,
-     >   PSTVAL,   QHSFIT,    QINTERP,  QPLCRV,    QPLFRM,   QPLNXY,
-     >   RDLIST,   RDXYZ2,    READI,    READR,     READS,    READY,
-     >   SECOND,   SELECT,    SHIFTX,   SMOOTHXYZ, TABLE1,   TOGGLE,
-     >   TSUBJ,    UGETIO,    USESCALE, VECFIT,    WAGFIT,   XGRID
+     >   ALPHA,    AEBXPLUSC, AXBECX,   BEVAL,     BOUNDS,    COPY,
+     >   CSEVAL,   CSFIT,     CURV1,    CURV2,     FSCOEF,    FSEVAL,
+     >   FSFIT,    GETLINE,   GETSCALE, GETXFORM,  ICSEVU,    ICSFKU,
+     >   ICSSCU,   ICSVKU,    LCSFIT,   LEGENDRE,  LINE1D,    LSFIT1,
+     >   MSFIT,    OPENER,    PLSFIT,   PNEVAL,    PNFIT,     PROTECT,
+     >   PSFIT,    PSTVAL,    QHSFIT,   QINTERP,   QPLCRV,    QPLFRM,
+     >   QPLNXY,   RDLIST,    RDXYZ2,   READI,     READR,     READS,
+     >   READY,    SECOND,    SELECT,   SHIFTX,    SMOOTHXYZ, TABLE1,
+     >   TOGGLE,   TSUBJ,     UGETIO,   USESCALE,  VECFIT,    WAGFIT,
+     >   XGRID
 
 C     Storage:
 C     --------
@@ -522,7 +527,8 @@ C     --------
      >' 19:  LSFIT1 - local lst. sqrs. polynomial/spline hybrid method',
      >' 20:  QINTERP- quadratic interpolation                         ',
      >' 21:  AXBECX - or AEBXPLUSC exponential curve fits (lst. sqrs.)',
-     >' 22:  AX^B+C - power law curve fit (least squares)             '/
+     >' 22:  AX^B+C - power law curve fit (least squares)             ',
+     >' 23:  LEGENDRE (linear combination of Legendre polynomials 0:n)'/
 
 
 C     Execution
@@ -916,7 +922,7 @@ CCCC           LEASTSQRS = TRUE  ! No; points are smoothed in-place
 
                   WRITE (LEGEND(38:38), '(I1)') NIT
 
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
 
                END IF
 
@@ -957,7 +963,7 @@ C              Spline with smoothing parameter >= 0.
 
                   LEGEND = 'ICSSCU: SM = z.zzzzzzz'
                   WRITE (LEGEND (14:22), '(ES9.3)') SM
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                CALL SECOND (TIMEA)
@@ -1029,7 +1035,7 @@ C              ICSFKU to fail for reasons unknown at time of writing.)
 
                   LEGEND = 'ICSFKU:  INCR0 = nnn'
                   WRITE (LEGEND (18:20), '(I3)') INCR0
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                CALL SECOND (TIMEA)
@@ -1101,7 +1107,7 @@ C              iteratively to optimize the location of the knots.
 
                   LEGEND = 'ICSVKU: Initial INC = nn'
                   WRITE (LEGEND (23:24), '(I2)') INCR0
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                CALL SECOND (TIMEA)
@@ -1176,7 +1182,7 @@ C              Polynomial fit by linear least squares (QR factorization)
                   LEGEND = 'PNFIT: Degree = nn'
                   WRITE (LEGEND (17:18), '(I2)') NDEG
                   IF (THRU00) WRITE (LEGEND (19:24),' (''; C0=0'')')
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                CALL SECOND (TIMEA)
@@ -1230,7 +1236,7 @@ CCCCCC         IF (ARROW /= ONE) GO TO 830  ! Allow duplicate absscissas
                   IF (NFCREQ < 0 .OR. NFCREQ > MXFSFIT) GO TO 460
                   LEGEND = 'FSFIT:  N = nn'
                   WRITE (LEGEND (13:14), '(I2)') NFCREQ
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                NFCOF = MIN (NFCREQ, (NX - 2) / 2)
@@ -1312,7 +1318,7 @@ C              Macintosh version in mind.)
                   LEGEND = 'FSERIES, mode m:  N = nn'
                   WRITE (LEGEND (15:15), '(I1)') MODE
                   WRITE (LEGEND (23:24), '(I2)') NFCOF
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                CALL SECOND (TIMEA)
@@ -1360,7 +1366,7 @@ C              recurrence relation:
                   IF (NFCREQ < 0 .OR. NFCREQ > MXFCOF) GO TO 470
                   LEGEND = 'FSCOEF:  N = nnn'
                   WRITE (LEGEND (14:16), '(I3)') NFCREQ
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                M = NX - 1
@@ -1446,7 +1452,7 @@ C              Interpolation by quasi-Hermite spline:
                   METHOD = REPLY
                END IF
  
-               WRITE (LUNLOG, 1100) LEGEND
+               WRITE (LUNLOG, 1100) TRIM (LEGEND)
 
                CALL SECOND (TIMEA)
 
@@ -1530,7 +1536,7 @@ C              and proper handling of degenerate cases:
                      WRITE (LEGEND (23:23), ' (I1)') IENDR
                   END IF
 
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                IF (PERIODIC) THEN
@@ -1710,7 +1716,7 @@ C              The Xs must be on [0,1], either originally, or by normalization:
                   END DO
                   LEGEND = 'WAGFIT:  N = nn'
                   WRITE (LEGEND (14:15), '(I2)') NDEG
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
 C ...          Wagner functions are zero at X = 0. and 1.
@@ -1856,7 +1862,7 @@ C ...             Already evaluated at original Xs in VECFIT.
                CALL SECOND (TIMEB)
 
                WRITE (LEGEND (13:15), '(I3)') NDEG
-               WRITE (LUNLOG, 1100) LEGEND
+               WRITE (LUNLOG, 1100) TRIM (LEGEND)
 
                CALL PRCOEF (1, NDEG, C(1), IDATASET,
      >                      'Linear coefficients:', IOMIT)
@@ -1901,7 +1907,7 @@ C              first derivative end conditions (NCAR, 1972):
                      IF (QUIT) GO TO 710
                   END IF
 
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                CALL SECOND (TIMEA)
@@ -1938,7 +1944,7 @@ C              Monotonic cubic interpolating spline:
 
                IF (FIRSTSET) THEN
                   LEGEND = 'MSFIT'
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                CYCLIC = FALSE
@@ -2009,7 +2015,7 @@ C              Parametric local interpolating spline (open or closed curves).
      >               LUNKBD, CLOSED, DEFAULT, QUIT)
                   IF (QUIT) GO TO 710
 
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
 
                END IF
 
@@ -2160,7 +2166,7 @@ C              Local least squares / spline hybrid method.
      >               LUNKBD, CYCLIC, DEFAULT, QUIT)
                   IF (QUIT) GO TO 710
 
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
 
                END IF
 
@@ -2212,7 +2218,7 @@ C              Quadratic interpolation (weighted average where possible).
 
                IF (FIRSTSET) THEN
                   LEGEND = 'QINTERP'
-                  WRITE (LUNLOG, 1100) LEGEND
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
                END IF
 
                CALL SECOND (TIMEA)
@@ -2438,6 +2444,56 @@ C              Power law curve fit as for certain viscous flow properties.
 
                CALL PRCOEF (1, 3, C (1), IDATASET, 'A, B, C:', IOMIT)
 
+            CASE (23)  ! *** LEGENDRE ***
+
+C              Linear combination of Legendre polynomials 0:n.
+
+               IF (FIRSTSET) THEN
+                  NDEG = 0
+                  DO WHILE (NDEG < 1 .OR. NDEG > MXLEGENDRE)
+                     NDEG = 6
+                     CALL READI (LUNCRT,
+     >           'To fit Legendre polynomials 0:N, enter N. <CR> = 6: ',
+     >                           LUNKBD, NDEG, DEFAULT, QUIT)
+                     IF (QUIT) GO TO 710
+                  END DO
+                  LEGEND = 'LEGENDRE:  N = nn'
+                  WRITE (LEGEND (16:17), '(I2)') NDEG
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
+
+                  LEASTSQRS = TRUE
+                  CLOSED    = FALSE
+               END IF
+
+               CALL SECOND (TIMEA)
+
+               CALL LEGENDRE (TRUE, NX, NDEG, X, Y, LEGENDRE_COEFS,
+     >                        SSQMIN, TRUE, NEVAL, XEVAL, YEVAL, IER)
+
+               WRITE (LUNCRT, '(A, I3, ES17.8)') 'IER, SSQMIN:', IER,
+     >            SSQMIN
+
+               IF (IER /= 0) GO TO 860
+
+CC             DO I = 1, NX
+CC                YFIT (I) = AE * X (I)**BE + CE
+CC             END DO
+
+               CALL LEGENDRE (FALSE, NX, NDEG, X, Y, LEGENDRE_COEFS,
+     >                        SSQMIN, TRUE, NX, X, YFIT, IER)
+
+               IF (PLTCRV) THEN
+CC                DO I = 1, NPLOT
+CC                   YPLOT (I) = AE * XPLOT (I)**BE + CE
+CC                END DO
+                  CALL LEGENDRE (FALSE, NX, NDEG, X, Y, LEGENDRE_COEFS,
+     >                           SSQMIN, TRUE, NPLOT, XPLOT, YPLOT, IER)
+               END IF
+
+               CALL SECOND (TIMEB)
+
+               CALL PRCOEF (0, NDEG, LEGENDRE_COEFS, IDATASET, 'COEFS:',
+     >                      IOMIT)
             END SELECT
 
 C:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

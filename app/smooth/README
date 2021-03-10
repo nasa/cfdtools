@@ -240,8 +240,13 @@ HISTORY:
                    X(1) and X(NX) but the abscissas need not be ordered.
   DAS   11/19/10   Added exponential curve fits AEBXPLUSC and ABXECX.
   DAS   11/23/10   Added power law curve fit AXBPLUSC.
-  DAS   12/28/10   Exponential & power law fits need not trap unordered
-                   data.
+  DAS   12/28/10   Exponential & power law fits need not trap unordered data.
+  DAS   06/17/16   Printed coefficients have more digits showing now.
+                   No more use of 1P: ES formatting is preferable.
+  DAS   11/23/16   Make the comment character # instead of !, for Tecplot
+                   compatibility.  This required RDXYZ2 variant with COMMENT
+                   as an argument.  Suppress output of deviations by default.
+  DAS   07/01/20   Added LEGENDRE option.
 
 AUTHOR:  David Saunders, Sterling Software/NASA Ames, Moffett Field, CA
-                         (now with ERC, Inc. at NASA ARC)
+         Now with AMA, Inc. at NASA ARC.
