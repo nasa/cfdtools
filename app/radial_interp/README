@@ -11,6 +11,12 @@ Radial_Interp Description:
 
    All files are PLOT3D grid and function files, formatted or unformatted.
 
+   Normally, an output volume grid has the k dimension of the input volume
+   grid, but this version has an option to redistribute the points in the
+   k direction, including changing their number.  The optional last line
+   of the control file contains three controls for doing this.  See the
+   History below.
+
 Options:
 
    (1) Interpolate a new volume grid from a given volume grid and a new
@@ -187,13 +193,36 @@ Control file format ('radial_interp.inp')
    --------------- MISCELLANEOUS CONTROLS -------------------
    1                      1 assumes consistent radial lines; 2 relaxes this
    T                      T = allow extrapolation; F = all (p,q)s in [0, 1]
-   0.0001                 Projected distance dtol for in/out cell searches
-   0.01  0.15             Optional ds1, ds2fraction:  ds1 > 0. means
-                          redistribute each radial line a la OUTBOUND.
+   0.0001                 E.g., dtol = 0.0001 m = distance tolerance for
+                          surface cell searches (same units as the grid)
+   newnk ds1 ds2fraction  Optional inputs to redistribute each radial line
+                          a la OUTBOUND.  GRID ONLY.  See NOTES below.
 
-   NOTE:  dtol < 0 means decay surface mismatches to zero at the outer
-          boundary.  dtol > 0 is usually preferable.
-
+   NOTES:  (1) dtol < 0 means decay surface mismatches to zero at the outer
+               boundary, else apply the same dx/dy/dz at each k;
+               note that the same differences is probably the right choice if
+               the new surface adds curvature, esp. at k = 2.
+           (2) DO NOT ATTEMPT TO REDISTRIBUTE THE RADIAL LINES IF A FLOW FILE IS PRESENT.
+               (One reason: Half-cell spacing at the wall.)
+           (3) If the optional last line is not present, the output radial
+               distribution matches that of the input grid; alternatively,
+               enter newnk = 0 and ds1 = -99. to suppress redistribution.
+               These optional controls allow changing the output nk (or not)
+               and/or the output radial distribution:
+               newnk = input nk is allowed (probably to impose a ds1 > 0.);
+               newnk = 2 means the most likely case: double the point count
+                         in the k direction; e.g., 65 --> 129;
+               newnk = 0 means the output nk is the same as the input nk;
+               newnk = some sensible positive integer means change nk to that newnk;
+                       ds1 = -1. is probably the right choice;
+               ds1 < -1. suppresses any redistribution;
+               ds1 = -1. means preserve the input relative spacing (probably
+                         for a different nk);
+               ds2 =  0. means preserve the input wall spacing;
+               ds2 >  0. means a fixed wall spacing everywhere;
+               ds2fraction is not used if ds1 = -1.;
+               otherwise, ds2fraction is applied to the interim 1-sided
+               stretching's outer spacing for 2-sided stretching
 Sponsor:
 
    TSA Reacting Flow Environments Branch, NASA Ames Research Center
@@ -262,8 +291,27 @@ History:
                   if it's ever called for.
    08/07/13   "   All ADT variants are now in a single module with generic
                   build_adt and search_adt interfaces.
+   03/19/18   "   Jeff Hill asked for an option to change the number of grid
+                  points in the radial direction, as convenient for the case
+                  of grid alignment within DPLR on a coarsened (say 222) then
+                  wanting to impose the next finer surface.  This calls for a
+                  111 volume output, not 112.  The optional last line of the
+                  control file now has three inputs, not two.  Only the grid
+                  is treated; expected usage allows FCONVERT to upsequence the
+                  flow solution.
+   03/22/18   "   The cases of an old (or no) optional last line in the control
+                  file did not turn off redistribution.  To suppress
+                  redistribution, omit the last line or enter (say) newnk = 0
+                  and ds1 = -99. with any ds2fraction.
+   03/23/18   "   The special case of newnk = 2 now means double the current k
+                  resolution, as in 65 --> 129.
+   04/27/18   "   The option to change nk, intended for vertex-centered grids only,
+                  led to unassigned flow interpolations.  Changing nk was supposed
+                  to be disallowed for flow solutions all along.
+   10/21/20   "   Variable newnk was not being defined as [old] nk when a function
+                  file is present (redistribution disallowed).
 
 Author:
 
-   David Saunders, ELORET Corporation/NASA Ames Research Center, CA
-                   (now with ERC, Inc./ARC)
+   David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA
+                   (then ERC, Inc./ARC; now AMA, Inc./ARC)

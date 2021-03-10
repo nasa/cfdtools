@@ -234,6 +234,7 @@
 !                    Changing nk was supposed to be disallowed for flow solutions all along.
 !     10/21/20   "   Variable newnk was not being defined as [old] nk when a function file is present (redistribution disallowed).
 !     11/7/20   JPH  Added flow solution redistribution logic. Fix bug in grid redistribution at the wall.
+!
 !  Author:
 !
 !     David Saunders, ELORET Corporation/NASA Ames Research Center, Moffett Field, CA  (then ERC, Inc./ARC; now AMA, Inc./ARC)
