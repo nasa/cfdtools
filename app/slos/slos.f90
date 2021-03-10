@@ -144,6 +144,31 @@
 !                               NORMALIZED BY THE LINE LENGTH IF THAT IS THE
 !                               INTERVAL EXPECTED TO CONTAIN THE INTERSECTION,
 !                               AS IT IS HERE, USING THE BOUNDING BOX DIAGONAL.
+!     07/21/2020    "    "      A "small" tolerance in transform_quadrant was
+!                               too big.  Body points near the nose (normally
+!                               not the case for full angular integration)
+!                               produced inaccurate rotation axes for the second
+!                               quadrant of the transformed unit hemisphere.
+!                               This led to irregular heat flux results near the
+!                               heatshield apex on the centerline, now fixed.
+!                               Avoiding a cross product of parallel unit
+!                               vectors (zero length vector) was the root cause.
+!     07/26/2020    "    "      Reluctant special-casing of the (0,0,0) body pt.
+!                               that proves pathological in the sense that the
+!                               associated surface grid cell is almost certain
+!                               to be a corner cell for which the existing
+!                               adjustment that forces the body normal to be in
+!                               the symmetry place still doesn't force it to be
+!                               along -Ox as it should be for a body of revolu-
+!                               tion centered on Ox.  Remember that we normally
+!                               don't apply the hemisphere LOS method to the
+!                               nose region anyway, but it has been needed as
+!                               part of comparing radiative heat flux results
+!                               with those from a vasdtly more efficient method.
+!     10/08/2020    "    "      Replace intsec6 with intsec9 as introduced for
+!                               line_surface.f90 (interp3d library) used by the
+!                               Stardust_Lines utility.  This packages a retry
+!                               method that is virtually bulletproof.
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 !
@@ -157,7 +182,6 @@
    use tri_zone_structure
    use triangulation_io            ! Tecplot-type triangulation I/O package
    use adt_utilities               ! All variants of ADT build & search routines
-   use trigd
 
    implicit none
 
@@ -206,7 +230,7 @@
       xyz_interp(3), xyz_intersect(3), ymax, ymin, zmax, zmin
 
    logical :: &
-      cell_centered, cr, eof, formatted, hemisphere, oncenter
+      at_nose, cell_centered, cr, eof, formatted, hemisphere, oncenter
 
    integer, allocatable :: &
       conn(:,:)            ! For (patch,i,j) of surface quads. to search
@@ -344,6 +368,7 @@
 
    do l = 1, nbps
 
+      write (luncrt, '(a, 3es16.8)') 'BP:', xyz_bp(:,l)
       call search_adt (xyz_bp(:,l), iquad, p, q, dsqmin, true, nblocks, &
                        inner_surface, nquad, conn, xyz_interp)
 
@@ -353,16 +378,24 @@
          noutside = noutside + 1
       end if
 
+      write (luncrt, '(a, es16.8)') 'dsqmin:', dsqmin
       dmax  = max (dmax, dsqmin)
       dmean = dmean + sqrt (dsqmin)
       oncenter = xyz_bp(2,l) == zero ! We ensure a normal in the symmetry plane
-      xyz_bp(:,l) = xyz_interp(:)    ! Ensure that the body pt is on the surface
+      at_nose  = oncenter .and. xyz_bp(1,l) == zero .and. xyz_bp(3,l) == zero
+      if (.not. at_nose) xyz_bp(:,l) = xyz_interp(:) ! Else ensure that the body
+                                                     ! pt. is on the surface
+      write (luncrt, '(a, l2)') 'oncenter:', oncenter
+      write (luncrt, '(a, l2)') 'at_nose: ', at_nose
 
 !     Construct a carefully-calculated unit normal at the current body point.
 
       n = conn(1,iquad) ! Patch # at inner surface for this target surface point
       i = conn(2,iquad) ! Corresponding cell indices (lower left)
       j = conn(3,iquad)
+
+      write (luncrt, '(a, 3i4)') 'n,i,j:', n,i,j
+      write (luncrt, '(a, 2es16.8)') 'p,q:', p,q
 
       call surface_normal (inner_surface(n)%ni, inner_surface(n)%nj, &
                            inner_surface(n)%x,  inner_surface(n)%y,  &
@@ -375,8 +408,20 @@
          unit_norm(3,l) = unit_norm(3,l) / unit_norm(2,l)
          unit_norm(2,l) = zero
          xyz_bp(2,l)    = zero
-         write (luncrt, '(a, 3f12.8)') ' Adjusted body point: ', xyz_bp(:,l)
-         write (luncrt, '(a, 3f12.8)') ' Adjusted body normal:', unit_norm(:,l)
+         write (luncrt, '(a, 3f12.8)') ' Adjusted body point:  ', xyz_bp(:,l)
+         write (luncrt, '(a, 3f12.8)') ' Adjusted body normal: ', unit_norm(:,l)
+
+!        Special handling of the pathological nose-point case (that assumes the
+!        geometry is a body of revolution centered about Ox):
+
+         if (at_nose) then
+            unit_norm(1,l) = -one
+            unit_norm(2,l) = zero  ! (Already so)
+            unit_norm(3,l) = zero
+            write (luncrt, '(a, 3f12.8)') ' Corrected nose normal:', &
+               unit_norm(:,l)
+         end if
+
       end if
 
    end do ! Next target surface point
@@ -568,8 +613,7 @@
 
       hemisphere = nbps == 1
       if (hemisphere) then  ! Allow for a single body-normal line of sight
-         call ready (luncrt, &
-                     '1 body pt. => hemisphere lines? ' // &
+         call ready (luncrt, & '1 body pt. => hemisphere lines? ' // &
                      'y|n; y=<cr>=yes; n=body-normal line: ', &
                      lunkbd, hemisphere, cr, eof)
          if (eof) then
@@ -737,7 +781,7 @@
 !     Two further triangulations are produced, each with either 2 or 4 quadrant
 !     zones: (a) a unit [half-]hemisphere, tangent to the body at the body pt.;
 !     (b) the surface triangulation produced by intersecting lines through each
-!     vertex of (a) with outer boundary mesh.
+!     vertex of (a) with the outer boundary mesh.
 
       allocate (transformed_quadrant(1))
       allocate (intersected_quadrant(1))
@@ -861,7 +905,7 @@
 
 !     Local constants:
 
-      real, parameter :: small_value = 0.001
+      real, parameter :: small_value = 0.000001
 
 !     Local variables:
 
@@ -904,10 +948,12 @@
          if (parallel) then          ! Second  "   "   "   "   "   "   "
             v2(:) = v1(:)
             v2(2) = v2(2) + one      ! Axis is parallel to Oy
+            write (luncrt, '(a)') 'Evidently the body normal is along Ox.'
          else
             v2(:) = v1(:) + v2(:)
          end if
 
+         
          write (luncrt, '(a, 3f12.8)') ' Axis p2:', v2(:)
 
 !        The first transformation requires an initial shift:
@@ -955,7 +1001,7 @@
 
 !     Execution:
 
-      call intsec6 (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl, &
+      call intsec9 (l, nblocks, outer_surface, nquad, conn, nl, xl, yl, zl, &
                     sl, lcs_method, iquad, p, q, s, xyz_intersect, dsqmin)
 
 !!!   write (luncrt, '(a, 2i4, 4i10)') &
@@ -963,35 +1009,14 @@
 !!!   write (luncrt, '(a, 3es19.11)') ' p, q, s:   ', p, q, s, &
 !!!                                   ' xyz_intersect:', xyz_intersect
 
-      if (dsqmin < dtolsq) then ! The nearest triangle was within tolerance
+      if (dsqmin < dtolsq) then ! The nearest cell was within tolerance
          ninside  = ninside + 1
       else
          noutside = noutside + 1
          write (luncrt, '(a, i6, 4es13.6)') &
          ' *** Intersection trouble.  Line #, sa, sb, dsq, s:', l, sl, dsqmin, s
 
-         write (luncrt, '(a)') &
-         '     Assume local min. due to boundary concavity.  Do one retry.'
-
-!!!      sl(1) = s*1.000001  ! This has been observed to give a similar bad s
-                             ! and it is unclear why
-
-         call bad_local_min_recovery () ! Simple-minded look at rest of line
-                                        ! returns narrower range [sl(1), sl(2)]
-
-         call intsec6 (nblocks, outer_surface, nquad, conn, nl, xl, yl, zl, &
-                       sl, lcs_method, iquad, p, q, s, xyz_intersect, dsqmin)
-
-         if (dsqmin < dtolsq) then ! The nearest cell was within tolerance
-            ninside  = ninside + 1;  noutside = noutside - 1
-            write (luncrt, '(a, i6, 4es13.6)') &
-               '     Recovered.       Line #, sa, sb, dsq, s:', l, sl, dsqmin, s
-         else
-            write (luncrt, '(a, i6, 4es13.6)') &
-         ' *** Intersection failure.  Line #, sa, sb, dsq, s:', l, sl, dsqmin, s
-
-            ! Keep going
-         end if
+         ! Keep going
       end if
 
       dmax  = max (dmax, dsqmin)
@@ -1019,48 +1044,11 @@
       end subroutine intersect_line
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      subroutine bad_local_min_recovery ()  ! Crude search for best interval
-!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      integer :: iuse, ilocmin(1)
-      real :: dsu, xyz_target(3)
-
-!     Discretize the arc length beyond the bad local minimum,
-!     and look for the point nearest to the outer shock surface:
-
-      dsu = (sl(nl) - s)/real (nk)
-      do i = 2, nk
-         sline(i) = s + dsu*real (i-1)
-         xline(i) = xl(1) + (xl(nl) - xl(1))*(sline(i))
-         yline(i) = yl(1) + (yl(nl) - yl(1))*(sline(i))
-         zline(i) = zl(1) + (zl(nl) - zl(1))*(sline(i))
-
-         xyz_target(1) = xline(i)
-         xyz_target(2) = yline(i)
-         xyz_target(3) = zline(i)
-         call search_adt (xyz_target, iquad, p, q, distsq(i), true, nblocks, &
-                          outer_surface, nquad, conn, xyz_intersect)
-         write (luncrt, '(a, i4, 2es14.6)') 'i, s(i), dsq(i):', &
-            i, sline(i), distsq(i)
-      end do
-
-      distsq(1) = 1.e+6
-      ilocmin = minloc (distsq)
-      i = ilocmin(1)
-      write (luncrt, '(a, i4)') 'Index of minimum distance:', i
-      iuse = max (2, i-1)
-      sl(1) = sline(iuse)
-      iuse = min (nk, i+1)
-      sl(nl) = sline(iuse)
-
-      end subroutine bad_local_min_recovery
-
-!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine save_cone_only ()  ! Suppress lines outside the cone angle
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       integer :: i, ncone
-      logical, allocatable :: keep(:)
+      integer, allocatable :: keep(:)
       real :: angle, vnormal(3), v2(3)
       type (grid_type), pointer, dimension (:) :: cone_lines
       character (12) :: filename

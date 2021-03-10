@@ -145,6 +145,31 @@ History:
                              NORMALIZED BY THE LINE LENGTH IF THAT IS THE
                              INTERVAL EXPECTED TO CONTAIN THE INTERSECTION,
                              AS IT IS HERE, USING THE BOUNDING BOX DIAGONAL.
+   07/21/2020    "    "      A "small" tolerance in transform_quadrant was
+                             too big.  Body points near the nose (normally
+                             not the case for full angular integration)
+                             produced inaccurate rotation axes for the second
+                             quadrant of the transformed unit hemisphere.
+                             This led to irregular heat flux results near the
+                             heatshield apex on the centerline, now fixed.
+                             Avoiding a cross product of parallel unit
+                             vectors (zero length vector) was the root cause.
+   07/26/2020    "    "      Reluctant special-casing of the (0,0,0) body pt.
+                             that proves pathological in the sense that the
+                             associated surface grid cell is almost certain
+                             to be a corner cell for which the existing
+                             adjustment that forces the body normal to be in
+                             the symmetry place still doesn't force it to be
+                             along -Ox as it should be for a body of revolu-
+                             tion centered on Ox.  Remember that we normally
+                             don't apply the hemisphere LOS method to the
+                             nose region anyway, but it has been needed as
+                             part of comparing radiative heat flux results
+                             with those from a vasdtly more efficient method.
+   10/08/2020    "    "      Replace intsec6 with intsec9 as introduced for
+                             line_surface.f90 (interp3d library) used by the
+                             Stardust_Lines utility.  This packages a retry
+                             method that is virtually bulletproof.
 
 Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 
