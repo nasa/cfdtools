@@ -23,6 +23,7 @@ intsec5.f          Bilinear form of INTSEC4 using PBILINT, not PLBICUBE
 intsec6.f90        Multipatch form of INTSEC5: ADT techniques/minimization
 intsec6.f90.two_point_lines  1st INTSEC6 form for 2 pt. straight line cases
 intsec8.f90        Variant of INTSEC6 for a triangulated surface
+intsec9.f90        Use instead of intsec6 (to handle nonconvex surfaces)
 lcsint3d.f         Variant of TABLE3 using LCSFIT, not linear interpolation
 line_surface.f90   Find up to two intersections of line with closed surface
 peval3.f           Evaluate curve x,y,z vs. t via spline coefs. from PFIT3
