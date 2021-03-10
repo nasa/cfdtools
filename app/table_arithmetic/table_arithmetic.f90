@@ -9,6 +9,7 @@
 !     shift operations) and to form ratios of radiative to convective heat
 !     flux at a given body point on an atmospheric entry vehicle (implying
 !     input of a second table and operations on matching columns).
+!     (Later:) Now we can add or divide pairs of columns from table 1 also.
 !
 !     Some options involve only one table, and multiple operations can be
 !     performed on any of the columns in one run.  Output number formats
@@ -26,6 +27,8 @@
 !     are key building blocks, without which contemplating this type of utility
 !     would probably be foolhardy.  (RDLIST allows entry of column lists, say,
 !     via any reasonable shorthand, such as 2:8 for the sample table below.)
+!
+!     Table 1 can also be thinned as rows 1, 1+n, 1+2n, ... now.
 !
 !  Table Inputs:
 !     Any initial lines that are not purely numeric are treated as header
@@ -61,6 +64,9 @@
 !     08/15/2018    "      "    The requirement that a second table needs the
 !                               same number of columns as the first was more
 !                               restrictive than it needed to be.
+!     11/25/2020    "      "    Provided for adding and dividing pairs of
+!                               table 1 columns and also for thinning table 1
+!                               as rows 1, 1+n, 1+2n, ...
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA
 !
@@ -81,10 +87,10 @@
       lunout   = 3,      &  ! Output table
       lunkbd   = 5,      &  ! Keyboard inputs
       luncrt   = 6,      &  ! Screen prompts and diagnostics
-      lmenu1   = 31,     &  ! Length of longest menu1 entry
+      lmenu1   = 33,     &  ! Length of longest menu1 entry
       lmenu2   = 33,     &  !   "    "    "     menu2   "
       maxbuf   = 512,    &  ! Should match table_io module
-      maxmenu1 = 4,      &  ! Number of menu 1 entries
+      maxmenu1 = 7,      &  ! Number of menu 1 entries
       maxmenu2 = 6          !   "    "    "  2    "
 
    real, parameter :: &
@@ -125,9 +131,14 @@
       '   0: Review table 1',              &
       '   1: Scale table 1 column(s)',     &
       '   2: Shift table 1 column(s)',     &
-      '   3: Reverse table 1 row order',   &
-      '   4: Read a second table',         &
-      '   5: Done'/
+      '   3: Add two table 1 columns',     &
+      '   4: Divide two table 1 columns',  &
+      '   5: Thin table: rows 1, 1+n, ..', &
+      '   6: Reverse table 1 row order',   &
+      '   7: Read a second table',         &
+      '   8: Done'/
+
+!  Programmer: if maxmenu1 changes, change the ^D prompt below too.
 
    data menu2 / &
       '  -2: Start over with table 2',     &
@@ -140,6 +151,8 @@
       '   5: Scale table 2 column(s)',     &
       '   6: Shift table 2 column(s)',     &
       '   7: Done'/
+
+!  Programmer: if maxmenu2 changes, change the ^D prompt below too.
 
 !  Execution:
 
@@ -184,7 +197,7 @@
    menu_choice = 0
    do while (menu_choice /= maxmenu1 + 1)
 
-      call readi (luncrt, 'Menu 1 choice? [^D or 5 means no more]: ', &
+      call readi (luncrt, 'Menu 1 choice? [^D or 8 means no more]: ', &
                   lunkbd, menu_choice, cr, eof)
       if (eof) exit
 
@@ -285,9 +298,11 @@
       subroutine operate_on_1 ()  ! Table 1 operations
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+      integer :: i1add, i2add, i1div, i2div, ithin
+
       select case (menu_choice)
 
-         case (-2)
+         case (-2)  ! Restore the original table1
             call table_io_copy (table1_original, table1, .false., .true., ios)
             if (ios /= 0) then
                write (luncrt, '(a)') '*** Trouble restoring table1.'
@@ -299,28 +314,59 @@
          case (0)  ! Review current table1 values
             call table_io_write_real (luncrt, table1, ' ', ios)
 
-         case (1)
+         case (1)  ! Scale current table1 column(s)
             call readr (luncrt, 'Scale factor: ', lunkbd, scale, cr, eof)
             do i = 1, ncols
                icol1 = icols1(i)
                table1%values(icol1,:) = table1%values(icol1,:)*scale
             end do
 
-         case (2)
+         case (2)  ! Shift current table1 column(s)
             call readr (luncrt, 'Shift: ', lunkbd, shift, cr, eof)
             do i = 1, ncols
                icol1 = icols1(i)
                table1%values(icol1,:) = table1%values(icol1,:) + shift
             end do
 
-         case (3)  ! Reverse the row order of specified columns
+         case (3)  ! Add two table 1 columns as a new column
+
+            write (luncrt, '(a)', advance='no') 'Columns to add: '
+            read  (lunkbd, *) i1add, i2add
+
+            call append_new_column ()
+
+            table1%values(ncols1,:) = table1%values(i1add,:) + &
+                                      table1%values(i2add,:)
+!           It's not obvious what to do with %tokens (character data).
+
+         case (4)  ! Divide two table 1 columns as a new column
+
+            write (luncrt, '(a)', advance='no') 'Columns to ratio (1/2): '
+            read  (lunkbd, *) i1div, i2div
+
+            call append_new_column ()
+
+!           Assume the column being divided by contains no zeros.
+
+            table1%values(ncols1,:) = table1%values(i1div,:) / &
+                                      table1%values(i2div,:)
+!           It's not obvious what to do with %tokens (character data).
+
+         case (5)  ! Thin table 1 as rows 1, 1+n, 1+2n, ...
+
+            write (luncrt, '(a)', advance='no') 'n for rows 1, 1+n, 1+2n, ...: '
+            read  (lunkbd, *) ithin
+
+            call table_io_thin (table1, ithin)
+
+         case (6)  ! Reverse the row order of specified columns
             do i = 1, ncols
                icol1 = icols1(i)
                call rverse (nrows1, table1%values(icol1,:), &
                                     table1%values(icol1,:))
             end do
 
-         case (4)  ! Read a second table at the higher level
+         case (7)  ! Read a second table at the higher level
              cr = .true.
              do while (cr)
                 call reads (luncrt, 'Name of second table: ', &
@@ -334,7 +380,7 @@
              table2%filename = table2_name
              ios = 0
 
-         case (5)  ! Done
+         case (8)  ! Done
             ios = -1
 
          case default
@@ -355,7 +401,7 @@
 
       select case (menu_choice)
 
-         case (-2)
+         case (-2)  ! Restore the original table2
             call table_io_copy (table2_original, table2, .false., .true., ios)
             if (ios /= 0) then
                write (luncrt, '(a)') '*** Trouble restoring table2.'
@@ -430,5 +476,22 @@
 99    continue
 
       end subroutine operate_on_1_and_2
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine append_new_column ()  ! Append a new column to table1
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      integer :: i, j
+
+!     Don't try to extend any header rows with a new column for now.
+
+      deallocate (table1%values, table1%tokens)
+      ncols1 = ncols1 + 1
+      table1%ncols = ncols1
+      allocate (table1%values(ncols1,nrows1), table1%tokens(ncols1,nrows1))
+      table1%values(1:ncols1-1,:) = table1_original%values(:,:)
+      table1%tokens(1:ncols1-1,:) = table1_original%tokens(:,:)
+
+      end subroutine append_new_column
 
    end program table_arithmetic

@@ -1,0 +1,69 @@
+program table_arithmetic
+
+Description:
+   This aid to Excel novices is intended to ease the burden of compiling
+   tables of results from multiple related analyses.  It was prompted by
+   the need to adjust units (e.g., convert W/m^2 to W/cm^2) (scale and/or
+   shift operations) and to form ratios of radiative to convective heat
+   flux at a given body point on an atmospheric entry vehicle (implying
+   input of a second table and operations on matching columns).
+   (Later:) Now we can add or divide pairs of columns from table 1 also.
+
+   Some options involve only one table, and multiple operations can be
+   performed on any of the columns in one run.  Output number formats
+   can be specified at run time (e.g., an input E format may be preferred
+   as an output F format, for preparing a slide).  Reals desired to be
+   treated as integers are handled with a format such as i3 for column
+   1 in the example below.
+
+   Any second table, at least initially, is expected to match the first
+   in terms of row counts (cf. matrix multiplication, which requires
+   certain dimensions to match).
+
+   See also the author's much earlier COLUMNEDIT for extracting, inserting,
+   or replacing table columns.  The TABLE_IO module and the RDLIST subroutine
+   are key building blocks, without which contemplating this type of utility
+   would probably be foolhardy.  (RDLIST allows entry of column lists, say,
+   via any reasonable shorthand, such as 2:8 for the sample table below.)
+
+   Table 1 can also be thinned as rows 1, 1+n, 1+2n, ... now.
+
+Table Inputs:
+   Any initial lines that are not purely numeric are treated as header
+   information by the table_io package, and ignored.  Any header records
+   from table 1 are transferred to the output table.  An example of a
+   radiative heat flux table follows:
+
+       t,s  BP 1   BP 2   BP 3   BP 4   BP 5   BP 6   BP 7
+       50 0.2887 0.1785 0.1341 0.1383 0.1005 0.1362 0.1946
+       59 0.7429 0.4754 0.3245 0.2612 0.2134 0.2669 0.4218
+       78 2.9063 1.8416 1.1830 0.9051 0.8218 1.1402 0.4218
+       90 4.3462 2.5807 1.6881 1.2732 1.1256 1.5980 1.9729
+       95 4.6270 2.8072 1.9010 1.4455 1.2590 1.6965 3.5093
+      104 3.6444 2.2715 1.8328 1.5137 1.3239 1.5524 3.8476
+      112 1.3757 0.8778 0.7848 0.6097 0.5070 0.5730 3.4849
+      121 0.3423 0.2136 0.1826 0.1289 0.0978 0.1198 1.4563
+      130 0.0918 0.0500 0.0600 0.0600 0.0492 0.0600 0.3987
+
+    All rows of specified columns (except headers) are operated on.
+
+Programmer Note:
+    If a menu is added to, be sure to adjust the appropriate prompt for a
+    menu choice, where ^D and maxmenu* are both indicated.
+
+History:
+   11/17/2018  D.A.Saunders  Initial design.
+   11/19/2018    "      "    Initial coding and testing completed.
+   11/20/2018    "      "    Displaying a table on the screen required a
+                             a change in table_io.f90, which now has a
+                             table_io_copy option that allows starting
+                             over with either table.  Also, table 2 may
+                             now be scaled or shifted.
+   08/15/2018    "      "    The requirement that a second table needs the
+                             same number of columns as the first was more
+                             restrictive than it needed to be.
+   11/25/2020    "      "    Provided for adding and dividing pairs of
+                             table 1 columns and also for thinning table 1
+                             as rows 1, 1+n, 1+2n, ...
+
+Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA
