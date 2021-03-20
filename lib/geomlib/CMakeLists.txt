@@ -52,6 +52,7 @@ cfdtools_add_library(geomlib
   rotate3d.f
   rotate_xyz.f90
   solid_angle_quad.f90
+  solid_angle_quadrature_4.f90
   surface_normal.f90
   test_angle2d.f90
   tri_normal_and_area.f90

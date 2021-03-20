@@ -186,6 +186,7 @@
 !  Modules:
 
    use grid_block_structure    ! Employed by the xyzq_io package
+   use trigd                   ! Degree-valued trigonometry
    use xyzq_io_module          ! PLOT3D-type I/O package
 
    implicit none
@@ -210,7 +211,7 @@
       true  = .true.
 
 !  Variables:
- 
+
    integer :: &
       i, icol, imid, ios, j, jmid, line, niLOS, njLOS, nlines, npixelblocks, &
       npixels, nregion, numf, nuniform
@@ -700,7 +701,7 @@
 
 !     Arguments:
 
-      integer, intent (in)  :: lun         ! Logical unit on which the NEQAIR 
+      integer, intent (in)  :: lun         ! Logical unit on which the NEQAIR
                                            ! control file is opened/closed here
       integer, intent (out) :: nregion     ! # wavelength regions found;
                                            ! nregion = 6 means there are 7
@@ -1324,7 +1325,7 @@
 !     Execution:
 
       nuniform = iuniform(nregion+1)
-      if (pixels(1)%q(1,i,j,1) == biggest_cosine) then 
+      if (pixels(1)%q(1,i,j,1) == biggest_cosine) then
 
          allocate (cumulative(nuniform))  ! Cumulative integrals, center only
 
