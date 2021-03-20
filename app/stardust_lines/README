@@ -1,0 +1,21 @@
+This directory contains software updated or added for Hayabusa 2.
+
+Stardust_Lines has been improved in several ways, including handling of
+nonconvex aft-body surfaces and improved diagnostics.
+
+Stardust_Integration.f90 implements the analysis of NEQAIR calculations that
+was done differently by independent investigators for Stardust and Hayabusa 1.
+
+Point_source.f90 was prompted by the Hayabusa 2 observation team's request
+that they be provided with spectral radiant intensity files derived from
+the spectral irradiance data (integrations.dat) by multiplying by the square
+of the slant range.
+
+See also NEQAIR_DATA, which now handles the Stardust case, including as needed
+for proper use of NEQAIR's black body BC, which requires overriding high outflow
+temperatures at the downstream outflow grid boundary.
+
+For CAPSULE_GRID inputs and results matching the generatrix extracted here from
+stardust.grd, see:
+
+/nobackupp8/dasaund1/cfdtools/CAPSULE_GRID/Standard_Configurations/Stardust
