@@ -51,6 +51,7 @@ function(cfdtools_add_executable exename)
     set(fullname "cfdtools_${exename}")
     add_executable(${fullname} ${ARGN})
     target_link_libraries(${fullname} cfdtools_global)
+    set_target_properties(${fullname} PROPERTIES OUTPUT_NAME ${exename})
     install(PROGRAMS $<TARGET_FILE:${fullname}>
         DESTINATION ${CMAKE_INSTALL_BINDIR}
         RENAME ${exename})

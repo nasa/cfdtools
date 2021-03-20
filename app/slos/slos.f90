@@ -613,9 +613,10 @@
 
       hemisphere = nbps == 1
       if (hemisphere) then  ! Allow for a single body-normal line of sight
-         call ready (luncrt, & '1 body pt. => hemisphere lines? ' // &
-                     'y|n; y=<cr>=yes; n=body-normal line: ', &
-                     lunkbd, hemisphere, cr, eof)
+         call ready (luncrt, &
+             '1 body pt. => hemisphere lines? ' // &
+             'y|n; y=<cr>=yes; n=body-normal line: ', &
+             lunkbd, hemisphere, cr, eof)
          if (eof) then
            ios = 1;  go to 99
          end if
@@ -898,6 +899,8 @@
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+      use trigd
+
 !     Argument:
 
       real,    intent (in) :: un(3)  ! Unit normal at the body point
@@ -953,7 +956,7 @@
             v2(:) = v1(:) + v2(:)
          end if
 
-         
+
          write (luncrt, '(a, 3f12.8)') ' Axis p2:', v2(:)
 
 !        The first transformation requires an initial shift:
@@ -1048,7 +1051,7 @@
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       integer :: i, ncone
-      integer, allocatable :: keep(:)
+      logical, allocatable :: keep(:)
       real :: angle, vnormal(3), v2(3)
       type (grid_type), pointer, dimension (:) :: cone_lines
       character (12) :: filename

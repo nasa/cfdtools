@@ -7,6 +7,7 @@ cfdtools_add_library(interp3d
   intsec6.f90
   intsec6_2pt.f90
   intsec8.f90
+  intsec9.f90
   lcsint3d.f
   line_surface.f90
   peval3.f

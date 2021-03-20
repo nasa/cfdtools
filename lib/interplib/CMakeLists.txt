@@ -23,6 +23,7 @@ cfdtools_add_library(interplib
   lcsfit.f
   lcsfit2.f90
   lcsinverse.f90
+  legendre.f90
   line1d.f
   lint1d.f
   lintrp.f
