@@ -1,12 +1,12 @@
 # CFDTOOLS
 
 ## Overview
-The CFD Utility Software Library, a.k.a. CFDTOOLS, contains nearly 30 general
-purpose libraries and close to 100 utility applications built upon those
+The CFD Utility Software Library, a.k.a. CFDTOOLS, contains nearly 30 numerical
+analysis libraries and close to 100 utility applications built upon those
 libraries. These utilities were developed over a rougly fifty year span to
 support aerospace research and development activities at NASA Ames Research
 Center (ARC). They are mostly written in Fortran 90 or 77 and are designed with
-potential reuse in mind. The library also include C translations of roughly a
+potential reuse in mind. The library also includes C translations of roughly a
 dozen numerics routines in the `C_utilities` module.
 
 The library began as the ARC Aerodynamics Division Software Library, and is
