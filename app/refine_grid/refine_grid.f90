@@ -10,6 +10,8 @@
 !        other available utilities may suffice to extract/refine/merge groups of
 !        blocks appropriately.
 !
+!        This version handles 2D as well as 3D structured grids.
+!
 !        If grid densification were limited to integer multiples of the input
 !        cell counts, treatment of function files could be avoided, since DPLR's
 !        FCONVERT can perform grid sequencing on solution files.  However, since
@@ -76,6 +78,7 @@
 !
 !     Procedures:
 !
+!        XYQ_IO  module      2D analog of XYZQ_IO
 !        XYZQ_IO package     I/O utilities for PLOT3D grid and function files
 !        DENSIFY_GRID_BLOCK  Adjust the number of cells in i/j/k directions
 !        CHORDS3D            Arc lengths along a 3-space curve
@@ -104,7 +107,7 @@
 !                                does. Therefore, treat all integer multipliers
 !                                the same way.  Remember, even point counts are
 !                                still likely for cell-centered data.
-!        09/23/20 Jeff Hill      Updated file handling to support 2D grids.
+!        09/23/20  Jeff Hill     Updated file handling to support 2D grids.
 !
 !     Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
 !              Now with AMA, Inc. at NASA ARC.
