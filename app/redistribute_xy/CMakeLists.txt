@@ -1,0 +1,11 @@
+cfdtools_add_executable(redistribute_xy
+  redistribute_xy.f90
+)
+target_link_libraries(cfdtools_redistribute_xy
+  cfdtools_geomlib
+  cfdtools_gridlib
+  cfdtools_interplib
+  cfdtools_numodules
+  cfdtools_optlib
+  cfdtools_searchlib
+)
