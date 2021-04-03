@@ -182,6 +182,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **radial_interp**             | C    | Rapid volume grid|flow interpolation for new surface grid (single layer of volume grid blocks) |
 | **radial_interp_2d**          | C    | 2-space RADIAL_INTERP analogue; both one layer of grid blocks |
 | **rectify_grid**              | C    | Ensure right-handedness for 3-space volume or surface grid |
+| **redistribute_xy**           | C    | Redistribute points in a 2- or 3-space line segment (1- or 2-sided stretching) |
 | **refine_grid**               | C    | Densify | thin multiblock grid/flow data, any multipliers |
 | **reflect_blocks**            | C    | Reflect 3-space grid/flow data; save reflected or both halves |
 | **reflect_blocks_2d**         | C    | Reflect 2-space grid/flow data; save reflected or both halves |
@@ -201,12 +202,15 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **sort_rows**                 | GP   | Sorts the output from grep (say) or a list of file names containing numeric substrings. |
 | **sort_surface_slice**        | C    | Sort Tecplot surface slice into 1 or more curves for line plots |
 | **split_grid**                | C    | Split multiblock grid/flow and/or permute indices |
+| **Stardust_Lines**            | C    | Radiation lines of sight for airborne or ground observation of an entry capsule |
+| **Stardust_Integration**      | C    | Companion to Stardust_Lines |
 | **surface_curvature**         | C    | Gaussian/mean/principal curvatures for surface/volume grid |
 | **surface_diffs**             | C    | Map Tecplot surface grid 1 to grid 2; save [%]differences |
 | **surface_interp**            | C    | Interpolate 3-space Tecplot surface data at target data point(s) |
 | **surface_interp_2d**         | C    | Interpolate 2-space Tecplot surface data at target data point(s) |
 | **surface_pad**               | C    | Pad structured surface data nonlinearly: 1-D in i and|or j |
 | **surface_patches**           | C    | ADJUST_GRID variant with more surface_patch_utilities options |
+| **table_arithmetic**          | G    | Manipulate one or two data tables by columns |
 | **template**                  | C    | Calculate block interface data and DPLR-type control file (structured volume grid) |
 | **tet_interp**                | C    | Interpolate tetrahedral volume data to a structured multiblock grid |
 | **thin_flow**                 | C    | THIN_GRID analogue for multiblock flow data |
