@@ -7,7 +7,6 @@ cfdtools_add_library(ugridlib
   cutsurfi.f
   cutsurfi_nf.f
   nonlinear_tri_interp.f90
-  points_delaunay_naive_2d.f90
   search_tri_2d.f90
   solid_angle_quadrature_3.f90
   solid_angle_tri.f90
