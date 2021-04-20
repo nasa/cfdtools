@@ -229,10 +229,24 @@
 !                             to determine the kind of output produced.
 !     03/22/19    "     "     Finished dual output format options and testing.
 !     04/03/19    "     "     A two-temperature/8 species case encountered an
-!                             ambiguity between variable names n and Na in the
+!                             ambiguity between variable names n and N in the
 !                             column-oriented data format of NEQAIR v15.  Also,
 !                             the index for Tv is not necessarily 3 for this
 !                             data format choice.
+!     09/08/19    "     "     Cosmetic only: N, not Na, in the last comment
+!                             above, and one other comment line exceeded 80
+!                             characters (printing issue).  This utility was
+!                             first suspected of letting free-stream temperature
+!                             data points through, but the fault proved to be in
+!                             FLOW_INTERP's hybrid option.
+!     03/25/20    "     "     Slight adjustment to skip degenerate lines (nk=2)
+!                             in Stardust_Lines output, line_segments.g.
+!     03/30/20    "     "     Not so slight! Failure to skip degenerate lines
+!                             without explicitly reading them was hard to debug.
+!     09/21/20    "     "     Use of the blackbody BC for Stardust cases (and
+!                             meteor cases? TBD) requires lines not starting on
+!                             the body to start at low (free-stream) T.  Do this
+!                             for lines with the first x > ~3*body diameter.
 !
 !  Author: David Saunders, ERC Inc./NASA Ames Research Center, Moffett Field/CA
 !          Later with AMA, Inc. at NASA ARC.
@@ -266,7 +280,7 @@
 
    logical, parameter ::   &
       false     = .false., &
-      normalize = false,   &
+      normalize = .false., &
       true      = .true.
 
    character, parameter :: &
@@ -275,16 +289,16 @@
 !  Local variables:
 
    integer :: &
-      i, i1, ilast, iline, ios, ir, is, is0, ismooth, ispecies1, iTv, length, &
-      most_pts, nf, nlines, nnew, npts, nspecies, num_T
+      i, i1, ilast, iline, iline_use, ios, ir, is, is0, ismooth, ispecies1, &
+     iTv, length, most_pts, nf, nlines, nnew, npts, nspecies, num_T
 
    real :: &
-      arc, power, total, total_N
+      arc, D, power, Tfree, total, total_N
 
    logical :: &
       cr, curvature, eof, formatted_f, formatted_g, gradient, hybrid, &
-      output_columns, output_n, output_ntot, redistribute, relative, thin2x, &
-      towards_body, twod
+      output_columns, output_n, output_ntot, redistribute, relative, &
+      Stardust_case, thin2x, towards_body, twod
 
    character (1) :: &
       answer
@@ -329,7 +343,7 @@
    end do
 
    i1 = 1;  if (formatted_g) i1 = 3
-   open (lung, file=filename, form=format(i1:11), status='OLD')
+   open (lung, file=filename, form=format(i1:11), status='old')
 
    ios = 1
    do while (ios /= 0)  ! Repeat for the function file
@@ -343,7 +357,7 @@
    end do
 
    i1 = 1;  if (formatted_f) i1 = 3
-   open (lunf, file=filename, form=format(i1:11), status='OLD')
+   open (lunf, file=filename, form=format(i1:11), status='old')
 
 !  Determine whether it's a 2D or 3D case by trying to read a 3D header:
 
@@ -415,22 +429,61 @@
       end if
    end if
 
+   Stardust_case = input_los(1)%nk == 2  ! Corner of pixel array if true
+   write (luncrt, '(a, l2)') 'Stardust case:', Stardust_case
+
 !  Option to have NEQAIR integrate away from the body instead of towards it:
 
-   towards_body = true
-   call ready (luncrt, &
+   if (Stardust_case) then
+      towards_body = false
+      call readr (luncrt, &
+         'Enter approximate body diameter: ', lunkbd, D, cr, eof)
+      if (eof) go to 99
+      D = 3.*D
+      write (luncrt, '(a, f7.1)') &
+         'Forcing Tfree for point 1 of lines starting at x >', D
+   else
+      towards_body = true
+      call ready (luncrt, &
               'Should NEQAIR integrate towards the body? [y|n; <CR> = yes]: ', &
-               lunkbd, towards_body, cr, eof)
-   write (luncrt, '(a, l2)') 'towards_body:', towards_body
-   if (eof) go to 99
+                  lunkbd, towards_body, cr, eof)
+      if (eof) go to 99
+   end if
+   write (luncrt, '(a, l2)') 'towards_body: ', towards_body
 
-!  Process one line of sight at a time:
+!  Process one line of sight at a time.
+!  The Stardust_Lines application needs to skip degenerate lines.
+
+   iline_use = 0
+   Stardust_case = false
 
    do iline = 1, nlines
 
+      if (input_los(iline)%nk == 2) then  ! True for pixel(1,1)/line 1
+
+         Stardust_case = true
+
+!        Skip the line if nk = 2; the same reads are least trouble:
+
+         call xyz_allocate (input_los(iline), ios)
+         npts = 2
+         call xyz_block_io (1, lung, formatted_g, npts, &
+                            input_los(iline)%x, input_los(iline)%y, &
+                            input_los(iline)%z, ios)
+         deallocate (input_los(iline)%x, input_los(iline)%y, input_los(iline)%z)
+         call q_allocate (input_los(iline), nf, ios)
+         call q_block_io (1, lunf, formatted_f, nf,  &
+                          input_los(iline)%mi, input_los(iline)%mj, &
+                          input_los(iline)%mk, input_los(iline)%q, ios)
+         deallocate (input_los(iline)%q)
+         cycle
+      end if
+
+      iline_use = iline_use + 1
+
 !     Construct the output LOS file name as LOS-n.dat:
 
-      call numbered_name ('LOS-', iline, filename, length)
+      call numbered_name ('LOS-', iline_use, filename, length)
 
       length = length + 4
       filename(length-3:length) = '.dat'
@@ -499,20 +552,38 @@
                           input_los(iline)%q, ios)
       end if
 
-!     Option to redistribute each line of sight to [presumably] fewer points:
+!     Stardust (and meteor) cases using the black body BC with NEQAIR must
+!     not start at high temperature if point 1 is not on the body:
 
-      if (redistribute) then
+      if (Stardust_case) then
+         if (iline_use == 1) then
+            Tfree = 1.e+6
+            do i = 1, input_los(iline)%nk
+               Tfree = min (input_los(iline)%q(1,i,1,1), Tfree)
+            end do
+            write (luncrt, '(a, f7.1)') 'Apparent free-stream T:', Tfree
+         end if
+      end if
+
+!     Option to redistribute each line of sight to [presumably] fewer points,
+!     but not for the Stardust case:
+
+      if (redistribute .and. .not.Stardust_case) then
          call redistribute_los ()  ! Update everything so that the rest
       end if                       ! works either way
 
-      sv(:) = m_to_cm * sv(:)  ! NEQAIR expects arc lengths to be in cm.
+      sv(:) = m_to_cm * sv(:)      ! NEQAIR expects arc lengths to be in cm.
 
 !     Arrange to suppress points outside the shock.  Dinesh says use Tv, not T.
 
-      do i = npts, 1, -1
-         ilast = i
-         if (input_los(iline)%q(iTv,i,1,1) >= Tmin) exit
-      end do
+      if (.not. Stardust_case) then
+         do i = npts, 1, -1
+            ilast = i
+            if (input_los(iline)%q(iTv,i,1,1) >= Tmin) exit
+         end do
+      else
+         ilast = npts
+      end if
 
       is0 = npts - ilast + 1
       most_pts = max (most_pts, ilast)
@@ -528,7 +599,7 @@
 
 !     Output data in NEQAIR form, one grid point at a time:
 
-      if (towards_body) then
+      if (towards_body) then  ! Should be entered as false for Stardust cases
 
 !        The last arc length is taken by NEQAIR (14-?) to be total arc length,
 !        so we subtract the shock arc length from all arc lengths upon output,
@@ -578,9 +649,10 @@
 
          end if
 
-      else  ! Meteor case?  We want NEQAIR to integrate away from the body
+      else  ! Meteor case?  We want NEQAIR to integrate away from the body,
+            ! towards an observer, or Stardust case likewise.
 
-         total = sc(npts)
+         total = sc(npts)  ! Undo reversing of arc lengths
          do i = 1, npts
             sv(i) = total - sc(npts - i + 1)
          end do
@@ -588,6 +660,19 @@
          if (output_columns) then
 
             do i = 1, npts - is0 + 1
+               if (Stardust_case) then  ! Protect NEQAIR differently
+                  input_los(iline)%q(iTv-1:num_T,i,1,1) = max (Tmin, &
+                  input_los(iline)%q(iTv-1:num_T,i,1,1))
+!                 Guard against high black body Ts in the outflow:
+                  if (input_los(iline)%x(1,1,1) > D) then
+                      input_los(iline)%q(1:num_T,1,1,1) = Tfree
+                  end if
+                  if (input_los(iline)%q(1,i,1,1) > 1.e+10) then
+                     write (luncrt, '(a, 3i6, 2es15.7)') &
+    'i, iline, iuse, T, Tv:', i, iline, iline_use, input_los(iline)%q(1:2,i,1,1)
+                     stop
+                  end if
+               end if
                input_los(iline)%q(ispecies1:,i,1,1) = &
                   max (cm_to_cc*input_los(iline)%q(ispecies1:,i,1,1), Nmin)
                total_N  =  sum (input_los(iline)%q(ispecies1:,i,1,1))
@@ -638,7 +723,9 @@
    close (lung)
    close (lunf)
 
-   write (luncrt, '(a, i5)') ' Highest output LOS point count:', most_pts
+   write (luncrt, '(a, i5)') 'Highest output LOS point count:', most_pts
+   if (Stardust_case) write (luncrt, '(a, i6)') &
+                             'Number of nondegenerate lines:', iline_use
 
 99 continue  ! Avoid system-dependent STOP behavior
 
@@ -958,8 +1045,8 @@
 
 !        For the first line of sight only, determine the data contents:
 
-         if (iline == 1) then  ! Is n and/or ntot to be output? Also, count Ts.
-
+         if (iline_use == 1) then  ! Is n and/or ntot to be output?
+                                   ! Also, count Ts.
            seps = ' , '; seps(3:3) = char (9)  ! Tab
            call token_count (line(1:l), seps, nheader)  ! Count all titles
 
@@ -976,7 +1063,7 @@
              if (l == 1 .and. first_titles(i)(1:1) == 'N')    output_n    = true
              if (l == 4 .and. first_titles(i)(1:4) == 'NTOT') output_ntot = true
              if (first_titles(i)(1:1) == 'T') num_T = num_T + 1
-             if (l == 2 .and. first_titles(i)(1:2) == 'TV')   iTv = i
+             if (l == 2 .and. first_titles(i)(1:2) == 'TV') iTv = i
            end do
 
 !          Handle a possible clash between 'n' (line number) and 'N' (nitrogen):
@@ -989,11 +1076,12 @@
                end do
            end if
 
-!          iTv needs to point into the function file, not the variable name list:
+!          iTv needs to point into the fn. file, not the variable name list:
 
-           iTv = iTv -1  ! For arc length
+           iTv = iTv - 1  ! For arc length
            if (output_n)    iTv = iTv - 1
            if (output_ntot) iTv = iTv - 1
+           write (luncrt, '(a, i2)') 'iTv:', iTv
 
 !          Trap mismatched species counts:
 

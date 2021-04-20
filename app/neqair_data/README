@@ -1,0 +1,250 @@
+Program NEQAIR_DATA Description:
+
+Version Description:
+
+   This version of NEQAIR_DATA can write line-of-sight (LOS) data in both the
+original rigid format read by NEQAIR versions up to and including v14 and the
+simpler column-oriented format handled from NEQAIR v15 on.  Both data formats
+involve a sample.LOS.dat file read here that indicates the species names.  If
+a sample file is found with a NEQAIR version number on line 1, then the later
+data format is indicated. The sample file is transcribed as the header of all
+output LOS data files in either case.
+
+Original Preamble:
+
+   Earlier utilities LINES_OF_SIGHT[_2D] and FLOW_INTERP[_2D] typically
+produce multiple lines of sight and flow-field data interpolated to each
+point of each line of sight, as a PLOT3D-type multiblock grid and function
+file pair.  Note that the input coordinates should correspond to grid
+vertices, not cell centers, because the lines of sight are discretized using
+the relative distribution of the nearest radial line from the vertex-
+centered grid.
+
+   Radiation program NEQAIR treats one line of sight at a time, and expects
+the data in a rigid format containing arc lengths (measured in the direction
+towards the body, and in cm), total number density, T, Tr, Tv, Te, and the
+species number densities, at each grid point along the line.  The arc lengths
+should correspond to the centers of cells at which the flow function data
+are taken to apply (in NEQAIR), so they are adjusted accordingly here.  The
+wall function values thus apply to a cell half the width of the grid cell
+at the wall.
+
+   [Later:  This version has the option, prompted by meteor studies, to
+output line-of-sight data in the direction away from the body.]
+
+   This program retrieves the PLOT3D-format files (e.g., los.g & los.f in
+SI units) and writes a separate file in NEQAIR's LOS.dat format for each
+line of sight it finds, into the working directory. These output file names
+contain line numbers, such as LOS-1.dat.  A script can then run NEQAIR on
+some range m:n of line numbers, by copying or linking to input files and
+writing radiation results for each line one level down in directories
+/LINE-m through /LINE-n (say).
+
+   The current version now offers options to redistribute the line-of-sight
+data to a [presumably smaller] different number of points in order to speed
+the expensive NEQAIR calculations.  This was initially done based on |dT/ds|,
+where T is vibrational temperature and s is arc length along the line.  (Use
+of the translational temperature, which is higher than Tv at the shock, tends
+to produce spacing that is too coarse in the boundary layer.)  See below for
+further redistribution options.
+
+Method:
+
+   The grid and function file may be 2D or 3D (automatically determined).
+The input grid coordinates are assumed to be in meters, emanating from the
+body towards the shock.  Normal usage with the DPLR flow solver has block
+dimensions (1,nj) or (1,1,nk), but these can safely be treated here as (nj,1)
+or (nk,1,1) for more efficient Fortran indexing.  Points outside the shock
+need to be suppressed to avoid NEQAIR trouble with low temperatures, and the
+line data need to be output in the shock-to-body direction.
+
+             The following paragraph is NEQAIR V14-specific:
+
+   The function file should contain T, Tr, Tv, Te (K) and the species number
+densities (m^-3).  Note that DPLR's postprocessor does NOT extract Tr unless
+irot = 1.  BE SURE THAT THERE ARE 4 TEMPERATURES IN THE FUNCTION FILE.
+Common usage with 2-temperature data (ivib = 1 in DPLR) means reading and
+writing T, T, Tv, Tv for these 4 temperatures.
+
+             NEQAIR V15 differences:
+
+   NEQAIR V15[+] handles variables numbers of temperatures.  The number of
+species names beginning with T determines the number of temperatures that
+should be in the input function file in the indicated order.
+
+   One line of sight's worth of data (one input block) is read at a time.
+The header of a file named sample.LOS.dat file in the working directory is
+transcribed to each output file, down to the line above the first line of
+the data proper for line 1.  This sample file should contain the species
+names in the order matching the input function file.  This program is thus
+independent of the number and order of the species, as long as the file
+sample.LOS.dat lists them in the header in the correct order.
+
+Minimum Contents of File sample.LOS.dat:
+
+   V14 or earlier:
+
+      >  A line of asterisks precedes the species section.
+      >  The species names may appear in any order.
+      >  Two lines of hyphens must appear.  The last line is all hyphens.
+      >  Replace the comments in column 1 below appropriately.
+
+*****************************************************************************
+      aaaaaaaa       aaaaaaaa       aaaaaaaa       aaaaaaaa    (2x,(7x,a8))
+      CO2            CO             N2             O2       :Species Symbols.
+      NO             C              N              O
+
+-----------------------------------------------------------------------------
+no.   x,cm   total partcc       t        tr        tv        te  (i5,f8.3,
+ii rrrrrrr rrrrrrrrrrrrrr rrrrrrrrr rrrrrrrrr rrrrrrrrr rrrrrrrrre15.6,4f10.1
+    rrrrrrrrrrrrrr rrrrrrrrrrrrrr rrrrrrrrrrrrrr rrrrrrrrrrrrr   (6x,4e15.6)
+    Include these 9 lines (from --- to --- lines) for first grid point only!!
+    End each grid point entry with a blank line.
+    End data file with a line of zero's as shown on the next line.
+ 0     0.0            0.0       0.0       0.0       0.0       0.0
+-----------------------------------------------------------------------------
+
+   V15 sample.LOS.dat Format:
+
+      >  NEQAIR expects a version number on line 1.
+      >  Descriptive lines follow, with # comments in column 1.
+      >  The last line (no # comment) should contain species names preceded
+         by titles for data point number n, distance x (cm), and ntot (the
+         total number density, cm^-3, which is determined and written here
+         and is NOT expected in the input function file).
+
+Point Redistribution Options:
+
+   If the option to reduce the number of points along each line of sight is
+employed, this is done based on the magnitude of the distribution of the
+gradient of Tv (3rd flow function) with respect to arc length.  All of the
+function data profiles are interpolated nonlinearly to the redistributed
+grid points here, as opposed to requiring the FLOW_INTERP[_2D] step to be
+repeated before rerunning NEQAIR_DATA on redistributed line-of-sight data.
+The typical function units are so large that these interpolations are
+performed in normalized space.
+
+   It appears that 3/4ths of the input number of points per line may be the
+best compromise, since halving the number tends to lose too much resolution
+in the boundary layer of typical forebody lines.  For a similar reason, it
+appears that the maximum effect of temperature gradient should be invoked
+by using a power of 1.0 for the temperature-gradient-based shape function,
+where lower power moderates the effect and power = 0. would give uniform
+spacing at the other extreme (definitely NOT recommended).  Up to 2.0 is
+permitted, but don't go that high without scrutinizing the consequences.
+
+   Extreme cases (high pressures/thin boundary layers) may not be able to
+converge with high exponents anyway.  This can mean too much thinning in
+the boundary layer, so a hybrid scheme is now an option: the shock region
+(defined by the range from the outer boundary to the largest input spacing)
+is redistributed by the gradient-base method to the SAME number of shock-
+region points, and the rest of each profile employs a 2-sided Vinkour
+distribution to obtain the specified total number of points, with the new
+wall spacing determined by the ratio of the input to the output number of
+points and a heuristic multiplier.  This preserves the character of the
+boundary layer point distribution, where gradient-based everywhere may not.
+
+   Following the hybrid option, a curvature-based option has also been added.
+This works with a normalized form of the Tv vs. LOS arc curve.  For the
+extreme cases of high pressure, this method tends to improve the boundary
+layer point distribution, but it does the same sort of thing in the shock
+region and therefore tends to put too many points there.  Therefore, it
+has now been changed to leave a heuristic fraction of the grid points
+untouched in the shock region (0.2 currently), giving better resolution
+of the boundary-layer-edge region, which appears to be where radiance
+losses in NEQAIR occur compared with simple 2x thinning of the CFD points.
+That thinning option is now (belatedly) a redistribution option as well.
+
+   Most of the above discussion applies to forebody lines of sight (only).
+The hybrid and curvature-based methods both assume a shock is present, so do
+NOT use either of them on lines in the wake where no shock is encountered.
+
+History:
+
+   11/13/13  D.A.Saunders  Initial rewrite of a program by Aaron Brandis
+                           that expected LOS data in Tecplot format rather
+                           than PLOT3D multiblock format.
+   11/14/13    "     "     Low temperature data outside the shock cause
+                           trouble in NEQAIR.  Dinesh Prabhu recommends
+                           suppressing points with Tv < 500 K.
+   11/15/13    "     "     Guard against extremely low number densities,
+                           which can affect NEQAIR performance.
+   11/21/13    "     "     The arc length outputs now correspond to the
+                           centers of the cells at which the function data
+                           are taken to apply within NEQAIR.
+   11/23/13    "     "     An option has been provided to redistribute the
+                           line-of-sight coordinates based on |dTv/ds| and
+                           interpolate all the temperature and species
+                           profiles nonlinearly before writing the lines in
+                           NEQAIR format.
+   12/03/13    "     "     GRADDIS[3D]2 now return updated arc lengths
+                           because recovering them from the new x,y[,z]s
+                           is not identical to using the arcs that produced
+                           those new coordinates.
+   11/24/14    "     "     Extremely high pressure cases from asteroid entry
+                           studies prompted introduction of a hybrid scheme
+                           for redistributing the data points, as outlined
+                           above (appropriate for forebody data only).
+   11/25/14    "     "     Added a same-relative-spacing option that could
+                           be used on forebody lines of sight but is the
+                           likely choice for lines in the wake, where the
+                           hybrid scheme is definitely NOT recommended.
+   11/26/14    "     "     x/y/z were not being updated for the Vinokur
+                           part of the hybrid scheme (diagnostic only).
+   12/01/14    "     "     Provided a redistribution option that works with
+                           the curvature (in normalized space) of the
+                           (arc length, Tv) distribution.
+   12/02/14    "     "     The curvature-based method does what we want in
+                           the boundary layer, but puts too many points in
+                           the shock region.  Therefore, simply preserve
+                           the input data points in the shock region and
+                           confine the curvature-based method to the rest
+                           of the profile.  Lack of explicit blending of
+                           the two groups of points should not matter much.
+   12/03/14    "     "     Raised the heuristic shock-region fraction of the
+                           modified curvature-based method to 0.2 from 0.1.
+                           This puts more redistributed points in the
+                           boundary-layer-edge region, which is where the
+                           main radiance losses appear for NEQAIR compared
+                           with simple 2x thinning of the CFD grid.  Talking,
+                           of simple thinning, that is belatedly an option
+                           too now.
+   12/08/14    "     "     Averaging of sv(:) as sc(:) allowed an invalid
+                           index of 0 for a wake line of sight.
+   01/24/14    "     "     Added the option to output line-of-sight data in
+                           the order required for NEQAIR to integrate away
+                           from the body rather than towards it.  This is
+                           required for meteor studies, where the lines are
+                           probably parallel to the X axis, and a "light
+                           curve" is sought (requiring further processing
+                           of the NEQAIR results).
+   06/04/15    "     "     The redistribution prompt was missing the 'c'
+                           option; no real change.
+   03/04/19    "     "     Started option to output LOS data in the column-
+                           oriented format handled by NEQAIR v15.  The legacy
+                           format expected by V14 and its predecessors is
+                           retained as an option, and sample.LOS.dat is used
+                           to determine the kind of output produced.
+   03/22/19    "     "     Finished dual output format options and testing.
+   04/03/19    "     "     A two-temperature/8 species case encountered an
+                           ambiguity between variable names n and N in the
+                           column-oriented data format of NEQAIR v15.  Also,
+                           the index for Tv is not necessarily 3 for this
+                           data format choice.
+   09/08/19    "     "     Cosmetic only: N, not Na, in the last comment
+                           above, and one other comment line exceeded 80
+                           characters (printing issue).  This utility was
+                           first suspected of letting free-stream temperature
+                           data points through, but the fault proved to be in
+                           FLOW_INTERP's hybrid option.
+   03/25/20    "     "     Slight adjustment to skip degenerate lines (nk=2)
+                           in Stardust_Lines output, line_segments.g.
+   03/30/20    "     "     Not so slight! Failure to skip degenerate lines
+                           without explicitly reading them was hard to debug.
+   09/21/20    "     "     Use of the blackbody BC for Stardust cases (and
+                           meteor cases? TBD) requires lines not starting on
+                           the body to start at low (free-stream) T.  Do this
+                           for lines with the first x > ~3*body diameter.
+
+Author: David Saunders, ERC Inc./NASA Ames Research Center, Moffett Field/CA
+        Later with AMA, Inc. at NASA ARC.
