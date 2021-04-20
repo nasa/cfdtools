@@ -7,14 +7,13 @@ combination of neighboring data points that minimizes each interpolation
 error in some sense under certain statistical assumptions (hence the use
 of the term optimal).
 
-Alexander Barth (originally: abarth@marine.usf.edui, now: a.barth@ulg.ac.be
-and barth.alexander@gmail.com) kindly made the original package available
-under the terms of the GNU General Public License (and later under the
-BSD 2-Clause License).  The present version has been adapted considerably
-as explained in the header of the file optimal_interpolation.f90.
-In particular, it offers a simpler inverse-distance-weighting option
-that should be helpful during application development, given the number
-of "knobs" to turn in order to get satisfactory results with the more
-sophisticated method.
+Alexander Barth (originally: abarth@marine.usf.edui, now: a.barth@ulg.ac.be and
+barth.alexander@gmail.com) kindly made the original package available under the
+terms of the BSD 2-Clause License.  The present version has been adapted
+considerably as explained in the header of the file optimal_interpolation.f90.
+In particular, it offers a simpler inverse-distance-weighting option that
+should be helpful during application development, given the number of "knobs"
+to turn in order to get satisfactory results with the more sophisticated
+method.
 
 See program ANCHOR or Radio_Blackout elsewhere for a sample application.

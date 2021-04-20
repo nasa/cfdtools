@@ -39,7 +39,7 @@ C              Langley Research Center
 C
 C------------------------------------------------------------------------
 
-      COMMON XU,XL,YU,YL,YUPR(200),YLPR(200),I
+      COMMON /VARS/ XU,XL,YU,YL,YUPR(200),YLPR(200),I
       COMMON /MAIN/ YSTART(3),CHD,KON
       DIMENSION XU(200), XL(200), YU(200), YL(200)
       DIMENSION COEFFS(4)
