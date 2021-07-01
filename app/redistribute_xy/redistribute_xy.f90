@@ -40,6 +40,8 @@
 !     03/03/2021    "      "    Added curvature-based redistribution option.
 !     03/-5/2021    "      "    Arranged for suppressing or logging the
 !                               (voluminous) diagnostic output from curvdis.
+!     06/14/2021    "      "    If 1-sided clustering is at the last point,
+!                               we want the output to be in the same order.
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 !
@@ -166,6 +168,11 @@
    if (.not. curvature_based) then
       call lcsfit (nin, sin, xin, true, 'B', nout, sout, xout, unused) ! x vs. s
       call lcsfit (nin, sin, yin, true, 'B', nout, sout, yout, unused) ! y vs. s
+   end if
+
+   if (onesided .and. .not. lowend) then  ! Retrieve the original order
+      call rverse (nout, xout, xout)
+      call rverse (nout, yout, yout)
    end if
 
    write (lunout, '(2es16.8)') (xout(i), yout(i), i = 1, nout)

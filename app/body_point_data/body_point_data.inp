@@ -1,0 +1,45 @@
+Body point data control file
+2                               ! 2D | 3D
+0.187288   0.674985             ! Body point (x,y) or (x,y,z)
+T       T       T               ! Laminar?   Turbulent?   Radiative?
+times.dat                       ! List of times common to dataset groups
+9                               ! Number of output variables
+  x y p T tau qw                ! Input variables to extract (laminar)
+t x y p T tau qlam qturb qrad   ! Output variable names; t,x,y[,z]  mandatory 
+s m m Pa K Pa W/cm2 W/cm2 W/cm2 ! Output units
+1 1 1 1 1 1 0.0001 0.0001 1     ! Scale factors to apply before output
+body_point_2.dat                ! Output table file name
+(f5.1, 2f10.6, 3es14.6, 3f9.3)  ! Output format
+! Laminar cases in time order (Tecplot surface datasets)
+time149-surf.dat
+time171-surf.dat
+time192-surf.dat
+time211-surf.dat
+time222-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t234/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t245/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t255/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t263/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t275/dragonfly-surf.dat
+! Turbulent cases in time order (Tecplot surface datasets; only qw used)
+t149.7/SST/dragonfly-surf.dat
+t171.6/SST/dragonfly-surf.dat
+t192.3/SST/dragonfly-surf.dat
+t211.6/SST/dragonfly-surf.dat
+t222.3/SST/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t234/SST/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t245/SST/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t255/SST/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t263/SST/dragonfly-surf.dat
+/nobackupp12/cnaughto/Dragonfly/DAC0/Max_HL_1576kg/t275/SST/dragonfly-surf.dat
+! (x,y,qrad)  or (x,y,z,qrad) datasets
+time149-qrad.dat
+time171-qrad.dat
+time192-qrad.dat
+time211-qrad.dat
+time222-qrad.dat
+time234-qrad.dat
+time245-qrad.dat
+time255-qrad.dat
+time263-qrad.dat
+time275-qrad.dat

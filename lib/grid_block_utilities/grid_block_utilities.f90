@@ -29,6 +29,7 @@
 !
 !  04/09/05  D. A. Saunders   Initial implementation of surface_patch_utilities.
 !  07/23/10     "      "      Initial adaptation of grid_block_utilities.
+!  06/21/21     "      "      The cloning was missing the (ib) indices.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
 !
@@ -238,13 +239,13 @@
       allocate (grid2(nb))
 
       do ib = 1, nb
-         grid2%ni = grid1%ni
-         grid2%nj = grid1%nj
-         grid2%nk = grid1%nk
+         grid2(ib)%ni = grid1(ib)%ni
+         grid2(ib)%nj = grid1(ib)%nj
+         grid2(ib)%nk = grid1(ib)%nk
          if (nf > 0) then
-            grid2%mi = grid1%mi
-            grid2%mj = grid1%mj
-            grid2%mk = grid1%mk
+            grid2(ib)%mi = grid1(ib)%mi
+            grid2(ib)%mj = grid1(ib)%mj
+            grid2(ib)%mk = grid1(ib)%mk
          end if
       end do
 

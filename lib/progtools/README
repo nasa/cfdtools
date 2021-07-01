@@ -32,10 +32,13 @@ for solutions, and also the DECODE_ILIST/DECODE_RLIST pair.
 alpha.f          Flag a string as alphanumeric if it appears not a number
 check_existence.f90     Check for a file by name + diagnostic if missing
 cleantext.f      Remove likely separators; separate tokens by one blank
+column_widths.f90       Use format string (...) to assist right-justifying
+count_records.f90       Count # lines (formatted) or # records (unformatted)
 countr.f         Count # tokens in first significant line; see TOKEN_COUNT
 decode_ilist.f90 Decodes an indefinite list of integers in a string
 decode_number.f90       Extracts an integer|real|both|neither from a string
 decode_rlist.f90 Decodes an indefinite list of reals in a string
+digit.f90        T means the given single character is in 0-9
 echo.f           Copy input file to printable output & to a scratch copy
 extend_name.f90  Construct composite [HDF5 group?] name; see NUMBERED_NAME
 getargs.f90      Return command line command name & arguments as an array
@@ -87,3 +90,6 @@ token_count.f90  Count # tokens in a string (no I/O, unlike COUNTR)
 upcase.f         Converse of LOCASE; return input string as all uppercase
 writer.f         Error-message analogue of READER, but its multiple entry
                  points are now deprecated
+
+06/09/2021       Added digit.f90 and column_widths.f90 as part of right-
+                 justification of column headers.

@@ -40,6 +40,8 @@
 !     03/03/2021    "      "    Added curvature-based redistribution option.
 !     03/-5/2021    "      "    Arranged for suppressing or logging the
 !                               (voluminous) diagnostic output from curvdis.
+!     06/14/2021    "      "    If 1-sided clustering is at the last point,
+!                               we want the output to be in the same order.
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 !

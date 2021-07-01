@@ -68,6 +68,8 @@
 !                             numeric (meaning no leading header lines).
 !     03/16/17    "      "    Handled more than one "coordinate" (number) in the
 !                             column containing the prefix.
+!     05/29/21    "      "    Look for apparently missing rows for the common
+!                             case where the sorted numbers are really ordinals.
 !
 !  Author:  David Saunders, AMA, Inc./NASA Ames Research Center, Mnt. View, CA
 !

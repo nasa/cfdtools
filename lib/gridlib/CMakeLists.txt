@@ -8,7 +8,7 @@ cfdtools_add_library(gridlib
   catenary_grid.f90
   cellvol.f
   changen.f
-  changen1d.f
+  changen1d.f90
   changen2d.f
   compass.f
   condis.f

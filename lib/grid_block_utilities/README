@@ -13,4 +13,8 @@ scale_shift_block  (block, scale, dx, dy, dz, pout)     Scale/shift x, y, z
 swap_block_xyz     (block, m, n)           Swap coordinates m and n
 update_block       (block1, block2, nf)    Transfer block1 to block2
 
+04/09/05  D. A. Saunders   Initial implementation of surface_patch_utilities.
+07/23/10     "      "      Initial adaptation of grid_block_utilities.
+06/21/21     "      '      The cloning was missing index (ib).
+
 See also xyzq_io for structured grid I/O utilities.

@@ -1,0 +1,123 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   program body_point_data
+!
+!  Description:
+!
+!     This utility is intended to ease the pain of gathering time histories for
+!     body points from aerothermal solution surface datasets.  One body point is
+!     treated at a time using a control file that should be straightforward to
+!     prepare.  The intended input files are surface datasets from DPLR's
+!     POSTFLOW utility, or outputs from BLAYER, and (optionally) outputs
+!     gathered from a sequence of NEQAIR runs.
+!
+!  Control file format (read on standard input):
+!
+!     Body point data control file
+!     2                               ! 2D | 3D
+!     0.1234  1.2345                  ! Body point (x,y) or (x,y,z)
+!     T       T       T               ! Laminar?   Turbulent?   Radiative?
+!     times.dat                       ! List of times common to dataset groups
+!     9                               ! Number of output variables
+!       x y p T tau qw                ! Input variables to extract (laminar)
+!     t x y p T tau qlam qturb qrad   ! utput var. names; t,x,y[,z]  mandatory
+!     s m m Pa K Pa W/cm2 W/cm2 W/cm2 ! Output units
+!     1 1 1 1 1 1 0.0001 0.0001 1     ! Scale factors to apply before output
+!     body_point_2.dat                ! Output table file name
+!     (f5.1, 2f10.6, es14.6, f8.2, es14.6, 3f8.3)  ! Output format
+!     ! Laminar cases in time order (Tecplot surface datasets)
+!     t149-surf.dat
+!     t171-surf.dat
+!     t192-surf.dat
+!     t211-surf.dat
+!     t222-surf.dat
+!     t234-surf.dat
+!     t245-surf.dat
+!     t255-surf.dat
+!     t263-surf.dat
+!     t275-surf.dat
+!     ! Turbulent cases in time order (Tecplot surface datasets; only qw used)
+!     t149-surf.SST.dat
+!     t171-surf.SST.dat
+!     t192-surf.SST.dat
+!     t211-surf.SST.dat
+!     t222-surf.SST.dat
+!     t234-surf.SST.dat
+!     t245-surf.SST.dat
+!     t255-surf.SST.dat
+!     t263-surf.SST.dat
+!     t275-surf.SST.dat
+!     ! (x,y,qrad)  or (x,y,z,qrad) datasets
+!     t149-xyqrad.dat
+!     t171-xyqrad.dat
+!     t192-xyqrad.dat
+!     t211-xyqrad.dat
+!     t222-xyqrad.dat
+!     t234-xyqrad.dat
+!     t245-xyqrad.dat
+!     t255-xyqrad.dat
+!     t263-xyqrad.dat
+!     t275-xyqrad.dat
+!     ! Output table file name
+!     nose-tangency-point.dat
+!
+!  Assumptions:
+!
+!     o  Control file comments should begin with '!'.
+!        This may be changed to another character in one place if necessary.
+!
+!     o  The input file of times that will become column 1 in the output table
+!        should contain one time per line.  The number of times found should
+!        match the length of each list of datasets to be searched for the
+!        indicated body point.
+!
+!     o  Input dataset file names may be symbolic links or full paths.
+! 
+!     o  For the indicated body point coordinates, the nearest data point is
+!        chosen from each dataset.  Exact coordinates are not required, and no
+!        interpolation is attempted.  The coordinates are assumed to be common
+!        to each set of like files.
+!
+!     o  Any of the laminar, turbulent, and radiative file lists may be
+!        omitted in the control file (F instead of T), but the header in the
+!        control file should not be omitted.  (LATER:) Allowing the laminar
+!        input group to be suppressed is more trouble than it's worth, so
+!        Laminar = T is assumed but retained for aesthetic reasons.
+!
+!     o  If laminar and turbulent are both specified, only qw is extracted from
+!        the turbulent datasets, and it is appended to the laminar variables.
+!
+!     o  If radiative datasets are present, qrad is assumed to be in the last
+!        input column (no need for column headers) and it will form the last
+!        output column.
+!
+!  History:
+!
+!     05/13/2021  D.A.Saunders  Initial design.  This is overdue, and should be
+!                               straightforward to implement using existing
+!                               Tecplot I/O utilities and the relatively recent
+!                               table_io module.
+!     05/18/2021   "   "   "    Extracting the time column from the file names
+!                               as in the initial design proved more trouble
+!                               than it was worth, so read the times from a
+!                               file.  One time per line simplifies work-space
+!                               allocation.
+!     05/20/2021   "   "   "    Initial coding is complete (on a laptop), but
+!                               our only computer is down for maintenance.
+!                               This has proved to be a lot messier than one
+!                               might imagine, so testing is expected to take
+!                               considerable effort.
+!     05/24/2021   "   "   "    Debugged the compilation.  Testing has to wait.
+!     05/26/2021   "   "   "    Testing proved arduous--mostly due to confusion
+!                               associated with the various lists of variable
+!                               names.  The 80-character filename limit in
+!                               tecplot_io.f90 had to be raised (to 160 chars.).
+!     05/26/2021   "   "   "    Fixed run-time formatting glitch.  The debug
+!                               output is helpful as a dialogue, so leave it in
+!                               there for now.  It would be nice to right-
+!                               justify the column header tokens, based on the
+!                               run-time format string.
+!
+!  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

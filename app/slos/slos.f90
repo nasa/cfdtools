@@ -105,6 +105,18 @@
 !              lines if the body point is off-center.  Centerline points require
 !              just half the volume data, and the eventual integration over
 !              solid angle of radiances from the lines of sight can be doubled.
+!        >  Triangulation choice:
+!              This version of SLOS has the option to read a previously generat-
+!              ed unit triangulation that the Equal_Area_Triangulation variant
+!              of the NPOPT_DRIVER framework can now produce.  If nedge is spec-
+!              ified as 25 (say), we look for the file unit_sphere_octant_25.dat
+!              (likewise for other nedge values).  If the file is not found, the
+!              spherical_triangulation subroutine is employed as originally.
+!              In principle, the integrations w.r.t. solid angle of radiances
+!              calculated for each line of sight will be more accurate if the
+!              solid angle elements are essentially equal, although it is ex-
+!              pected that the two kinds of triangulation will produce very
+!              similar results for a given value of nedge.
 !           >  The initial unit quadrant is transformed so that line 1/vertex 1
 !              corresponds to the body point normal. After The lines for the
 !              first quadrant are generated, the quadrant is rotated 90 degrees
@@ -169,6 +181,16 @@
 !                               line_surface.f90 (interp3d library) used by the
 !                               Stardust_Lines utility.  This packages a retry
 !                               method that is virtually bulletproof.
+!     04/12/2021    "    "      Handle reading of a unit spherical octant tri-
+!                               angulation named unit_sphere_octant_n.dat where
+!                               n = nedge is typically 25.  (See above for more
+!                               details.)  If the appropriately named file is
+!                               not found, subroutine spherical_triangulation is
+!                               invoked as originally.  Not much difference is
+!                               expected to be found in the integrations with
+!                               respect to solid angle subtended at the body
+!                               point, but until the option was provided, we
+!                               could never know ...
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 !
@@ -613,10 +635,9 @@
 
       hemisphere = nbps == 1
       if (hemisphere) then  ! Allow for a single body-normal line of sight
-         call ready (luncrt, &
-             '1 body pt. => hemisphere lines? ' // &
-             'y|n; y=<cr>=yes; n=body-normal line: ', &
-             lunkbd, hemisphere, cr, eof)
+         call ready (luncrt, & '1 body pt. => hemisphere lines? ' // &
+                     'y|n; y=<cr>=yes; n=body-normal line: ', &
+                     lunkbd, hemisphere, cr, eof)
          if (eof) then
            ios = 1;  go to 99
          end if
@@ -727,7 +748,7 @@
 !     Local variables:
 
       integer :: &
-         i, m, nn
+         i, l, m, nn
       real, dimension (3) ::  &
          un, v1, v2              ! For unit normals and rotation axis end pts.
 
@@ -737,11 +758,22 @@
 !     Execution:
 !     ----------
 
-!     Generate the indicated triangulation of a quadrant of a unit hemisphere:
+!     Option to read an optimized triangulation:
 
       allocate (unit_hemi_quadrant(1))  ! Not a scalar because it's a pointer
 
-      call spherical_triangulation (ne, unit_hemi_quadrant(1))
+      call numbered_name ('unit_sphere_octant_', ne, tri_header%filename, l)
+      l = l + 4
+      tri_header%filename(l-3:l)   = '.dat'
+      tri_header%fileform          =  2   ! Cell-centered fn. (solid angle)
+      tri_header%formatted         = true
+      tri_header%nvertices         = 3
+
+      call tri_read (lunhemi1, tri_header, unit_hemi_quadrant, ios)
+
+!     If an optimized triangulation wasn't found, generate one:
+
+      if (ios /= 0) call spherical_triangulation (ne, unit_hemi_quadrant(1))
 
 !     This unit quadrant has all of x, y, z in [0, 1], and the rotational trans-
 !     formations that complete the hemisphere should be about its Oz axis, not
@@ -899,8 +931,6 @@
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      use trigd
-
 !     Argument:
 
       real,    intent (in) :: un(3)  ! Unit normal at the body point
@@ -956,7 +986,7 @@
             v2(:) = v1(:) + v2(:)
          end if
 
-
+         
          write (luncrt, '(a, 3f12.8)') ' Axis p2:', v2(:)
 
 !        The first transformation requires an initial shift:
@@ -1051,7 +1081,7 @@
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       integer :: i, ncone
-      logical, allocatable :: keep(:)
+      integer, allocatable :: keep(:)
       real :: angle, vnormal(3), v2(3)
       type (grid_type), pointer, dimension (:) :: cone_lines
       character (12) :: filename

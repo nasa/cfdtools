@@ -17,7 +17,7 @@ average_increments.f90  Average off-face-1-6 spacings for one grid block
 blgrid.f           Boundary-layer-type distribn.: geometric and/or Vinokur
 catenary_grid.f90  Catenary curve (L|R|both halves) discretized as n points
 cellvol.f          Hex cell volume via 6 pyramids, from A. Jameson's FLO87
-changen1d.f        Change # pts. in a 1-D interval; same relative distrbn.
+changen1d.f90      Change # pts. in a 1-D interval; same relative distrbn.
 changen2d.f        Change # pts. on a 2-sp. curve;  same relative distrbn.
 changen.f          Change # pts. on a 3-sp. curve;  same relative | uniform
 compass.f          Locates the intersection of a 2-space circle and a curve
@@ -43,6 +43,7 @@ expdis5.f          Recommended EXPDIS4 variant with geometric safeguard
 fixogrid.f         Portion of a hyperbolic OH grid generator; uses ECOMPASS
 flow_gradients.f90 Compute partial df/dx etc. at all structured block pts.
 flow_gradients_nf.f90   Multiple-function form of FLOW_GRADIENTS
+flow_gradients_2d.f90   2-D form of FLOW_GRADIENTS_NF
 foilgrd.f          Airfoil-type distrib.: linear, quadratic, sine, & cosine
 foilgrid.f         Earlier variant with sine & quadratic + LE refinement
 geodis.f           Generalized geometric-type 1-sided distribution

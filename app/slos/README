@@ -115,6 +115,19 @@ Method:
             intersection search intervals, but that doesn't matter.  Each
             hemisphere line is intersected and discretized as for the body
             normal (tangent-slab) case described above.
+
+   >  Triangulation choice:
+            This version of SLOS has the option to read a previously generat-
+            ed unit triangulation that the Equal_Area_Triangulation variant
+            of the NPOPT_DRIVER framework can now produce.  If nedge is spec-
+            ified as 25 (say), we look for the file unit_sphere_octant_25.dat
+            (likewise for other nedge values).  If the file is not found, the
+            spherical_triangulation subroutine is employed as originally.
+            In principle, the integrations w.r.t. solid angle of radiances
+            calculated for each line of sight will be more accurate if the
+            solid angle elements are essentially equal, although it is ex-
+            pected that the two kinds of triangulation will produce very
+            similar results for a given value of nedge.
 History:
 
    11/02/2018  D.A.Saunders  Started adapting USLOS for the structured case.
@@ -170,6 +183,16 @@ History:
                              line_surface.f90 (interp3d library) used by the
                              Stardust_Lines utility.  This packages a retry
                              method that is virtually bulletproof.
+   04/12/2021    "    "      Handle reading of a unit spherical octant tri-
+                             angulation named unit_sphere_octant_n.dat where
+                             n = nedge is typically 25.  (See above for more
+                             details.)  If the appropriately named file is
+                             not found, subroutine spherical_triangulation is
+                             invoked as originally.  Not much difference is
+                             expected to be found in the integrations with
+                             respect to solid angle subtended at the body
+                             point, but until the option was provided, we
+                             could never know ...
 
 Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 

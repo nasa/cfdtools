@@ -44,6 +44,7 @@ update_patch      (patch1, patch2, nf)   transfers patch1 to patch2
                            application made use of surface_vectors:
                            patches reflected about y = 0 DO need to be
                            rectified, and "if (jev == 2)" had iev, not jev.
+06/21/21     "      "      The cloning was missing index (ib).
  
 For a sample application, see CAPSULE_GRID.  For use of the most recent
 surface_vectors and match_patch_edges, see SURFACE_PATCHES.  In particular,

@@ -19,6 +19,7 @@ cfdtools_add_library(interp3d
   plscurve.f
   plsfit3d.f
   plsintyz.f
+  plxcut3d.f90
   smoothxyz.f
   table3.f
   tri_line.f90

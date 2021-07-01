@@ -131,6 +131,7 @@
 !     power_aft = 0.5,             ! Initial power in curvature-based redistrbn.
 !     numi_aft_body = 201,         ! # grid points on aft body generatrix
 !     sting_stretch_multiplier = 2.! Applied to interim end-of-sting spacing
+!     x_parachute_cone = ...,      ! > 0. means split patches 7-10 at this x
 !     ng_split = 0,                ! Split index for full-body input generatrix
 !                                  ! 0 = max. radius index; < 0 1-piece/no split
 !     nblend_fore_aft = 8,         ! # aft pts. used to match fore/aft spacing
@@ -630,7 +631,18 @@
 !                               work in the absence of a rounded shoulder aft
 !                               of the underlying cone and a nose cap larger
 !                               than that cone.
-!
+!     06/17/2021 -  "    "      Parachute cones with different TPS material have
+!     06/25/2021                required splitting of aft body surface patches
+!                               for BC purposes (catalycity).  The dimensions
+!                               either side of the split need to be of the form
+!                               4n + 1 in order for the initial fine grid to be
+!                               coarsened once for production use (221) and
+!                               coarsened again for grid sequencing (441|442)
+!                               during an initial unaligned grid solution.
+!                               Introduced x_parachute_cone control. Patch
+!                               dimensions either side of this x > 0. will be
+!                               adjusted to the closest 4n+1 form as well.
+!                               The number of surface patches becomes 16.
 !  Author:
 !
 !     David Saunders, ERC, Inc. at NASA Ames Research Center, Moffett Field, CA
@@ -649,6 +661,7 @@
       use adt_utilities            ! All ADT build & search routines
       use biconic_parameters       ! Derived data type for biconic forebody
       use grid_block_structure     ! Derived data type for one grid block
+      use grid_block_utilities     ! Used for parachute cone split option
       use sphere_cone_parameters   ! Derived data type for sphere/cone forebody
       use sphere_cone              ! Analytic forebody generatrix utilities
       use surface_patch_utilities  ! 3-space surface grid utilities
@@ -699,7 +712,7 @@
       r_aft(mxcones), r_nose, radius_base, radius_cone_juncture, radius_nose, &
       radius_shoulder, radius_vertex, rib_deflection, rib_thickness, &
       scale_factor, semiangle, skirt_angle, skirt_length, &
-      sting_stretch_multiplier, x_aft(mxcones), x_nose
+      sting_stretch_multiplier, x_aft(mxcones), x_nose, x_parachute_cone
 
    logical :: &
       aft_body_too, analytic, cell_centered, collapsed, &
@@ -736,7 +749,7 @@
       new_aft(6)                ! for replacing the singular point region
 
    type (grid_type), pointer, dimension (:) :: &
-      new_grid, &               ! Desired regridded surface, 6 or 12 patches
+      new_grid, &               ! Desired regridded surface, 6|12|16 patches
       template                  ! Normalized quarter circle grid, with x = 0.
 
    namelist /FOREBODY_INPUTS/ &
@@ -754,7 +767,7 @@
       sting_case, numi_aft_body, ncones, flat_blend_aft, power_aft, ng_split, &
       nblend_fore_aft, ni_regrid_aft_body, cone_angle_aft, r_aft, &
       rounding_mode, ds_round, ni_round, sting_stretch_multiplier, &
-      i0_umbrella, i1_umbrella, i2_umbrella
+      x_parachute_cone, i0_umbrella, i1_umbrella, i2_umbrella
 
 !  Execution:
 !  ::::::::::
@@ -862,6 +875,7 @@
       ni_round(:) = 0              ! # uniform rounding circle arc points >= 0
       numi_aft_body = 201          ! # grid points on aft body
       sting_stretch_multiplier = 2.! Applied to interim end-of-sting spacing
+      x_parachute_cone = -99.      ! Split initial patches 7-10 at this x if > 0
       flat_blend_aft = true        ! Puts more points on flat/low curv. segments
       power_aft = 0.5              ! Initial exponent for curvature-based redis.
       ng_split = 0                 ! Full-body input generatrix split index
@@ -3753,6 +3767,16 @@
 
       end if
 
+      if (x_parachute_cone > zero) then
+         write (luncrt, '(/, a, f16.8)') 'x_parachute_cone:', x_parachute_cone
+         call split_at_parachute_cone ()
+         if (ier /= 0) then
+            write (luncrt, '(a)') &
+               '*** Trouble splitting at x_parachute_cone.  Aborting.'
+            go to 99
+         end if
+      end if
+
       call xyz_write (lunout, true, nblocks, new_grid, ios)
 
       if (ios /= 0) then
@@ -3797,7 +3821,188 @@
       close (lungen1)
       deallocate (xg, yg, sg, growth)
 
+  99  return
+
       end subroutine save_result
+
+!     --------------------------------------------------------------------------
+      subroutine split_at_parachute_cone ()
+
+!     Common enough requirement that it's been automated:  if x_parachute_cone
+!     is within initial aft patches 7-10, split those patches at this x for BC
+!     purposes, and adjust the point counts to be of the form 4n + 1 on either
+!     side of the split for grid coarsening purposes.
+!     --------------------------------------------------------------------------
+
+!     Local constants:
+
+      character (1), parameter :: method = 'M'  ! Monotonic local spline fits
+
+!     Local variables:
+
+      integer :: &
+         i, ib, ibnew, ileft, isplit, j, mi, newmi, nf, ni, newni, mj, newmj, &
+         nj, newnj
+      real :: &
+         dxsq, dxsqmin, ssplit, stotal, xsplit, ysplit, zsplit, unused(3)
+      real, allocatable, dimension (:) :: &
+         sinterim, snorm1, snorm2, s1, x1, y1, z1, s2, x2, y2, z2, &
+         xinterim, yinterim, zinterim
+      type (grid_type), pointer :: &
+         before_split (:)
+
+!     Execution:
+
+      nf = 0
+
+!     Copy the interim 12-block surface so that it can become 16 blocks:
+
+      allocate (before_split(nblocks))
+
+      do ib = 1, nblocks  ! Transcribe each block's dimensions and coordinates
+         call update_block (new_grid(ib), nf, false, false, before_split(ib))
+         deallocate (new_grid(ib)%x, new_grid(ib)%y, new_grid(ib)%z)
+      end do
+
+      deallocate (new_grid);  allocate (new_grid(nblocks+4))
+
+      do ib = 1, 6
+         call update_block (before_split(ib), nf, false, false, new_grid(ib))
+      end do
+
+      do ib = 11, 12
+         call update_block (before_split(ib), nf, false, false, new_grid(ib+4))
+      end do
+
+!     We need to redistribute the i-lines of blocks 7-10 with new point counts.
+!     Each block is split into 2.  E.g., 7 --> 7 (x > xsplit) & 8 (x < xsplit).
+!     Use the centerline to determine new dimensions of the form 4n + 1:
+
+      ni = before_split(7)%ni
+      nj = before_split(7)%nj
+      allocate (xinterim(ni), yinterim(ni), zinterim(ni), sinterim(ni))
+      xinterim(:) = before_split(10)%x(:,nj,1)
+      yinterim(:) = before_split(10)%y(:,nj,1)
+      zinterim(:) = before_split(10)%z(:,nj,1)
+
+      call chords3d (ni, xinterim, yinterim, zinterim, false, stotal, sinterim)
+ 
+!     Locate the interim cewnterline grid point nearest to the x split.
+
+      dxsqmin = 1.e+6
+
+      do i = 1, ni
+         dxsq = (x_parachute_cone - xinterim(i))**2
+         if (dxsq < dxsqmin) then
+            dxsqmin = dxsq;  isplit = i
+         end if
+      end do
+
+      newni = isplit/4             ! First part of split
+      newni = 4*newni + 1          ! To allow two levels of coarsening
+      mi    = ni - isplit + 1      ! Second part of the split to redistribute
+      newmi = mi/4
+      newmi = 4*newmi + 1
+      write (luncrt, '(a, 2i4)') 'isplit,   mi:', isplit, mi, &
+                                 'newni, newmi:', newni, newmi
+
+      allocate (snorm1(isplit), snorm2(mi))
+      allocate (x1(newni), y1(newni), z1(newni), s1(newni))  ! s1, s2 will be
+      allocate (x2(newmi), y2(newmi), z2(newmi), s2(newmi))  ! new normalized s
+
+!     The remaining steps need to be performed for every j of blocks 7-10
+!     because the edges associated with two corners of the aft nose patches
+!     are slightly different from the bulk of the streamwise grid lines.
+
+      unused(1) = -999.  ! Suppresses unneeded derivative calculations
+      ibnew = 5
+
+      do ib = 7, 10
+         ibnew = ibnew + 2
+         do j = 1, nj
+            xinterim(:) = before_split(ib)%x(:,j,1)
+            yinterim(:) = before_split(ib)%y(:,j,1)
+            zinterim(:) = before_split(ib)%z(:,j,1)
+
+            call chords3d (ni, xinterim, yinterim, zinterim, false, stotal, &
+                           sinterim)
+
+            snorm1(1:isplit) =  sinterim(1:isplit)  / sinterim(isplit)
+            snorm2(1:mi)     = (sinterim(isplit:ni) - sinterim(isplit)) / &
+                                            (stotal - sinterim(isplit))
+
+!           Change existing normalized arcs to similar distribs. of desired #s:
+
+            call changen1d (1, isplit, snorm1, 1, newni, s1)
+            call changen1d (1, mi,     snorm2, 1, newmi, s2)
+
+!           Find the original arc length corresponding to the x split:
+
+            ileft = isplit
+            call plxcut3d (ni, xinterim, yinterim, zinterim, sinterim, ileft, &
+                           false, x_parachute_cone, 1.e-14, ssplit,-luncrt, ier)
+            if (ier > 1) then
+               write (luncrt, '(a, 3i4)') &
+                 'Trouble calculating split arc length. ier, ib, j:', ier, ib, j
+               go to 99
+            end if
+
+!           Find all the split coordinates.
+!           Note that j = 1 is not on the center line for block 7.  (It is nj.)
+
+            call plscrv3d (ni, xinterim, yinterim, zinterim, sinterim, method, &
+                           true, false, ssplit, ileft, xsplit, ysplit, zsplit, &
+                           unused)
+
+!           Move the nearest data point to the desired split point:
+
+            xinterim(isplit) = xsplit
+            yinterim(isplit) = ysplit
+            zinterim(isplit) = zsplit
+
+!           Adjust the points either side of the split to have the same relative
+!           spacing as the points before the shift of point isplit:
+
+            call adjustn2 (ni, 1, isplit, xinterim, yinterim, zinterim, &
+                           1, newni, s1, x1, y1, z1, method)
+
+            if (j == 1) then
+               new_grid(ibnew)%ni = newni
+               new_grid(ibnew)%nj = nj
+               new_grid(ibnew)%nk = 1
+               allocate (new_grid(ibnew)%x(newni,nj,1), &
+                         new_grid(ibnew)%y(newni,nj,1), &
+                         new_grid(ibnew)%z(newni,nj,1))
+            end if
+            new_grid(ibnew)%x(:,j,1) = x1(:)
+            new_grid(ibnew)%y(:,j,1) = y1(:)
+            new_grid(ibnew)%z(:,j,1) = z1(:)
+
+            call adjustn2 (ni, isplit, ni, xinterim, yinterim, zinterim, &
+                           1, newmi, s2, x2, y2, z2, method)
+
+            if (j == 1) then
+               new_grid(ibnew+1)%ni = newmi
+               new_grid(ibnew+1)%nj = nj
+               new_grid(ibnew+1)%nk = 1
+               allocate (new_grid(ibnew+1)%x(newmi,nj,1), &
+                         new_grid(ibnew+1)%y(newmi,nj,1), &
+                         new_grid(ibnew+1)%z(newmi,nj,1))
+            end if
+            new_grid(ibnew+1)%x(:,j,1) = x2(:)
+            new_grid(ibnew+1)%y(:,j,1) = y2(:)
+            new_grid(ibnew+1)%z(:,j,1) = z2(:)
+
+!!!         if (j == 1) exit
+         end do  ! Next j of this block
+!!!      if (ib == 7) exit
+      end do  ! Next block to split
+
+      nblocks = 16
+
+ 99   return
+
+      end subroutine split_at_parachute_cone
 
 !     --------------------------------------------------------------------------
       subroutine morph_aft_to_umbrella ()

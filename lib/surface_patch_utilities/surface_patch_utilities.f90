@@ -51,6 +51,7 @@
 !                             application made use of surface_vectors:
 !                             patches reflected about y = 0 DO need to be
 !                             rectified, and "if (jev == 2)" had iev, not jev.
+!  06/21/21     "      "      The cloning was missing index (ib).
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
 !           Now with AMA, Inc., at NASA Ames Research Center.
@@ -198,13 +199,13 @@
       allocate (grid2(np))
 
       do ib = 1, np
-         grid2%ni = grid1%ni
-         grid2%nj = grid1%nj
-         grid2%nk = grid1%nk
+         grid2(ib)%ni = grid1(ib)%ni
+         grid2(ib)%nj = grid1(ib)%nj
+         grid2(ib)%nk = grid1(ib)%nk
          if (nf > 0) then
-            grid2%mi = grid1%mi
-            grid2%mj = grid1%mj
-            grid2%mk = grid1%mk
+            grid2(ib)%mi = grid1(ib)%mi
+            grid2(ib)%mj = grid1(ib)%mj
+            grid2(ib)%mk = grid1(ib)%mk
          end if
       end do
 

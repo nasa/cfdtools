@@ -60,3 +60,8 @@ details.
                           work in the absence of a rounded shoulder aft
                           of the underlying cone and a nose cap larger
                           than that cone.
+06/25/2021    "    "      Splitting aft surface patches at a given x
+                          with new dimensions in the form 4n+1 for
+                          possible coarsening is now an option via
+                          new input x_parachute_cone > 0. (meaning 16
+                          output surface patches, not 12).

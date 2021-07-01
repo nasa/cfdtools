@@ -35,8 +35,12 @@ plscrv3d.f         Parametric local spline interpolation on a 3-spc. curve
 plscurve.f         Used by MODGRID4 (gridlib); not as efficient as PLSCRV3D
 plsfit3d.f         Analogue of PLSFIT (interp2d); lacks PLSCRV3D's derivs.
 plsintyz.f         Interpolate y, z for given x(s) on an (x,y,z) curve
+plxcut3d.f90       Find arc-length coresp. to a given x on a 3-space curve
 smoothxyz.f        Gaussian kernel-based smoothing of noisy curve | surface
 table3.f           Trilinear interp. in rectangular table, in function form
 tri_line.f90       Intersect line thru (xt,zt) _|_ y = 0 w/ 3-spc. triangle
 trilint.f          Part of RIPPLE3D approach to searching a structured grid
 wbintr.f           Compute intersectn. betwn. "wing", "body" regular meshes
+
+06/25/21           Added plxcut3d variant of plxcut for application to a
+                   3-space curve in CAPSULE_GRID.

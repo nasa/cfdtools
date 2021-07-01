@@ -68,6 +68,8 @@
 !                             numeric (meaning no leading header lines).
 !     03/16/17    "      "    Handled more than one "coordinate" (number) in the
 !                             column containing the prefix.
+!     05/29/21    "      "    Look for apparently missing rows for the common
+!                             case where the sorted numbers are really ordinals.
 !
 !  Author:  David Saunders, AMA, Inc./NASA Ames Research Center, Mnt. View, CA
 !
@@ -202,9 +204,28 @@
    do i = i1, i2, inc
       irow = ilist(i)
       call pack_row ()  ! Internal procedure below
+!!    write (luncrt, '(f6.1)') rlist(i)
    end do
 
    close (lunout)
+
+!  For the common case where the numbers being sorted are really ordinals,
+!  look for apparently missing items in the list:
+
+   if (inc == 1) then  ! It's not worth trying to handle reverse order
+      if (real (int (rlist(1))) == rlist(1)) then  ! Make sure it's an ordinal
+         if (rlist(i2) - rlist(i1) /= real (nrows - 1)) then
+            if ((i2 - i1) > nint (real (nrows)*0.9)) then  ! Are a few missing?
+               do i = i1, i2 - 1
+                  if (nint (rlist(i+1) - rlist(i)) /= 1.) then
+                     write (luncrt, '(2a, i10)') '   Likely missing row for ', &
+                        prefix(1:lpre), nint (rlist(i) + 1.)
+                  end if
+               end do
+            end if
+         end if
+      end if
+   end if
 
 99 continue
 

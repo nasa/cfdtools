@@ -52,6 +52,7 @@
  nblend_fore_aft = 8,
  numi_aft_body = 201,
  ni_regrid_aft_body = 21,
+ x_parachute_cone = -99.
  i0_umbrella = 0,
  i1_umbrella = 0,
  i2_umbrella = 0,
@@ -121,11 +122,12 @@
 !     sting_stretch_multiplier = 3., ! Applied to interim end-of-sting spacing
 !     ng_split = 0,                ! Full input generatrix index (fore/aft red.)
 !     nblend_fore_aft = 8,         ! # aft pts. used to match fore/aft spacing
-!     ni_regrid_aft_body = 0,      ! Automated if analytic; enter desired index
+!     ni_regrid_aft_body = 0,      ! Automated if analytic (tail cap index)
+!     x_parachute_cone = ...,      ! > 0. means split patches 7-10 at this x
 !     i0_umbrella = 0,             ! For fat aft body cases (extra morphing)
 !     i1_umbrella = 0,             ! Inboard index defining aft spoke morph
 !     i2_umbrella = 0,             ! Outboard index near shoulder likewise
-!     $END                         ! if automation fails or for input generatrix
+!     $END
 !
 !  Clarification of Input Generatrix Option:
 !

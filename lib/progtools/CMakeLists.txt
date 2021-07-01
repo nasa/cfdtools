@@ -3,11 +3,13 @@ cfdtools_add_library(progtools
   cfd_io_package.f
   check_existence.f90
   cleantext.f
+  column_widths.f90
   countr.f
   count_records.f90
   decode_ilist.f90
   decode_number.f90
   decode_rlist.f90
+  digit.f90
   echo.f
   extend_name.f90
   get_coordinates.f90
