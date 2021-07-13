@@ -59,8 +59,13 @@ C     05/20/99   DAS   Minor Fortran 90 changes.
 C     08/30/10   DAS   The advance='no' prompting was misbehaving; added a
 C                      "Done" item to the menu.
 C     05/24/11   DAS   64-bit precision outputs now, not single precision.
+C     07/10/21   DAS   In order to test the revised CHANGEN2D, install
+C                      it as one more option here, as first done for testing
+C                      CHANGEN via RESHAPE3D.  Add saving of before and
+C                      after cell growth rates for this option.
 C
 C  AUTHOR:  David Saunders, Sterling Software/NASA Ames, Mt. View, CA.
+C           Later with ELORET, Inc. and AMA, Inc. at NASA ARC.
 C
 C-----------------------------------------------------------------------
 
@@ -73,29 +78,32 @@ C     Constants:
      >   LUNKBD = 5,
      >   LUNIN  = 7,
      >   LUNOUT = 8,
-     >   MXMENU = 12,
+     >   MXMENU = 13,
      >   MXPTS  = 200000,
      >   HALFM  = (MXMENU + 4) / 2 ! 4 here allows for -2, -1, 0, and MXMENU+1
 
 C     Variables:
 
-      INTEGER
-     >   CHOICE, COLUMNS (2), I, IER, IOS, J, LAST, N, NCOL
-      REAL
-     >   ANGLE, CI, SI, P, Q, SCALE, SHIFT, TEMP, XP, YP
+      INTEGER ::
+     >   CHOICE, COLUMNS (2), I, IER, IOS, J, LAST, N, NCOL, NNEW
+      REAL ::
+     >   ANGLE, CI, GROWTH, P, Q, SCALE, SHIFT, SI, TEMP, TOTAL, XP, YP
       REAL, DIMENSION (MXPTS) ::
      >   X, Y, XLAST, YLAST, XORIG, YORIG
-      LOGICAL
+      REAL, ALLOCATABLE, DIMENSION (:) ::
+     >   ARC, XNEW, YNEW
+      LOGICAL ::
      >   CR, EOF, FINIS, YESTITLE
-      CHARACTER
-     >   DATASET * 48, MENU (-2 : MXMENU + 1) * 30, TITLE * 80
+      CHARACTER ::
+     >   DATASET*128, MENU (-2 : MXMENU + 1)*30, METHOD*1, TITLE*80
 
 C     Procedures:
 
-      LOGICAL
+      LOGICAL ::
      >   ALPHA
-      EXTERNAL
-     >   ALPHA, GETLINE, OPENER, RDLIST, RDXYZ, READI, READR, READS
+      EXTERNAL ::
+     >   ALPHA, CHANGEN2D, CHORDS2D, GETLINE, OPENER, RDLIST, RDXYZ,
+     >   READI, READR, READS
 
 C     Storage:
 
@@ -114,7 +122,8 @@ C     Storage:
      >   '   9: Switch X and Y',
      >   '  10: Rotate Y about (Zc=0,Yc)',
      >   '  11: Scale X & Y the same way',
-     >   '  12: Done',
+     >   '  12: Change N; same rel. sp.',
+     >   '  13: Done',
      >   '                              '/ ! Last blank eases display
                                            ! of menu as two columns.
 C     Execution:
@@ -185,7 +194,7 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
          IF (MOD (MXMENU, 2) == 0) WRITE (LUNCRT, 1001)
 
   210    CALL READI (LUNCRT, 'Pick one. EOF (^Z or ^D) means no more. ',
-     >      LUNKBD, CHOICE, CR, EOF)
+     >               LUNKBD, CHOICE, CR, EOF)
          IF (EOF) GO TO 800
          IF (CR)  GO TO 210
 
@@ -211,13 +220,13 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
 
          ELSE IF (CHOICE == 0) THEN  ! "Review": Display data pairs.
 
-            WRITE (LUNCRT, '(/, (I6, 1P, 2E16.7))')
+            WRITE (LUNCRT, '(/, (I6, 2ES16.7))')
      >         (I, X(I), Y(I), I = 1, N)
 
          ELSE IF (CHOICE == 1) THEN  ! "Translate Y":
 
             CALL READR (LUNCRT, '   Enter Y shift (+ or -): ',
-     >         LUNKBD, SHIFT, CR, EOF)
+     >                  LUNKBD, SHIFT, CR, EOF)
             IF (CR .OR. EOF) GO TO 210
 
             DO I = 1, N
@@ -227,7 +236,7 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
          ELSE IF (CHOICE == 2) THEN  ! "Scale Y":
 
             CALL READR (LUNCRT, '   Enter Y scale (+ or -): ',
-     >         LUNKBD, SCALE, CR, EOF)
+     >                  LUNKBD, SCALE, CR, EOF)
             IF (CR .OR. EOF) GO TO 210
 
             DO I = 1, N
@@ -237,7 +246,7 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
          ELSE IF (CHOICE == 3) THEN  ! "Translate X":
 
             CALL READR (LUNCRT, '   Enter X shift (+ or -): ',
-     >         LUNKBD, SHIFT, CR, EOF)
+     >                  LUNKBD, SHIFT, CR, EOF)
             IF (CR .OR. EOF) GO TO 210
 
             DO I = 1, N
@@ -247,7 +256,7 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
          ELSE IF (CHOICE == 4) THEN  ! "Scale X":
 
             CALL READR (LUNCRT, '   Enter X scale (+ or -): ',
-     >         LUNKBD, SCALE, CR, EOF)
+     >                  LUNKBD, SCALE, CR, EOF)
             IF (CR .OR. EOF) GO TO 210
 
             DO I = 1, N
@@ -258,7 +267,7 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
 
             CALL READR (LUNCRT,
      >         '   Enter rotation in degrees (+ve is anticlockwise): ',
-     >         LUNKBD, ANGLE, CR, EOF)
+     >                  LUNKBD, ANGLE, CR, EOF)
             IF (CR .OR. EOF) GO TO 210
 
   350       WRITE (LUNCRT, 1001, ADVANCE='NO')
@@ -312,12 +321,12 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
 
             CALL READR (LUNCRT,
      >         '   Enter rotation in degrees (+ve is anticlockwise): ',
-     >         LUNKBD, ANGLE, CR, EOF)
+     >                  LUNKBD, ANGLE, CR, EOF)
             IF (CR .OR. EOF) GO TO 210
 
             CALL READR (LUNCRT,
      >         '   Enter Yc for center of rotation (Zc=0,Yc): ',
-     >         LUNKBD, Q, CR, EOF)
+     >                  LUNKBD, Q, CR, EOF)
             IF (CR .OR. EOF) GO TO 210
 
             ANGLE = ANGLE * ASIN (1.E+0) / 90.E+0
@@ -330,7 +339,7 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
          ELSE IF (CHOICE == 11) THEN  ! "Scale X & Y the same way":
 
             CALL READR (LUNCRT, '   Enter scale (+ or -): ',
-     >         LUNKBD, SCALE, CR, EOF)
+     >                  LUNKBD, SCALE, CR, EOF)
             IF (CR .OR. EOF) GO TO 210
 
             DO I = 1, N
@@ -338,7 +347,61 @@ C     :::::::::::::::::::::::::::::::::::::::::::::::::::
                Y (I) = Y (I) * SCALE
             END DO
 
-         ELSE IF (CHOICE == 12) THEN  ! Done (works better than ^D)
+         ELSE IF (CHOICE == 12) THEN  ! "Change N; same relative spacing":
+
+            WRITE (LUNCRT, '(A, I7)') '   Current number of points: ', N
+            CALL READI (LUNCRT,        '  Desired number of points: ',
+     >                  LUNKBD, NNEW, CR, EOF)
+            IF (CR .OR. EOF) GO TO 210
+
+            WRITE (LUNCRT, '(A)') '   Interpolation methods:',
+     >                         '   M (monotonic), B (loose), L (Linear)'
+            CALL READC (LUNCRT, '  Interpolation choice: ',
+     >                  LUNKBD, METHOD, CR, EOF)
+            IF (CR .OR. EOF) GO TO 210
+
+C           Save the current growth rates:
+
+            OPEN (LUNOUT, FILE='growth-rates-before.dat',
+     >            STATUS='UNKNOWN')
+
+            ALLOCATE (ARC(N))
+
+            CALL CHORDS2D (N, X, Y, .FALSE., TOTAL, ARC)
+
+            DO I = 2, N-1
+               GROWTH = (ARC(I+1) - ARC(I)) / (ARC(I) - ARC(I-1))
+               WRITE (LUNOUT, '(2ES16.8)') ARC(I), GROWTH
+            END DO
+            CLOSE (LUNOUT)
+
+            DEALLOCATE (ARC)
+            ALLOCATE (XNEW(NNEW), YNEW(NNEW))
+
+            CALL CHANGEN2D (1, N, X, Y, 1, NNEW, XNEW, YNEW, METHOD)
+
+            N = NNEW
+            X(1:N) = XNEW(:)
+            Y(1:N) = YNEW(:)
+
+            DEALLOCATE (XNEW, YNEW)
+
+            OPEN (LUNOUT, FILE='growth-rates-after.dat',
+     >            STATUS='UNKNOWN')
+
+            ALLOCATE (ARC(N))
+
+            CALL CHORDS2D (N, X, Y, .FALSE., TOTAL, ARC)
+
+            DO I = 2, N-1
+               GROWTH = (ARC(I+1) - ARC(I)) / (ARC(I) - ARC(I-1))
+               WRITE (LUNOUT, '(2ES16.8)') ARC(I), GROWTH
+            END DO
+            CLOSE (LUNOUT)
+            DEALLOCATE (ARC)
+
+         ELSE IF (CHOICE == 13) THEN  ! Done (works better than ^D)
+
             GO TO 800
          ELSE
             GO TO 210
@@ -366,7 +429,7 @@ C     :::::::::::::
          WRITE (LUNOUT, 1003, ERR=902) N
       END IF
 
-      WRITE (LUNOUT, '(1P, 2E24.15)', ERR=902) (X(I), Y(I), I = 1, N)
+      WRITE (LUNOUT, '(2ES24.15)', ERR=902) (X(I), Y(I), I = 1, N)
 
       GO TO 999
 
@@ -390,4 +453,4 @@ C     Formats:
  1003 FORMAT (I5)
  1004 FORMAT (/, (A, 10X, A))
 
-      END
+      END PROGRAM RESHAPE

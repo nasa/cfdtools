@@ -8,8 +8,15 @@ C     with the end points matching.
 C
 C     12/22/97  DAS  3-space grid line utility CHANGEN wrapped around PLSCRV3D.
 C     10/23/02   "   2-space variant: CHANGEN2D.
+C     07/10/21   "   The original algebraic method is deficient in that, for
+C                    instance, doubling the number of cells produces mid-points
+C                    of the given cells, which means that the cell growth rate
+C                    is stair-stepped.  Fix this simply by invoking the
+C                    corrected CHANGEN1D variant, which really does preserve
+C                    the relative distribution of the input points.
 C
 C     Author:  David Saunders, ELORET/NASA Ames Research Ctr., Moffett Field, CA
+C              Later with AMA, Inc. at NASA ARC.
 C
 C ------------------------------------------------------------------------------
 
@@ -47,27 +54,19 @@ C     Execution:
 
       NDATA = I2 - I1 + 1
 
-      CALL CHORDS2D (NDATA, X1(I1), Y1(I1), NORM, TOTAL, T)
+      CALL CHORDS2D (NDATA, X1(I1), Y1(I1), NORM, TOTAL, T(I1))
 
-      R   = REAL (I2 - I1) / REAL (IB - IA)
-      RI1 = REAL (I1)
-
-      DO I = IA, IB - 1
-         RIP      = RI1 + R * REAL (I - IA)
-         IP       = INT (RIP)
-         P        = RIP - REAL (IP)
-         TEVAL(I) = (ONE - P) * T(IP) + P * T(IP+1)
-      END DO
+      CALL CHANGEN1D (I1, I2, T(I1), IA, IB, TEVAL(IA))
 
       NINTERP = IB - IA
 
-      CALL LCSFIT (NDATA, T(I1), X1(I1), NEW, METHOD, NINTERP, TEVAL,
-     >             X2(IA), DERIV)
+      CALL LCSFIT (NDATA, T(I1), X1(I1), NEW, METHOD, NINTERP,
+     >             TEVAL(IA), X2(IA), DERIV)
 
       X2(IB) = X1(I2)
 
-      CALL LCSFIT (NDATA, T(I1), Y1(I1), NEW, METHOD, NINTERP, TEVAL,
-     >             Y2(IA), DERIV)
+      CALL LCSFIT (NDATA, T(I1), Y1(I1), NEW, METHOD, NINTERP,
+     >             TEVAL(IA), Y2(IA), DERIV)
 
       Y2(IB) = Y1(I2)
 

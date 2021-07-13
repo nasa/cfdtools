@@ -53,5 +53,10 @@ HISTORY:
    08/30/10   DAS   The advance='no' prompting was misbehaving; added a
                     "Done" item to the menu.
    05/24/11   DAS   64-bit precision outputs now, not single precision.
+   07/10/21   DAS   In order to test the revised CHANGEN2D, install
+                    it as one more option here, as first done for testing
+                    CHANGEN via RESHAPE3D.  Add saving of before and
+                    after cell growth rates for this option.
 
 AUTHOR:  David Saunders, Sterling Software/NASA Ames, Mt. View, CA.
+         Later with ELORET, Inc. and AMA, Inc. at NASA ARC.

@@ -2,8 +2,11 @@ cfdtools_add_executable(reshape3d
   reshape3d.f90
 )
 target_link_libraries(cfdtools_reshape3d
+  cfdtools_geomlib
+  cfdtools_gridlib
+  cfdtools_interplib
+  cfdtools_interp3d
+  cfdtools_searchlib
   cfdtools_numodules
   cfdtools_progtools
-  cfdtools_gridlib
-  cfdtools_geomlib
 )

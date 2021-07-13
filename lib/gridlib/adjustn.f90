@@ -23,8 +23,15 @@
 !                 See expanded use of "method".
 !  01/14/08   "   ADJUSTN adapted from CHANGEN as explained above, with a new
 !                 name, since adding an argument would affect existing uses.
+!  07/12/21   "   The original algebraic method is deficient in that, for
+!                 instance, doubling the number of cells produces mid-points
+!                 of the given cells, which means that the cell growth rate
+!                 is stair-stepped.  Fix this simply by invoking the
+!                 corrected CHANGEN1D variant, which really does preserve
+!                 the relative distribution of the input points.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames, Moffett Field, CA
+!           Later with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -56,8 +63,8 @@
 
 !  Local variables:
 
-   integer   :: i, ieval, ip
-   real      :: t(ndata), dt, p, r, ri1, rip, teval, total
+   integer   :: i, ieval
+   real      :: t1(ndata), t2(ib), dt, teval, total
    logical   :: new, uniform
    character :: mupper*1
 
@@ -69,7 +76,7 @@
 
    uniform = mupper /= method
 
-   call chords3d (ndata, x1, y1, z1, norm, total, t)
+   call chords3d (ndata, x1, y1, z1, norm, total, t1)
 
    ieval  = i1
    new    = .true.
@@ -80,13 +87,13 @@
 
    if (uniform) then
 
-      dt = (t(i2) - t(i1)) / real (ib - ia)
+      dt = (t1(i2) - t1(i1)) / real (ib - ia)
 
       do i = ia + 1, ib - 1
 
-         teval = t(i1) + dt * real (i - ia)
+         teval = t1(i1) + dt * real (i - ia)
 
-         call plscrv3d (ndata, x1, y1, z1, t, mupper, new, closed, &
+         call plscrv3d (ndata, x1, y1, z1, t1, mupper, new, closed, &
                         teval, ieval, x2(i), y2(i), z2(i), derivs)
          new = .false.
 
@@ -94,18 +101,12 @@
 
    else  ! Preserve original form of spacing as much as possible
 
-      r   = real (i2 - i1) / real (ib - ia)
-      ri1 = real (i1)
+      call changen1d (i1, i2, t1(i1), ia, ib, t2)
 
       do i = ia + 1, ib - 1
 
-         rip   = ri1 + r * real (i - ia)
-         ip    = int (rip)
-         p     = rip - real (ip)
-         teval = (one - p) * t(ip) + p * t(ip+1)
-
-         call plscrv3d (ndata, x1, y1, z1, t, mupper, new, closed, &
-                        teval, ieval, x2(i), y2(i), z2(i), derivs)
+         call plscrv3d (ndata, x1, y1, z1, t1, mupper, new, closed, &
+                        t2(i), ieval, x2(i), y2(i), z2(i), derivs)
          new = .false.
 
       end do

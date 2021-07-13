@@ -77,8 +77,13 @@
 !
 !     04/06/18   DAS              Full precision output is long overdue.
 !
+!     07/10/21   DAS              In order to test the revised CHANGEN, install
+!                                 it as one more option here.  Raise the "undo"
+!                                 limit significantly.  Add saving of before and
+!                                 after cell growth rates for this option.
+!
 !  AUTHORS (Original): David Saunders, Michael Wong,   Sterling Software/ARC, CA
-!          (Current):  David Saunders, ELORET Corp/NASA Ames Research Center, CA
+!          (Later):    David Saunders, ELORET Corp/NASA Ames Research Center, CA
 !                      Now with AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -89,9 +94,9 @@
 
    integer, parameter :: &
       luncrt   = 6, lunkbd = 5, lunin = 7, lunout = 8, &
-      mxmenu   = 23,     &
+      mxmenu   = 24,     &
       ndisplay = 30,     &  ! Don't display huge numbers of data points
-      nundo    = 20000,  &  ! Allocating an extra 6 x N can be extravagant
+      nundo    = 999999, &  ! Allocating an extra 6 x N can be extravagant
       halfm    = (mxmenu + 4) / 2 ! 4 here allows for -2, -1, 0, and mxmenu + 1
 
    real, parameter :: &
@@ -101,23 +106,23 @@
 !  Variables:
 
    integer :: &
-      choice, i, ios, j, n, nread, nsplit
+      choice, i, ios, j, n, nnew, nread, nsplit
    real :: &
-      angle, cutoff, p, px, py, pz, q, qx, qy, qz, scale, shift, temp,      &
-      xp, yp, zp, xmax, xmin, xmid, ymax, ymin, ymid, zmax, zmin, zmid
+      angle, cutoff, growth, p, px, py, pz, q, qx, qy, qz, scale, shift, temp, &
+      total, xp, yp, zp, xmax, xmin, xmid, ymax, ymin, ymid, zmax, zmin, zmid
    real, allocatable, dimension (:) :: &
-      x, y, z, xlast, ylast, zlast, xnew, ynew, znew, xorig, yorig, zorig
+      arc, x, y, z, xlast, ylast, zlast, xnew, ynew, znew, xorig, yorig, zorig
    logical :: &
       cr, datalost, eof, first, header, undo
    character :: &
-      coord*1, dataset * 48, menu (-2 : mxmenu + 1) * 35, test*2, title * 80
+      coord*1, dataset*48, menu (-2:mxmenu + 1)*35, method*1, test*2, title*80
 
 !  Procedures:
 
    logical :: &
       alpha
    external &
-      alpha  ! Distiguishes numeric text from alphanumeric
+      alpha  ! Distinguishes numeric text from alphanumeric
 
 !  Data:
 
@@ -147,7 +152,8 @@
       '  20: Split: X|Y|Z <|<=|==|>|>= cut', &
       '  21: RIGID_TRANSFORM (new end pts)', &
       '  22: NULINE3D morph  (new end pts)', &
-      '  23: Done',                          &
+      '  23: CHANGEN: new N; same rel. sp.', &
+      '  24: Done',                          &
       '                                   '/ ! Last ' ' eases display
                                              ! of menu as two columns.
 
@@ -223,7 +229,7 @@
       end if
 
 210   call readi (luncrt, 'Pick one. EOF (^Z or ^D) means no more. ', &
-         lunkbd, choice, cr, eof)
+                  lunkbd, choice, cr, eof)
       if (eof) go to 800
       if (cr) go to 210
 
@@ -291,7 +297,7 @@
          case (1)   ! "Translate X":
 
             call readr (luncrt, '   Enter X shift (+ or -): ', &
-               lunkbd, shift, cr, eof)
+                        lunkbd, shift, cr, eof)
             if (cr .or. eof) go to 210
 
             do i = 1, n
@@ -301,7 +307,7 @@
          case (2)   ! "Scale X":
 
             call readr (luncrt, '   Enter X scale (+ or -): ', &
-               lunkbd, scale, cr, eof)
+                        lunkbd, scale, cr, eof)
             if (cr .or. eof) go to 210
 
             do i = 1, n
@@ -311,7 +317,7 @@
          case (3)   ! "Translate Y":
 
             call readr (luncrt, '   Enter Y shift (+ or -): ', &
-               lunkbd, shift, cr, eof)
+                        lunkbd, shift, cr, eof)
             if (cr .or. eof) go to 210
 
             do i = 1, n
@@ -321,7 +327,7 @@
          case (4)   ! "Scale Y":
 
             call readr (luncrt, '   Enter Y scale (+ or -): ', &
-               lunkbd, scale, cr, eof)
+                        lunkbd, scale, cr, eof)
             if (cr .or. eof) go to 210
 
             do i = 1, n
@@ -331,7 +337,7 @@
          case (5)   ! "Translate Z"
 
             call readr (luncrt, '   Enter Z shift (+ or -): ', &
-               lunkbd, shift, cr, eof)
+                        lunkbd, shift, cr, eof)
             if (cr .or. eof) go to 210
 
             do i = 1, n
@@ -341,7 +347,7 @@
          case (6)   ! "Scale Z"
 
             call readr (luncrt, '   Enter Z scale (+ or -): ', &
-               lunkbd, scale, cr, eof)
+                        lunkbd, scale, cr, eof)
             if (cr .or. eof) GO TO 210
 
             do i = 1, n
@@ -408,7 +414,7 @@
          case (14)  ! "Scale X & Y & Z"
 
             call readr (luncrt, '   Enter scale (+ or -): ', &
-               lunkbd, scale, cr, eof)
+                        lunkbd, scale, cr, eof)
             if (cr .or. eof) go to 210
 
             do i = 1, n
@@ -420,7 +426,7 @@
          case (15)  ! "Rotate (X,Y)":
 
             call readr (luncrt, '   Degrees anticlockwise: ', &
-               lunkbd, angle, cr, eof)
+                        lunkbd, angle, cr, eof)
             if (cr .or. eof) go to 210
 
             write (luncrt, 1001, advance='no') '  Center (Xc, Yc): '
@@ -432,7 +438,7 @@
          case (16)  ! "Rotate (Y,Z)":
 
             call readr (luncrt, '   Degrees anticlockwise: ', &
-               lunkbd, angle, cr, eof)
+                        lunkbd, angle, cr, eof)
             if (cr .or. eof) go to 210
 
             write (luncrt, 1001, advance='no') '  Center (Yc, Zc): '
@@ -444,7 +450,7 @@
          case (17)  ! "Rotate (Z,X)":
 
             call readr (luncrt, '   Degrees anticlockwise: ', &
-               lunkbd, angle, cr, eof)
+                        lunkbd, angle, cr, eof)
             if (cr .or. eof) go to 210
 
             write (luncrt, 1001, advance='no') '  Center (Zc, Xc): '
@@ -456,7 +462,7 @@
          case (18)  ! "Rotate (X,Y,Z) about line joining P and Q":
 
             call readr (luncrt, '   Degrees (RH rule; thumb P -> Q): ', &
-               lunkbd, angle, cr, eof)
+                        lunkbd, angle, cr, eof)
             if (cr .or. eof) go to 210
 
             write (luncrt, 1001, advance='no') '  (Px, Py, Pz): '
@@ -494,15 +500,15 @@
          case (20)  ! "Split the dataset"
 
             call readc (luncrt, '   Split in which direction? [X|Y|Z]: ', &
-               lunkbd, coord, cr, eof)
+                        lunkbd, coord, cr, eof)
             if (cr .or. eof) go to 210
 
             call readc (luncrt, '   Comparison test? [<|<=|==|>|>=]:   ', &
-               lunkbd, test, cr, eof)
+                        lunkbd, test, cr, eof)
             if (cr .or. eof) go to 210
 
             call readr (luncrt, '   Value to compare with:             ', &
-               lunkbd, cutoff, cr, eof)
+                        lunkbd, cutoff, cr, eof)
             if (cr .or. eof) go to 210
 
             call splitxyz (coord, test, cutoff, n, x, y, z, nsplit)
@@ -534,7 +540,63 @@
 
             deallocate (xnew, ynew, znew)
 
-         case (23)  ! Done (may work better than ^D)
+         case (23)  ! Change the # points; preserve the relative spacing
+
+            write (luncrt, '(a, i7)') '   Current number of points: ', n
+            call readi (luncrt,        '  Desired number of points: ', &
+                        lunkbd, nnew, cr, eof)
+            if (cr .or. eof) go to 210
+
+            write (luncrt, '(a)') '   Interpolation methods:', &
+                                  '   M (monotonic), B (loose), L (linear);', &
+                                  '   Uppercase => preserve relative spacing.',&
+                                  '   Lowercase m|b|l => ~uniform spacing.'
+            call reads (luncrt,    '  Interpolation choice: ', &
+                        lunkbd, method, cr, eof)
+            if (cr .or. eof) go to 210
+
+!           Save the current growth rates:
+
+            open (lunout, file='growth-rates-before.dat', status='unknown')
+
+            allocate (arc(n))
+
+            call chords3d (n, x, y, z, .false., total, arc)
+
+            do i = 2, n-1
+               growth = (arc(i+1) - arc(i)) / (arc(i) - arc(i-1))
+               write (lunout, '(2es16.8)') arc(i), growth
+            end do
+            close (lunout)
+            deallocate (arc)
+
+            allocate (xnew(nnew), ynew(nnew), znew(nnew))
+
+            call changen (1, n, x, y, z, 1, nnew, xnew, ynew, znew, method)
+
+            deallocate (x, y, z);  allocate (x(nnew), y(nnew), z(nnew))
+
+            n    = nnew
+            x(:) = xnew(:)
+            y(:) = ynew(:)
+            z(:) = znew(:)
+
+            deallocate (xnew, ynew, znew)
+
+            open (lunout, file='growth-rates-after.dat', status='unknown')
+
+            allocate (arc(n))
+
+            call chords3d (n, x, y, z, .false., total, arc)
+
+            do i = 2, n-1
+               growth = (arc(i+1) - arc(i)) / (arc(i) - arc(i-1))
+               write (lunout, '(2es16.8)') arc(i), growth
+            end do
+            close (lunout)
+            deallocate (arc)
+
+         case (24)  ! Done (may work better than ^D)
 
             go to 800
 
@@ -556,7 +618,7 @@
 
      if (header) then
         call reads (luncrt, 'Output title line? <CR> = same: ', &
-           lunkbd, title, cr, eof)
+                    lunkbd, title, cr, eof)
 
         i = len_trim (title)
         write (lunout, 1001, err=903) title(1:i)
