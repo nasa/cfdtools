@@ -178,6 +178,8 @@
       rewind luning
       call xy_header_io (1, luning, formatted_in, nblocks, gridin, ios)
       if (ios /= 0) go to 99
+   endif
+   if (any(gridin(:)%nk == 0)) then
       write(*,*) "The file appears to be two dimensional."
       gridin(:)%nk = 1  ! Not initialized by xy_header_io
       threed = .false.
