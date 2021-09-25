@@ -275,6 +275,6 @@ install(DIRECTORY samples
 install(EXPORT cfdtools-config
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cfdtools
     NAMESPACE cfdtools::
-    FILE cfdtoos-config.cmake
+    FILE cfdtools-config.cmake
 )
 
