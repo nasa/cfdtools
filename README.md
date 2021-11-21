@@ -361,7 +361,7 @@ C = CFD, G = General Numerics, P = Programming Tool
                    public [GitHub](https://www.github.com/nasa/cfdtools). Various
                    small improvements to `radial_interp`, `refine`, `capsule_grid`,
                    and `prepare_neqair_data`.
-  **Nov 20 2021**: Re-reviewed and approved for open source release by Ames Research
+* **Nov 20 2021**: Re-reviewed and approved for open source release by Ames Research
                    center under the NASA Open Source License v1.3. Added updated
                    license file and contributor license agreements.
 
