@@ -34,13 +34,13 @@ A detailed summary of each library/application is provided below.
 
 ## Build and Install
 The CFDTOOLS software archive is available for download on NASA's public
-(Github)[https://www.github.com/nasa/cfdtools]. The software may be cloned
+[Github](https://www.github.com/nasa/cfdtools). The software may be cloned
 using `git` in the typical fashion:
 
     git clone https://www.github.com/nasa/cfdtools.git
 
 Once downloaded, the software is compiled and installed using CMake. The
-software has no dependencies, and build is known to build successfully using
+software has no dependencies, and is known to build successfully using
 relatively recent compilers from Intel and GNU on Ubuntu and SUSE Linux. The
 basic installation process is as follows:
 
