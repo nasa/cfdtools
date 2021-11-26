@@ -3,7 +3,7 @@
 ## Overview
 The CFD Utility Software Library, a.k.a. CFDTOOLS, contains nearly 30 numerical
 analysis libraries and close to 100 utility applications built upon those
-libraries. These utilities were developed over a rougly fifty year span to
+libraries. These utilities were developed over a roughly fifty year span to
 support aerospace research and development activities at NASA Ames Research
 Center (ARC). They are mostly written in Fortran 90 or 77 and are designed with
 potential reuse in mind. The library also includes C translations of roughly a
@@ -76,7 +76,7 @@ are available in the [contrib](contrib) folder.
 
 
 ## Notices
-Copyright 2020 United States Government as represented by the Administrator of
+Copyright 2021 United States Government as represented by the Administrator of
 the National Aeronautics and Space Administration.  No copyright is claimed in
 the United States under Title 17, U.S. Code. All Other Rights Reserved.
 
@@ -132,7 +132,7 @@ AGREEMENT.
 | **Optimal_Interpolation**     | Alexander Barth's Kriging-like package, with extensions |
 | **optlib**                    | 1-D zero/minimum finders; n-D unconstrained methods, etc. |
 | **progtools**                 | String-manipulation & prompting utilities, incl. string_justify module |
-| **searchlib**                 | 1-D search/sort routines; some for 2|3-D now deprecated |
+| **searchlib**                 | 1-D search/sort routines; some for 2/3-D now deprecated |
 | **special_functions**         | A few utilities related to erf(x), normal distributions, etc. |
 | **surface_patch_utilities**   | For structured surface grids: scale/shift/transpose, etc. |
 | **table_io**                  | I/O utilities for plain text tables (headers + numeric rows) |
@@ -165,11 +165,11 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **combine_blocks**            | C    | Combine multiblock grids/solutions; cavity block options |
 | **combine_blocks_turb**       | C    | COMBINE_BLOCKS variant required for turbulent flows |
 | **compare_blocks**            | C    | Compare related structured grids: identical? maximum differences? |
-| **compare_flows**             | C    | Flow field analogue of COMPARE_BLOCKS (volume | surface) |
+| **compare_flows**             | C    | Flow field analogue of COMPARE_BLOCKS (volume / surface) |
 | **compare_patches**           | C    | Surface grid analogue of COMPARE_BLOCKS |
 | **compress2d**                | C    | CAPSULE_GRID tool; adjust upstream boundary, wall spacing, # radial grid points, etc. |
 | **cones_of_sight**            | C    | Body-normal sets of 9 discretized lines forming cones for radiation calculations |
-| **cross_sections**            | C    | Slice a surface dataset (structured | unstructured) at many stations |
+| **cross_sections**            | C    | Slice a surface dataset (structured / unstructured) at many stations |
 | **curvature**                 | C    | Evaluate curvature along X-Y curve; redistribute points according to curvature |
 | **curvature3d**               | C    | X-Y-Z curve analogue of CURVATURE |
 | **deconstruct**               | C    | Convert a multiblock structured surface or volume grid to unstructured form |
@@ -184,7 +184,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **flow_interp**               | C    | Volume grid search & flow interpolation (ADT method and KDTREE method) |
 | **flow_interp_2d**            | C    | 2-space analogue of FLOW_INTERP |
 | **gen1d**                     | G    | Generate (x,y) datasets from a choice of y = f(x) functions |
-| **gradient_based**            | CG   | Redistribute points along an (x,y) curve according to |df/ds| where s is arc length, for some function f |
+| **gradient_based**            | CG   | Redistribute points along a curve using abs(df/ds), where s is arc length, for some function f |
 | **grid_faces**                | C    | Extract grid block face(s) from a multiblock grid/flow |
 | **gsmooth**                   | C    | Elliptic volume grid smoothing; option to detect bad cells |
 | **gu**                        | C    | Ryan McDaniel's multi-option tool for PLOT3D grids/flows |
@@ -213,7 +213,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **p3d2tec**                   | C    | Convert between PLOT3D grid/flow format and Tecplot form |
 | **polar_interp**              | C    | Pad spoked forebody radiation data nonlinearly |
 | **precision**                 | G    | Estimate objective function precision (difference table) |
-| **prepare_local_analysis**    | C    |Rapid set-up of DPLR-based damage/repair/feature calculations: cavity | protruding gap-filler |
+| **prepare_local_analysis**    | C    |Rapid set-up of DPLR-based damage/repair/feature calculations: cavity / protruding gap-filler |
 | **prepare_neqair_data**       | C    | Facilitates scripting of radiative heating calculations by NEQAIR |
 | **profile**                   | C    | Airfoil geometry display/manipulation utility |
 | **qnmdriver2**                | G    | Framework for one unconstrained optimization (QNMDIF2) |
@@ -222,7 +222,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **radial_interp_2d**          | C    | 2-space RADIAL_INTERP analogue; both one layer of grid blocks |
 | **rectify_grid**              | C    | Ensure right-handedness for 3-space volume or surface grid |
 | **redistribute_xy**           | C    | Redistribute points in a 2- or 3-space line segment (1- or 2-sided stretching) |
-| **refine_grid**               | C    | Densify | thin multiblock grid/flow data, any multipliers |
+| **refine_grid**               | C    | Densify or thin multiblock grid/flow data, any multipliers |
 | **reflect_blocks**            | C    | Reflect 3-space grid/flow data; save reflected or both halves |
 | **reflect_blocks_2d**         | C    | Reflect 2-space grid/flow data; save reflected or both halves |
 | **reorder_blocks**            | C    | Reorder some or all grid blocks; optional flow file |
@@ -247,7 +247,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **surface_diffs**             | C    | Map Tecplot surface grid 1 to grid 2; save [%]differences |
 | **surface_interp**            | C    | Interpolate 3-space Tecplot surface data at target data point(s) |
 | **surface_interp_2d**         | C    | Interpolate 2-space Tecplot surface data at target data point(s) |
-| **surface_pad**               | C    | Pad structured surface data nonlinearly: 1-D in i and|or j |
+| **surface_pad**               | C    | Pad structured surface data nonlinearly: 1-D in i and/or j |
 | **surface_patches**           | C    | ADJUST_GRID variant with more surface_patch_utilities options |
 | **table_arithmetic**          | G    | Manipulate one or two data tables by columns |
 | **template**                  | C    | Calculate block interface data and DPLR-type control file (structured volume grid) |
@@ -255,19 +255,19 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **thin_flow**                 | C    | THIN_GRID analogue for multiblock flow data |
 | **thin_grid**                 | C    | Extract every mth/nth[/kth] point in i/j[/k] directions |
 | **thin_grid_2d**              | C    | THIN_GRID analogue for 2-space; grid only |
-| **throat_conditions_3d**      | C    | Boundary conditions at arc-jet nozzle: rectangular|circular|semi-elliptic |
-| **trail**                     | GP   | Truncate lines and|or strip trailing blanks |
+| **throat_conditions_3d**      | C    | Boundary conditions at arc-jet nozzle: rectangular, circular, semi-elliptic |
+| **trail**                     | GP   | Truncate lines and/or strip trailing blanks |
 | **traj_fit**                  | C    | Nonlinear least squares fitting of f(rho(t),V(t) = C rho(t)^m V(t)^n via the QNMDRIVER2 framework |
 | **traj_opt**                  | CG   | Trajectory optimization: would need an NPOPT license from Stanford University |
 | **tri_to_quad**               | C    | Impose a structured surface on a Tecplot triangulation |
 | **tri_to_tri**                | C    | Interpolate a single-zone Tecplot triangulation dataset to another 1+-zone target triangulation |
 | **triangulation_tool**        | C    | Drives scale/shift/rotate transformations and area/volume/CM/moments of inertia calculations for a Tecplot unstructured surface or volume dataset (1+ zones) |
 | **update_grid**               | C    | Replace one or more grid blocks with same-sized block(s) from other file or files |
-| **upsequence**                | C    | Upsequence coarse cavity|plu|gap filler solution; impose fine local boundary flow |
+| **upsequence**                | C    | Upsequence coarse cavity/plug/gap filler solution; impose fine local boundary flow |
 | **uslos**                     | C    | Merge of LINES_OF_SIGHT & HEMISPHERES_OF_SIGHT for unstructured surfaces |
 | **v2c**                       | C    | Convert grid [+ optional flow]: cell vertices to centers |
 | **wingsections**              | C    | B-spline sections + chord/thickness data --> B-spline wing |
-| **xdeck**                     | P    | Ancient precursor of TRAIL: remove trailing | leading characters |
+| **xdeck**                     | P    | Ancient precursor of TRAIL: remove trailing / leading characters |
 | **xline**                     | P    | Remove lines starting with a target string |
 
 
