@@ -72,7 +72,7 @@
 !        indicated body point.
 !
 !     o  Input dataset file names may be symbolic links or full paths.
-! 
+!
 !     o  For the indicated body point coordinates, the nearest data point is
 !        chosen from each dataset.  Exact coordinates are not required, and no
 !        interpolation is attempted.  The coordinates are assumed to be common
@@ -140,7 +140,7 @@
       lunout  = 2,       &   ! Output table
       lunctl  = 5,       &   ! Control file (standard input)
       luncrt  = 6,       &   ! Output diagnostics
-      maxbuf  = 128,     &   ! Character limit on input control lines
+      maxbuf  = 256,     &   ! Character limit on input control lines
       maxname = 32           ! Character limit on variable names | other tokens
                              ! as for tecplot_io.f90's varname(:)
 
@@ -345,7 +345,7 @@
       close (lunin)
 
       write (luncrt, '(3a, /, (f7.2))') 'Times found in ', filename(1:l), ':', &
-         times(:) 
+         times(:)
 
       line = line + 1
       read (lunctl, *, iostat=ios) nvars  ! Large enough for all name lists
@@ -506,7 +506,7 @@
 
       select case (icase)
 
-         case (1)  ! t, x, y[, z] + nvout variables 
+         case (1)  ! t, x, y[, z] + nvout variables
 
             do it = 1, ntimes  ! For each dataset in the laminar group
                read (lunctl, '(a)', iostat=ios) header%filename

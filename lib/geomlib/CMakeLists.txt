@@ -20,6 +20,7 @@ cfdtools_add_library(geomlib
   cross_product.f90
   curv2d.f
   curv3d.f
+  curve_diffs.f90
   detect_flatness.f90
   detect_vertices.f90
   distptol.f

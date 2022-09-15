@@ -10,7 +10,7 @@ target_link_libraries(cfdtools_capsule_grid
   cfdtools_progtools
   cfdtools_adt
   cfdtools_linsys
-  cfdtools_xgrid_block_utilities
+  cfdtools_grid_block_utilities
   cfdtools_surface_patch_utilities
   cfdtools_gridlib
   cfdtools_optlib

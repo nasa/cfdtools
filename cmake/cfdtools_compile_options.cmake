@@ -44,6 +44,16 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
         -ffree-line-length-none
     )
 
+    # Recent versions of the gfortran compiler emit errors if it notices
+    # calls with mismatched arguments (e.g. scalar passed to rank-1). This
+    # occurs in many place in CFDTOOLS, and it's not worth cleaning it all
+    # up. so we suppress this error and hope for the best.
+    include(CheckFortranCompilerFlag)
+    check_fortran_compiler_flag("-fallow-argument-mismatch" has_flag)
+    if (has_flag)
+      list(APPEND options "-fallow-argument-mismatch")
+    endif()
+
     # Debug
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         list(APPEND options

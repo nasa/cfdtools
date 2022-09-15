@@ -76,7 +76,7 @@
    character (1) :: &
       answer
 
-   character (64) :: &
+   character (256) :: &
       filegi, filefi, filego, filefo
 
 !  Composite data types:
@@ -312,7 +312,7 @@
    end if
 
    deallocate (blocki, blocko)
- 
+
 999 continue
 
 ! *** STOP ! Avoid system dependencies.

@@ -55,8 +55,6 @@ target_compile_options(cfdtools_global INTERFACE ${CFDTOOLS_COMPILE_OPTIONS})
 #------------------------------------------------------------------------------
 add_subdirectory(lib/aa_nurbs)
 add_subdirectory(lib/adt)
-add_subdirectory(lib/blas2lib)
-add_subdirectory(lib/blaslib)
 add_subdirectory(lib/dt_nurbs)
 add_subdirectory(lib/eigenlib)
 add_subdirectory(lib/forsythe)
@@ -64,7 +62,6 @@ add_subdirectory(lib/geomlib)
 add_subdirectory(lib/grid_block_structure)
 add_subdirectory(lib/grid_block_utilities)
 add_subdirectory(lib/gridlib)
-add_subdirectory(lib/grmodules)
 add_subdirectory(lib/integratelib)
 add_subdirectory(lib/interp2d)
 add_subdirectory(lib/interp3d)
@@ -101,6 +98,7 @@ add_subdirectory(app/aerosurf)
 add_subdirectory(app/anchor)
 add_subdirectory(app/blayer)
 add_subdirectory(app/blayer_results)
+add_subdirectory(app/body_point_data)
 add_subdirectory(app/bsprofile)
 add_subdirectory(app/bump_factors)
 add_subdirectory(app/capsule_grid)
@@ -152,7 +150,7 @@ add_subdirectory(app/grid_morph_1)
 add_subdirectory(app/gsmooth)
 add_subdirectory(app/gu)
 add_subdirectory(app/hb_grid)
-#add_subdirectory(app/heat_shield) npopt?
+#add_subdirectory(app/heat_shield) needs npopt/blas.
 add_subdirectory(app/hemispheres_of_sight)
 add_subdirectory(app/hyper_aero)
 add_subdirectory(app/iblank_move)
@@ -279,6 +277,6 @@ install(DIRECTORY samples
 install(EXPORT cfdtools-config
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cfdtools
     NAMESPACE cfdtools::
-    FILE cfdtoos-config.cmake
+    FILE cfdtools-config.cmake
 )
 

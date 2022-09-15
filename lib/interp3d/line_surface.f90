@@ -1,6 +1,6 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   subroutine line_surface (npatches, surface_patches, nquad, conn,            &
+   subroutine line_surface (linenum, npatches, surface_patches, nquad, conn,   &
                             nline, xline, yline, zline, sline, lcs_method,     &
                             ns, s1, s2)
 !  Purpose:
@@ -94,6 +94,14 @@
 !                 from CFD solutions for the Stardust capsule.  This original
 !                 strategy described above cannot be made reliable.
 !  03/24/06   "   Revised strategy using new FURTHEST_POINT utility.
+!  09/17/20   "   Hayabusa 2 produced puzzling radiation hot spots with NEQAIR'S
+!                 black body BC used correctly.  We believe that the aft body's
+!                 concavities produced flawed line-surface intersections from
+!                 the method of intsec6 that assumes a convex surface.  This
+!                 version invokes intsec9, which can trap an intersection
+!                 squared distance not essentially zero and use a back-up method
+!                 to isolate the true intersection.  Added the linenum argument
+!                 for improved diagnostics.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
 !
@@ -104,6 +112,8 @@
    implicit none
 
 !  Arguments:
+
+   integer, intent (in)  :: linenum       ! Line number for disgnostic purposes
 
    integer, intent (in)  :: npatches      ! # surface grid patches
 
@@ -180,17 +190,23 @@
 
    tline(2) = tint0 ! For a 2-point line; rethink this for a general curve
 
-   call intsec6 (npatches, surface_patches, nquad, conn,                       &
+   call intsec9 (linenum, npatches, surface_patches, nquad, conn,              &
                  nline, xline, yline, zline, tline, lcs_method,                &
                  iquad, pint, qint, tint1, xyzint, dsq)
+
+!! if (dsq > 1.e-6) write (52, '(a)') '???'
+!! write (52, '(a, i6, es16.8)') 'line, dsq1:', linenum, dsq
 
 !  Look for a second intersection in [tint0, 1]:
 
    tline(1) = tint0;  tline(2) = one
 
-   call intsec6 (npatches, surface_patches, nquad, conn,                       &
+   call intsec9 (linenum, npatches, surface_patches, nquad, conn,              &
                  nline, xline, yline, zline, tline, lcs_method,                &
                  iquad, pint, qint, tint2, xyzint, dsq)
+
+!! if (dsq > 1.e-6) write (52, '(a)') '%%%'
+!! write (52, '(a, i6, es16.8)') 'line, dsq2:', linenum, dsq
 
 !  Sort the two values of t:
 

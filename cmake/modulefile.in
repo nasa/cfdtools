@@ -6,6 +6,7 @@ conflict cfdtools
 set root @CMAKE_INSTALL_PREFIX@
 
 # Configure the environment
-setenv        CFDTOOLS_ROOT     $root
-setenv        CFDTOOLS_VERSION  @cfdtools_VERSION@
-prepend-path  PATH              $root/bin
+setenv        CFDTOOLS_ROOT      $root
+setenv        CFDTOOLS_VERSION   @cfdtools_VERSION@
+prepend-path  PATH               $root/bin
+prepend-path  CMAKE_PREFIX_PATH  $root

@@ -1,0 +1,10 @@
+cfdtools_add_executable(body_point_data
+  body_point_data.f90
+)
+target_link_libraries(cfdtools_body_point_data
+  cfdtools_tecplot_gridlib
+  cfdtools_progtools
+  cfdtools_numodules
+  cfdtools_table_io
+  cfdtools_tecplot_io
+)
