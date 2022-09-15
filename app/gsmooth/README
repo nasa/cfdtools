@@ -65,5 +65,14 @@ History:
                            of the target block remains an option.  Also,
                            check ALL block cell volumes if ITMAX = -1.
    02/10/14    "      "    Replaced CFD_IO_PACKAGE with xyzq_io package.
+   03/12/22    "      "    Handy test program for verifying pyramid_volume
+                           and hex_volume (alternatives to Antony Jameson's
+                           approach in subroutine cellvol, intended for
+                           unstructured grids).
+   03/15/22    "      "    Test alternative tet_vol and hex_vol similarly.
+   03/16/22    "      "    The 03/15/22 approach is preferable.  Retain it
+                           as corroboration of the Jameson scheme.  Monitor
+                           the volume summed over all blocks as a further
+                           comparison.
 
 Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA.

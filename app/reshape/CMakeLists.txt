@@ -1,7 +1,8 @@
 cfdtools_add_executable(reshape
-  reshape.f
+  reshape.f90
 )
 target_link_libraries(cfdtools_reshape
+  cfdtools_intrinsics
   cfdtools_geomlib
   cfdtools_gridlib
   cfdtools_numodules

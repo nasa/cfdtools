@@ -24,6 +24,7 @@ cfdtools_add_library(interp3d
   table3.f
   tri_line.f90
   trilint.f
+  usintsec.f90
   wbintr.f
 )
 target_link_libraries(cfdtools_interp3d PRIVATE cfdtools_adt)

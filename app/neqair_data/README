@@ -245,6 +245,10 @@ History:
                            meteor cases? TBD) requires lines not starting on
                            the body to start at low (free-stream) T.  Do this
                            for lines with the first x > ~3*body diameter.
+   11/29/21    "     "     Allowed for the Stardust option to perform
+                           gradient-based redistribution if specified.  Try
+                           the defaults of 1 and 1 for the exponent and the
+                           shape function only to smooth.
 
 Author: David Saunders, ERC Inc./NASA Ames Research Center, Moffett Field/CA
         Later with AMA, Inc. at NASA ARC.

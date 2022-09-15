@@ -1,11 +1,12 @@
-A handful of utilities for treating grids (possibly structured surfaces)
-using unstructured techniques is gathered here as the ugridlib collection.
+A handful of utilities for treating grids (possibly structured surfaces or
+volumes) using unstructured techniques.  See also the triangulation_io module.
 See the CROSS_SECTIONS and SORT_SURFACE_SLICE as examples of applying
 subroutines originated by Scott Thomas for piecing together 2-point line
 segments (from slicing operations) into one or more plottable curves.
 See also the geomlib collection's nearest-point utilities for the common
 structured or unstructured grid cell types.
 
+cell_volumes              Calculate the volumes of unstructured volume cells
 cutorder.f                Apply to results of CUTSURF (x/y/z/single f only)
 cutorder_nf.f             CUTORDER variant for nf surface functions
 cutsurf.f                 Cut a structured surface with a specified plane
@@ -14,6 +15,9 @@ cutsurfi.f                CUTSURF variant for IBLANKed surfaces
 cutsurfi_nf.f             CUTSURFI variant for nf surface functions
 cut_triangles.f           Var. of CUTSURF (quads.) for triangulation case
 nonlinear_tri_interp.f90  Least squares scheme proposed by Timothy Baker
+quad_areas.f90            Quad cell areas plus area totals at eaxh vertex
+quad_centers_to_vertices.f90   Interp. c-c data on quad surf. to cell vertices
+quad_to_tri.f90           Convert a quad. surface zone to triangles, in-place
 search_tri_2d.f90         Simple (no search tree) (x,y) triangulation search
 solid_angle_tri.f90       Solid angle element at a pt. for a triangle cell
 solid_angle_quadrature_3.f90 Quadrature for data on a triangulated surface
@@ -23,3 +27,4 @@ triangulate_patches.f     Quads. --> triangles via shortest diagonals
 tri_areas.f90             Triangle areas & vertex-surrounding summed areas
 tri_centers_to_vertices.f90  Interp. cell-cntrd. fn. vals. to tri. vertices
 tri_coefs.f               Linear interpolation coefs. for 3-space triangle
+vol_centers_to_vertices.f90  Weighted averaging of cell-centered fns. to vertices

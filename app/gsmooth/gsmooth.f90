@@ -69,8 +69,18 @@
 !     02/10/14    "      "    Replaced CFD_IO_PACKAGE with xyzq_io package.
 !                             Omitted the iblank option for now: it's easily
 !                             incorporated if the need arises.
+!     03/12/22    "      "    Handy test program for verifying pyramid_volume
+!                             and hex_volume (alternatives to Antony Jameson's
+!                             approach in subroutine cellvol, intended for
+!                             unstructured grids).
+!     03/15/22    "      "    Test alternative tet_vol and hex_vol similarly.
+!     03/16/22    "      "    The 03/15/22 approach is preferable.  Retain it
+!                             as corroboration of the Jameson scheme.  Monitor
+!                             the volume summed over all blocks as a further
+!                             comparison.
 !
 !  Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA.
+!           Now with:       AMA, Inc. at ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -92,7 +102,7 @@
       luncrt = 6
 
    real, parameter :: &
-      one = 1.
+      one = 1., zero = 0.
 
 !  Variables:
 
@@ -101,8 +111,8 @@
       numneg
 
    real :: &
-      conv,  dmax,  fglimit, omega, urfg, volmin, &
-      expi1, expi2, expj1, expj2, expk1, expk2
+      conv,  dmax,  fglimit, omega, urfg, volmin, voltot1, voltot2, &
+      voltotal1, voltotal2, expi1, expi2, expj1, expj2, expk1, expk2
 
    logical :: &
       all_block_volumes, extracopy, print, smoothing, &
@@ -214,6 +224,8 @@
 
 !  Transfer grid blocks from input to output, smoothing the specified one:
 
+   voltotal1 = zero;  voltotal2 = zero
+
    do n = 1, nblock
 
       ni = ingrid(n)%ni
@@ -229,11 +241,10 @@
 
       if (n == iblock) then
 
-         allocate (s(ni,nj,nk,3))
-
          if (smoothing) then
 
             allocate (xyz(ni,nj,nk,3))  ! Too much trouble to change ELLIP3D
+            allocate (s(ni,nj,nk,3))    ! For arc lengths in each index dir.
 
             xyz(:,:,:,1) = ingrid(n)%x
             xyz(:,:,:,2) = ingrid(n)%y
@@ -249,15 +260,28 @@
             ingrid(n)%y = xyz(:,:,:,2)
             ingrid(n)%z = xyz(:,:,:,3)
 
-            deallocate (xyz)
+            deallocate (xyz, s)
 
          end if
 
 !        Check the cell volumes:
 
+         allocate (s(ni-1,nj-1,nk-1,2))  ! For two sets of cell volume calcs.
+
          call check_vols (n, ni, nj, nk, one, &
                           ingrid(n)%x, ingrid(n)%y, ingrid(n)%z, &
-                          s, luncrt, volmin, ivmin, jvmin, kvmin, numneg)
+                          s(:,:,:,1), luncrt, voltot1, volmin,    &
+                          ivmin, jvmin, kvmin, numneg)
+
+         voltotal1 = voltotal1 + voltot1
+
+         call check_vol2 (n, ni, nj, nk, one, &
+                          ingrid(n)%x, ingrid(n)%y, ingrid(n)%z, &
+                          s(:,:,:,2), luncrt, voltot2, volmin,    &
+                          ivmin, jvmin, kvmin, numneg)
+
+         voltotal2 = voltotal2 + voltot2
+
          deallocate (s)
 
          if (extracopy) then ! Save (x,y,z)s of extra copy for plotting
@@ -282,6 +306,10 @@
 
    end do ! Next block
 
+   write (luncrt, '(10x, a, es16.8)') &
+      'Total volume of all blocks, Jameson formulation:   ', voltotal1, &
+      'Total volume of all blocks, hex_vol/tet_vol method:', voltotal2
+
    deallocate (ingrid)
    close (lunout)
 
@@ -292,9 +320,9 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
    subroutine check_vols (n, il, jl, kl, hand, x, y, z, vol, lunwrt, &
-                          volmin, ivmin, jvmin, kvmin, numneg)
+                          voltot, volmin, ivmin, jvmin, kvmin, numneg)
 !
-!  Compute cell volumes; count volumes < 0. & print with least volume.
+!  Compute cell volumes; count volumes < 0. & print the least volume.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -307,7 +335,7 @@
    real,    intent (in)  :: hand
    real,    intent (in)  :: x(il,jl,kl), y(il,jl,kl), z(il,jl,kl)
    integer, intent (out) :: ivmin, jvmin, kvmin, numneg
-   real,    intent (out) :: vol(2:il,2:jl,2:kl), volmin
+   real,    intent (out) :: vol(2:il,2:jl,2:kl), voltot, volmin
 
 !  Local constants:
 
@@ -323,6 +351,7 @@
    call cellvol (il, jl, kl, x, y, z, vol, hand)
 
    volmin = vol(2,2,2)
+   voltot = zero
    ivmin  = 2
    jvmin  = 2
    kvmin  = 2
@@ -331,6 +360,7 @@
    do k = 2, kl
       do j = 2, jl
          do i = 2, il
+            voltot = voltot + vol(i,j,k)
             if (vol(i,j,k) < zero) numneg = numneg + 1
             if (vol(i,j,k) < volmin) then
                volmin = vol(i,j,k)
@@ -349,12 +379,76 @@
       write (lunwrt, '(a)')
    end if
 
-   write (lunwrt, '(a, i4, a, 3i4, a, es13.4, a, i9, a, i9, i5)') &
-      ' Block:', n, '   Cell', &
+   write (lunwrt, '(a, i4, a, es16.8, a, 3i4, a, es16.8, a, i9, a, i9, i5)') &
+      ' Block:', n, '   Total vol.:', voltot, '   Cell', &
       ivmin, jvmin, kvmin, '  has least volume:', volmin, &
       '   # cells with negative volume:', numneg, '  out of', ncells, n
 
    end subroutine check_vols
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   subroutine check_vol2 (n, il, jl, kl, hand, x, y, z, vol, lunwrt, &
+                          voltot, volmin, ivmin, jvmin, kvmin, numneg)
+!
+!  Compute cell volumes by the second method;
+!  count volumes < 0. & print the least volume.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   implicit none
+
+!  Arguments:
+
+   integer, intent (in)  :: n                 ! Block number
+   integer, intent (in)  :: il, jl, kl, lunwrt
+   real,    intent (in)  :: hand
+   real,    intent (in)  :: x(il,jl,kl), y(il,jl,kl), z(il,jl,kl)
+   integer, intent (out) :: ivmin, jvmin, kvmin, numneg
+   real,    intent (out) :: vol(2:il,2:jl,2:kl), voltot, volmin
+
+!  Local constants:
+
+   real, parameter :: zero = 0.
+
+!  Local variables:
+
+   integer :: i, j, k, ncells
+
+!  Execution:
+
+   call cellvol2 (il, jl, kl, x, y, z, vol, hand)
+
+   volmin = vol(2,2,2)
+   voltot = zero
+   ivmin  = 2
+   jvmin  = 2
+   kvmin  = 2
+   numneg = 0
+
+   do k = 2, kl
+      do j = 2, jl
+         do i = 2, il
+            voltot = voltot + vol(i,j,k)
+            if (vol(i,j,k) < zero) numneg = numneg + 1
+            if (vol(i,j,k) < volmin) then
+               volmin = vol(i,j,k)
+               ivmin = i - 1     ! "Lower left" indices
+               jvmin = j - 1
+               kvmin = k - 1
+            end if
+         end do
+      end do
+   end do
+
+   ncells = (il - 1) * (jl - 1) * (kl - 1)
+
+   write (lunwrt, '(a, i4, a, es16.8, a, 3i4, a, es16.8, a, i9, a, i9, i5)') &
+      ' Block:', n, '   Total vol.:', voltot, '   Cell', &
+      ivmin, jvmin, kvmin, '  has least volume:', volmin, &
+      '   # cells with negative volume:', numneg, '  out of', ncells, n
+
+   end subroutine check_vol2
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
@@ -454,3 +548,59 @@
    end do
 
    end subroutine cellvol
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   subroutine cellvol2 (il, jl, kl, x, y, z, vol, hand)
+!
+!  Adaptation of cellvol routine to test hex_vol (five tetrahedra) against
+!  Antony Jameson's six-pyramid method.  This one can't detect a negative vol.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   implicit none
+
+!  Arguments:
+
+   integer, intent (in) :: &
+      il, jl, kl
+
+   real, intent (in) :: &
+      x(il,jl,kl), y(il,jl,kl), z(il,jl,kl)
+
+   real, intent (in) :: &
+      hand
+
+   real, intent (out) :: &
+      vol(2:il,2:jl,2:kl)
+
+!  Local variables:
+
+   integer :: &
+      i, j, k, l, m, n
+   real, dimension (3) :: &
+      p1, p2, p3, p4, p5, p6, p7, p8
+
+!  Execution:
+
+   do k = 2, kl
+      n = k - 1
+      do j = 2, jl
+         m = j - 1
+         do i = 2, il
+            l = i - 1
+            p1(1) = x(l,m,n);  p1(2) = y(l,m,n);  p1(3) = z(l,m,n)
+            p2(1) = x(i,m,n);  p2(2) = y(i,m,n);  p2(3) = z(i,m,n)
+            p3(1) = x(i,j,n);  p3(2) = y(i,j,n);  p3(3) = z(i,j,n)
+            p4(1) = x(l,j,n);  p4(2) = y(l,j,n);  p4(3) = z(l,j,n)
+            p5(1) = x(l,m,k);  p5(2) = y(l,m,k);  p5(3) = z(l,m,k)
+            p6(1) = x(i,m,k);  p6(2) = y(i,m,k);  p6(3) = z(i,m,k)
+            p7(1) = x(i,j,k);  p7(2) = y(i,j,k);  p7(3) = z(i,j,k)
+            p8(1) = x(l,j,k);  p8(2) = y(l,j,k);  p8(3) = z(l,j,k)
+
+            call hex_vol (p1, p2, p3, p4, p5, p6, p7, p8, vol(i,j,k))
+         end do
+      end do
+   end do
+
+   end subroutine cellvol2

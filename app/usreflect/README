@@ -1,0 +1,44 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   program usreflect
+!
+!  Description:
+!
+!     This is the unstructured-grid analogue of REFLECT_BLOCKS.
+!
+!     Provision is made for adding file types (probably HDF5 at some point),
+!     but initially, Tecplottable files that US3D can write are handled.
+!
+!     Like REFLECT_BLOCKS, USREFLECT reflects the zones of a multizone grid
+!     in the plane specified.  Optional function data may also be reflected.
+!     Either both halves or just the reflected half may be output.  If function
+!     data are present, one or more quantities may have the sign changed as part
+!     of the reflection.  Normally this would be just one velocity component.
+!
+!     The option to clean up a symmetry plane is not viable here, for lack of a
+!     way of identifying the points intended to be on the symmetry plane.
+!
+!     A handful of prompts suffice (no control file).
+!
+!  Strategy:
+!
+!     If both halves are to be output, all zones can be read and written as is.
+!     The reflected half is always written, and these zones can be derived from
+!     the zones already read and stored.  So we don't need to carry around an
+!     extra set of zones.
+!
+!  Procedures:
+!
+!     triangulation_io   I/O utilities for multizone unstructured datasets
+!     rdlist             Utility for reading an indefinite list of integers
+!
+!  History:
+!
+!     08/30/05  D.A.Saunders  Initial implementation of REFLECT_BLOCKS.
+!     02/23/06    "     "     Belated realization that reflecting changes the
+!                             handedness.  Restore the original handedness.
+!     04/20/22    "     "     Adaptation as USREFLECT.
+!
+!  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

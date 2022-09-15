@@ -7,13 +7,62 @@ combination of neighboring data points that minimizes each interpolation
 error in some sense under certain statistical assumptions (hence the use
 of the term optimal).
 
-Alexander Barth (originally: abarth@marine.usf.edui, now: a.barth@ulg.ac.be and
-barth.alexander@gmail.com) kindly made the original package available under the
-terms of the BSD 2-Clause License.  The present version has been adapted
-considerably as explained in the header of the file optimal_interpolation.f90.
-In particular, it offers a simpler inverse-distance-weighting option that
-should be helpful during application development, given the number of "knobs"
-to turn in order to get satisfactory results with the more sophisticated
-method.
+Alexander Barth (originally: abarth@marine.usf.edui, now: a.barth@ulg.ac.be
+and barth.alexander@gmail.com) kindly made the original package available
+under the terms of the GNU General Public License (and later under the
+BSD 2-Clause License).  The present version has been adapted considerably
+as explained in the header of the file optimal_interpolation.f90.
+In particular, it offers a simpler inverse-distance-weighting option
+that should be helpful during application development, given the number
+of "knobs" to turn in order to get satisfactory results with the more
+sophisticated method.
 
-See program ANCHOR or Radio_Blackout elsewhere for a sample application.
+See program USINTERP for a driving program that reads columnar data.
+
+[2021-2022]  The introduction of the Cholesky factorization proves to be a
+             misguided modification: it does not deal with ill-conditioning
+             that sppears to be likely in scattered data interpolation.
+             Details appear in the History as follows:
+
+!  Dec. 2021 - Jan. 2022     Belated return to understand the 2016 finding: a
+!                            fruitless search for a coding error and a look at
+!                            actual matrix condition numbers (potentially huge)
+!                            has prompted reversion to Alexander's original
+!                            approach: eigenvalue decomposition and solution via
+!                            the pseudo-inverse (modified inverse of D) that
+!                            treats ill-conditioning.  The EVD has been re-
+!                            modularized as the symevd/symevdsolve pair.
+!                            Also, the normalization (of each coordinate) has
+!                            been changed from shifting by the data mean and
+!                            dividing by the std. deviation to shifting by the
+!                            data  minimum and dividing by the data range.
+!                            Coordinate normalization is now optional via a new
+!                            argument to subroutine optiminterp.  Some findings:
+!                            The best choices for the multiple controls are not
+!                            obvious, and will require trial and error.
+!                            Nonzero observation variance does not seem to
+!                            behave as well as zero variance, at least for the
+!                            artificial test problem with optional Gaussian
+!                            noise added to the data point function values.
+!  02/14/2022  D.A.Saunders  Normalization of the target coordinates was
+!                            unintentionally using the target min and range.
+!                            All coordinates should be normalized the same way,
+!                            namely by the data min(s) and range(s).
+!  02/24/2022    "     "     Straightened out the adaptation option as follows:
+!                            if adapt = 1., then if the distance of the furthest
+!                            neighbor exceeds the correlation length, increase
+!                            the active correlation length so that that furthest
+!                            neighbor's contribution to the interpolation is
+!                            nullified (but all closer neighbors do contribute).
+!                            All these calculations are performed with normal-
+!                            ized coordinates if normalization is requested.
+!                            Gradations of adaptation have been eliminated:
+!                            we either adapt or we don't, and the hope is that
+!                            adaptation makes the choice of good correlation
+!                            lengths less obscure.  Erring on the high side for
+!                            these lengths (in real coordinates, not scaled)
+!                            seems to be preferable.
+!  02/28/2022   "      "     The first_call variable in optiminterp isn't needed
+!                            because each call to optiminterp can handle many
+!                            targets and will involve either new data or new
+!                            target points in a given run.

@@ -18,7 +18,8 @@
 !     vertex on its own may also misbehave because the curvature-based redis-
 !     tribution in terms of arc length has more trouble converging as the number
 !     of data points goes up.  This utility is intended to enable clustering of
-!     the defining point towards a vertex with more moderate numbers of points.
+!     the points towards a vertex with more moderate numbers of points by treat-
+!     ing the appropriate line segment here followed by some editing.
 !     A thruster nozzle profile prompted the curvature-based option.
 !
 !  Method:
@@ -42,6 +43,7 @@
 !                               (voluminous) diagnostic output from curvdis.
 !     06/14/2021    "      "    If 1-sided clustering is at the last point,
 !                               we want the output to be in the same order.
+!     01/20/2022    "      "    Display the first and last arc length intervals.
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 !
@@ -118,6 +120,11 @@
    read  (lunkbd, *) itype
    onesided = itype == 1
    curvature_based = itype == 3
+   if (.not. curvature_based) then
+      s1 = sin(2);  s2 = sin(nin) - sin(nin-1)
+      write (luncrt, '(a, 2es16.8)') 'First & last arc lengths currently:', &
+         s1, s2
+   end if
 
    if (curvature_based) then
 
@@ -146,7 +153,7 @@
          'Stretch from first point or last point [f|l]: '
       read  (lunkbd, *) answer
       lowend = answer == 'f' .or. answer == 'F'
-      write (luncrt, '(a)', advance='no') 'Initial arc length: '
+      write (luncrt, '(a)', advance='no') 'New arc length at that end: '
       read  (lunkbd, *) s1
       call expdis5 (1, sin(1), stotal, s1, nout, sout, -luncrt)
 
@@ -159,7 +166,7 @@
 
    else
 
-      write (luncrt, '(a)', advance='no') 'First and last arc lengths: '
+      write (luncrt, '(a)', advance='no') 'New first and last arc lengths: '
       read  (lunkbd, *) s1, s2
       call vinokur (1, nout, s1, s2, sout, luncrt, ier)
 

@@ -160,6 +160,17 @@ History:
                              NORMALIZED BY THE LINE LENGTH IF THAT IS THE
                              INTERVAL EXPECTED TO CONTAIN THE INTERSECTION,
                              AS IT IS HERE, USING THE BOUNDING BOX DIAGONAL.
+   03/07/2022     "    "     Subroutine intsec8 has been superseded by higher
+                             level routine usintsec to handle possible con-
+                             cavities in an inner or outer boundary.
+   04/02/2022     "    "     Quad. surfaces are now an option.  They are
+                             converted in place to triangulations, and a new
+      and                    combine_zones in triangulation_io transcribes
+                             %xyz and %conn for all zones to the header as
+   04/15/2022                needed for rapid searching.
+   04/25/2022     "    "     Cleared up confusion over %centers_to_vertices:
+                             any functions are ignored by USLOS, so this
+                             switch is irrelevant once %numf <-- 0.
 
 Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 

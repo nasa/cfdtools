@@ -104,6 +104,7 @@
 !                    rapid searching via the ADT scheme, which builds all cells
 !                    of all zones into its search tree rather than treating one
 !                    zone at a time.
+!     05/03/22   "   One glitch following triangulation_io extensions.
 !
 !  Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
 !                  Now with AMA, Inc. at NASA ARC.
@@ -205,7 +206,8 @@
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    ios = 1  ! Verbose mode
-   tri_header_1%combine_zones = .true.  ! Option prompted by this application
+   tri_header_1%combine_zones         = .true.  ! Option prompted by TRI_TO_TRI
+   tri_header_1%centroids_to_vertices = .true.  ! If input is cell-centered
 
    call tri_read (lunin, tri_header_1, tri_xyzf_1, ios)  ! Read all zones as one
 

@@ -1,0 +1,105 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   program usinterp
+!
+!  Purpose:
+!
+!     Read a list of data points with any number of dimensions and any number of
+!     function values at each data point as a column dataset with any number of
+!     header lines that are ignored.  Also read a similar table of coordinates
+!     at which to calculate estimates of those functions.  This serves as a
+!     driver for the optimal interpolation module originally made available by
+!     Alexander Barth (University of Liege, Belgium) and extended by David
+!     Saunders at NASA Ames Research Center.  Interpolating/smoothing of an
+!     unstructured dataset is intended.
+!
+!  Method:
+!
+!     The optimal interpolation scheme is designed to minimize interpolation
+!     errors under certain statistical assumptions about the function samples.
+!     Experience with smoothly varying test datasets shows remarkably accurate
+!     results that may be artificially good.  This driver is part of setting up
+!     and running further test cases, including working with noisy datasets.
+!
+!  Unstructured Input Dataset Format:
+!
+!     Header records (zero or more lines that are ignored)
+!     x1 x2 ... xn  f1 f2 .. fm  ! First data point: n dimensions, m functions
+!     x1 x2 ... xn  f1 f2 .. fm  ! Further data points, any order
+!      :  : ...  :   :  :     :  ! n >= 1, m >= 1
+!      :  : ...  :   :  :     :
+!     x1 x2 ... xn  f1 f2 .. fm
+!
+!  Target Coordinates Dataset Format:
+!
+!     Header records (one or more lines, ignored)
+!     x1 x2 ... xn
+!     x1 x2 ... xn
+!      :  : ...  :  ! Any number of target points, in some order or not
+!      :  : ...  :
+!     x1 x2 ... xn
+!
+!  Input Control File Format (on Standard Input):
+!
+!     USINTERP Control File
+!     nd                    ! Number of coordinate dimensions; nd >= 1
+!     nf                    ! Number of functions at each data point
+!     unstructured.dat      ! Input dataset
+!     target.dat            ! Target coordinates dataset
+!     usinterp.dat          ! Output results
+!     (3es16.8, 4es15.7)    ! Run-time output format
+!     m                     ! Number of nearest neighbors to interpolate within
+!     normalize             ! T|F; T => normalize the input coordinates
+!     verbose               ! T|F; T => diagnostic output is written to fort.50
+!     cf1 cf2 ...           ! nd correlation functions: each is g|l|G|L
+!     cl1 cl2 ...           ! nd correlation lengths in (0, 1]
+!     ovar1 ovar2 ...       ! nf observation variances >= 0.
+!     adapt                 ! -1.|0.|a < 1.; -1. => simple inverse dist. weights
+!
+!  Output Dataset Format:
+!
+!     Same as the target coordinates, with interpolated function(s) appended
+!     as in the input data format, no header lines, and interpolated function
+!     variances as nf additional functions:
+!
+!     x1 x2 ... xn  f1 f2 .. fm v1 v2 .. vm
+!     x1 x2 ... xn  f1 f2 .. fm v1 v2 .. vm
+!      :  : ...  :  ! Target coords., interpolated fns., interpolated variances
+!      :  : ...  :
+!     x1 x2 ... xn  f1 f2 .. fm v1 v2 .. vm
+!
+!  Notes:
+!
+!     1. Best choices for the multiple controls tend to require trial and error
+!        because of inadequate documentation.
+!     2. The normalization option converts the working coordinates to [0, 1]
+!        in case of disparate raw units; unnormalized coordinates are output.
+!     3. Forcing some nonzero contribution from the furthest of m neighbors to
+!        a given target point may or may not be a good idea.  Increasing the
+!        correlation length(s) should have a similar effect.
+!     4. See the available test_optiminterp.f90 for testing on a dataset that
+!        is constructed from a trigonometric function, with an option to impose
+!        Gaussian noise on the data point function values.
+!     5. The observation variance inputs are assumed to be a measure of the
+!        uncertainty in the function data.  Originally, they could differ at
+!        each data point for a single function.  Handling of multiple functions
+!        led to one variance per function type instead.  Experience suggests
+!        that specifying zeros for the variances is preferable, but this is
+!        not well understood.
+!     6. The adaptation option is not working as intended because the trig.
+!        squared test case suggests that large correlation lengths produce the
+!        best results.
+!
+!  History:
+!
+!     01/31/2022  D.A.Saunders  Initial implementation to enable more testing.
+!     02/11/2022    "     "     [After a severed internet cable hiatus:]
+!                               trig-squared test case for Optimal_Interpolation
+!                               reproduced here from tabular datasets.
+!     02/27/2022    "     "     Perform a second set of interpolations at the
+!                               data point coordinates and show the sum of
+!                               squared differences from the data functions.
+!
+!  Author: David Saunders, AMA, Inc. at NASA Ames Research Center, CA
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

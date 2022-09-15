@@ -53,6 +53,9 @@
 !
 !  Input Surface Triangulation Format (inner and outer, in separate files):
 !
+!     NOTE:  If an input surface consists of quad cells, it is turned into a
+!            triangulated surface here, in-place.
+!
 !     TITLE = "Dataset title"
 !     VARIABLES = "x", "y", "z"[, "f1"[, "f2"] ...]
 !     ZONE T="ZONE 1", NODES=450816, ELEMENTS=150272,
@@ -162,6 +165,17 @@
 !                               NORMALIZED BY THE LINE LENGTH IF THAT IS THE
 !                               INTERVAL EXPECTED TO CONTAIN THE INTERSECTION,
 !                               AS IT IS HERE, USING THE BOUNDING BOX DIAGONAL.
+!     03/07/2022     "    "     Subroutine intsec8 has been superseded by higher
+!                               level routine usintsec to handle possible con-
+!                               cavities in an inner or outer boundary.
+!     04/02/2022     "    "     Quad. surfaces are now an option.  They are
+!                               converted in place to triangulations, and a new
+!        and                    combine_zones in triangulation_io transcribes
+!                               %xyz and %conn for all zones to the header as
+!     04/15/2022                needed for rapid searching.
+!     04/25/2022     "    "     Cleared up confusion over %centers_to_vertices:
+!                               any functions are ignored by USLOS, so this
+!                               switch is irrelevant once %numf <- 0.
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 !
@@ -175,7 +189,6 @@
    use tri_zone_structure
    use triangulation_io            ! Tecplot-type triangulation I/O package
    use adt_utilities               ! ADT build & search routines
-   use trigd
 
    implicit none
 
@@ -212,7 +225,7 @@
 !  Local variables:
 
    integer :: &
-      i1, i2, i3, in, ios, itri, k, l, nbps, ne, nelements, ninside, nk, &
+      i1, i2, i3, in, ios, itri, iz, k, l, nbps, ne, nelements, ninside, nk, &
       nlines, nnode, nnodes, noutside, nquadrants, ntri
 
    real :: &
@@ -256,10 +269,10 @@
    call get_bp_data ()  ! Sets hemisphere = T if hemisphere lines are indicated
    if (ios /= 0) go to 99
 
-!  Prompt for, check existence of, and read the inner and outer volume surfaces:
-!  -----------------------------------------------------------------------------
+!  Prompt for, check existence of, and read the inner (body) surface:
+!  ------------------------------------------------------------------
 
-   call reads (luncrt, 'Body surface triangulation?  ', lunkbd, &
+   call reads (luncrt, 'Body surface dataset?  ', lunkbd, &
                tri_header_body%filename, cr, eof)
    if (cr .or. eof) go to 99
 
@@ -270,15 +283,74 @@
    end if
 
    close (lunbody)  ! tri_read opens it
-   ios = 1  ! Verbose mode
-   tri_header_body%fileform  = 1  ! Vertex-centered is assumed for any fns.
+
+!  Determine the element type without a prompt:
+
    tri_header_body%formatted = true
-   tri_header_body%nvertices = 3
-   tri_header_body%combine_zones = true
-   call tri_read (lunbody, tri_header_body, tri_body, ios)
+   call get_element_type (lunbody, tri_header_body, ios)
    if (ios /= 0) go to 99
 
-   call reads (luncrt, 'Shock surface triangulation? ', lunkbd, &
+   write (luncrt, '(a, i3)') &
+      ' # vertices/element found for body zone 1:', tri_header_body%nvertices, &
+      ' Any further zones are assumed to contain the same element type.'
+
+   ios = 1  ! Verbose mode
+
+   if (tri_header_body%nvertices /= 3) then  ! Quad surf., read as vol. dataset
+
+      tri_header_body%combine_zones = false
+
+      call vol_read (lunbody, tri_header_body, tri_body, ios)
+      if (ios /= 0) then
+         write (luncrt, '(2a)') &
+            '*** Trouble reading body surface ', trim (tri_header_body%filename)
+         go to 99
+      end if
+
+!     Triangulate in place.  Any functions can be ignored in USLOS.
+
+      write (luncrt, '(a, i6)') ' # body zones:     ', tri_header_body%nzones
+      write (luncrt, '(a, i6)') ' # zone 1 nnodes:  ', tri_body(1)%nnodes
+      write (luncrt, '(a, i6)') ' # zone 1 elements:', tri_body(1)%nelements
+      write (luncrt, '(a)')     ' Triangulating the body quad surface.'
+
+      tri_header_body%numf = 0
+
+      do iz = 1, tri_header_body%nzones
+         call quad_to_tri (tri_header_body, tri_body(iz), ios)
+         if (ios /= 0) then
+            write (luncrt, '(a)') '*** Trouble triangulating body surface.'
+            go to 99
+         end if
+      end do
+      tri_header_body%nvertices = 3
+
+!     Concatenate xyz and conn fields of all zones to header%xyz and %conn:
+
+      call combine_zones (tri_header_body, tri_body)
+
+!!!   tri_header_body%filename = 'triangulated_body.dat'
+!!!   tri_header_body%numf = 0  ! This is strictly geometric
+
+!!!   call tri_write (lunbody, tri_header_body, tri_body, ios)
+
+   else  ! It must be a triangulation
+
+      tri_header_body%combine_zones = true
+
+      call tri_read (lunbody, tri_header_body, tri_body, ios)
+      if (ios /= 0) then
+         write (luncrt, '(2a)') &
+            '*** Trouble reading body surface ', trim (tri_header_body%filename)
+         go to 99
+      end if
+
+   end if
+
+!  Repeat for the outer grid boundary:
+!  -----------------------------------
+
+   call reads (luncrt, 'Shock surface dataset? ', lunkbd, &
                tri_header_shock%filename, cr, eof)
    if (cr .or. eof) go to 99
 
@@ -289,15 +361,70 @@
    end if
 
    close (lunshock)  ! tri_read opens it
-   ios = 1  ! Verbose mode
-   tri_header_shock%fileform  = 1  ! Vertex-centered is assumed for any fns.
+
+!  Determine the element type without a prompt:
+
    tri_header_shock%formatted = true
-   tri_header_shock%nvertices = 3
-   tri_header_shock%combine_zones = true
-   call tri_read (lunshock, tri_header_shock, tri_shock, ios)
+   call get_element_type (lunshock, tri_header_shock, ios)
    if (ios /= 0) go to 99
 
-   call get_data_range ()  ! Bounding box diagonal, for intersection purposes
+   write (luncrt, '(a, i3)') &
+    ' # vertices/element found for shock zone 1:', tri_header_shock%nvertices, &
+    ' Any further zones are assumed to contain the same element type.'
+
+   ios = 1  ! Verbose mode
+
+   if (tri_header_shock%nvertices /= 3) then  ! Quad surf., read as vol. dataset
+
+      tri_header_shock%combine_zones = false
+
+      call vol_read (lunshock, tri_header_shock, tri_shock, ios)
+      if (ios /= 0) then
+         write (luncrt, '(2a)') &
+          '*** Trouble reading shock surface ', trim (tri_header_shock%filename)
+         go to 99
+      end if
+
+!     Triangulate in place:
+
+      write (luncrt, '(a)')     ' Triangulating the shock quad surface.'
+      tri_header_shock%numf = 0
+
+      do iz = 1, tri_header_shock%nzones
+         call quad_to_tri (tri_header_shock, tri_shock(iz), ios)
+         if (ios /= 0) then
+            write (luncrt, '(a, i6)') &
+               '*** Trouble triangulating shock surface.'
+            go to 99
+         end if
+      end do
+      tri_header_shock%nvertices = 3
+
+!     Concatenate xyz and conn fields of all zones to header%xyz and %conn:
+
+      call combine_zones (tri_header_shock, tri_shock)
+
+!!!   tri_header_shock%filename = 'triangulated_shock.dat'
+!!!   tri_header_shock%numf = 0  ! This is strictly geometric
+
+!!!   call tri_write (lunshock, tri_header_shock, tri_shock, ios)
+
+   else  ! It must be a triangulation
+
+      tri_header_shock%combine_zones = true
+
+      call tri_read (lunshock, tri_header_shock, tri_shock, ios)
+      if (ios /= 0) then
+         write (luncrt, '(2a)') &
+          '*** Trouble reading shock surface ', trim (tri_header_shock%filename)
+         go to 99
+      end if
+
+   end if
+
+!  Determine the grid bounding box diagonal, for intersection interval purposes:
+
+   call get_data_range ()
    if (ios /= 0) go to 99  ! May be wrong half flow soln. for a hemisphere case
 
    if (hemisphere) then
@@ -446,9 +573,9 @@
          sl(nl) = one           ! overkill for forebody; safe for aft body.
                                 ! These are NORMALIZED arc lengths.
 
-         call intsec8 (nnode, ntri, tri_header_shock%conn, &
-                       tri_header_shock%xyz, nl, xl, yl, zl, sl, lcs_method, &
-                       itri, p, q, r, s, xyz_intersect, dsqmin)
+         call usintsec (l, nnode, ntri, tri_header_shock%conn, &
+                        tri_header_shock%xyz, nl, xl, yl, zl, sl, lcs_method, &
+                        itri, p, q, r, s, xyz_intersect, dsqmin)
 
 !        The output s is normalized.
 !!!      write (luncrt, '(a,4i10)') ' itri,conn(:,itri):', itri, &
@@ -569,8 +696,7 @@
 
       hemisphere = nbps == 1
       if (hemisphere) then  ! Allow for a single body-normal line of sight
-         call ready (luncrt, &
-                     '1 body pt. => hemisphere lines? ' // &
+         call ready (luncrt, & '1 body pt. => hemisphere lines? ' // &
                      'y|n; y=<cr>=yes; n=body-normal line: ', &
                      lunkbd, hemisphere, cr, eof)
          if (eof) then
@@ -952,9 +1078,9 @@
 
 !     Execution:
 
-      call intsec8 (nnode, ntri, tri_header_shock%conn, &
-                    tri_header_shock%xyz, nl, xl, yl, zl, sl, lcs_method, &
-                    itri, p, q, r, s, xyz_intersect, dsqmin)
+      call usintsec (l, nnode, ntri, tri_header_shock%conn, &
+                     tri_header_shock%xyz, nl, xl, yl, zl, sl, lcs_method, &
+                     itri, p, q, r, s, xyz_intersect, dsqmin)
 
 !!!   write (luncrt, '(a,3i5)') ' Quadrant, node, line:', m, nn, l
 !!!   write (luncrt, '(a,4i10)') ' itri,conn(:,itri):', itri, &
@@ -1065,7 +1191,7 @@
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       integer :: i, ncone
-      logical, allocatable :: keep(:)
+      integer, allocatable :: keep(:)
       real :: angle, vnormal(3), v2(3)
       type (grid_type), pointer, dimension (:) :: cone_lines
       character (12) :: filename

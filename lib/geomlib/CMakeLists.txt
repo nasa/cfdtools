@@ -17,6 +17,7 @@ cfdtools_add_library(geomlib
   chordsrow.f
   circle_slope.f90
   cross.f
+  cross_product.f90
   curv2d.f
   curv3d.f
   detect_flatness.f90
@@ -26,6 +27,8 @@ cfdtools_add_library(geomlib
   distptos.f
   gaussian_curvature.f90
   handle_flatness.f90
+  hex_vol.f90
+  hex_volume.f90
   nearest_brick_point.f90
   nearest_cell_point.f90
   nearest_curve_point.f90
@@ -46,6 +49,7 @@ cfdtools_add_library(geomlib
   polygon4.f
   project3.f
   project4.f
+  quad_area.f90
   rigid_transform.f90
   rotate2.f
   rotate2d.f
@@ -55,6 +59,7 @@ cfdtools_add_library(geomlib
   solid_angle_quadrature_4.f90
   surface_normal.f90
   test_angle2d.f90
+  tet_vol.f90
   tri_normal_and_area.f90
   unitnorm.f
   unitnorm2d.f90
