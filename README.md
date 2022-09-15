@@ -267,8 +267,8 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **triangulation_tool**        | C    | Drives scale/shift/rotate transformations and area/volume/CM/moments of inertia calculations for a Tecplot unstructured surface or volume dataset (1+ zones) |
 | **update_grid**               | C    | Replace one or more grid blocks with same-sized block(s) from other file or files |
 | **upsequence**                | C    | Upsequence coarse cavity/plug/gap filler solution; impose fine local boundary flow |
-! **usflowinterp**              | C    | Interpolation within an unstructured 3D Tecplottable dataset (ADT search techniques)
-! **usinterp**                  | C    | Driver for the optimal interpolation package (scattered data interpolation in n dimensions)
+| **usflowinterp**              | C    | Interpolation within an unstructured 3D Tecplottable dataset (ADT search techniques) |
+| **usinterp**                  | C    | Driver for the optimal interpolation package (scattered data interpolation in n dimensions) |
 | **uslos**                     | C    | Merge of LINES_OF_SIGHT & HEMISPHERES_OF_SIGHT for unstructured surfaces |
 | **v2c**                       | C    | Convert grid [+ optional flow]: cell vertices to centers |
 | **wingsections**              | C    | B-spline sections + chord/thickness data --> B-spline wing |
