@@ -22,8 +22,8 @@ intsec4.f          Intersect a curve & regular surface in 3-spc. (PLBICUBE)
 intsec5.f          Bilinear form of INTSEC4 using PBILINT, not PLBICUBE
 intsec6.f90        Multipatch form of INTSEC5: ADT techniques/minimization
 intsec6.f90.two_point_lines  1st INTSEC6 form for 2 pt. straight line cases
-intsec8.f90        Variant of INTSEC6 for a triangulated surface
-intsec9.f90        Use instead of intsec6 (to handle nonconvex surfaces)
+intsec8.f90        Variant of INTSEC6 for a triangulated surface; see usintec
+intsec9.f90        Use instead of intsec6 to handle nonconvex surfaces
 lcsint3d.f         Variant of TABLE3 using LCSFIT, not linear interpolation
 line_surface.f90   Find up to two intersections of line with closed surface
 peval3.f           Evaluate curve x,y,z vs. t via spline coefs. from PFIT3
@@ -40,7 +40,10 @@ smoothxyz.f        Gaussian kernel-based smoothing of noisy curve | surface
 table3.f           Trilinear interp. in rectangular table, in function form
 tri_line.f90       Intersect line thru (xt,zt) _|_ y = 0 w/ 3-spc. triangle
 trilint.f          Part of RIPPLE3D approach to searching a structured grid
+usintsec.f90       Uses intsec8 twice to handle a nonconvex triangulated surface
 wbintr.f           Compute intersectn. betwn. "wing", "body" regular meshes
 
 06/25/21           Added plxcut3d variant of plxcut for application to a
                    3-space curve in CAPSULE_GRID.
+03/05/22           USINTSEC intersects a line/curve with a triangulated surface
+                   that may have concavities.  INTSEC8 has a slight ADT change.

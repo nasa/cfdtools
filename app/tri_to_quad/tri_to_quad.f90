@@ -245,8 +245,8 @@
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    ios = 1  ! Verbose mode
-   tri_header%combine_zones = .true. ! Pack zone(s) into header fields
-                                     ! If cell-centered, fns. are converted too
+   tri_header%combine_zones = .true.          ! Pack zone(s) into header fields
+   tri_header%centroids_to_vertices = .true.  ! If fns. are cell-centered
 
    call tri_read (lunin, tri_header, tri_xyzf, ios)  ! Read entire dataset
    if (ios /= 0) then

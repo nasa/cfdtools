@@ -56,5 +56,36 @@ Two derived data types also appear in triangulation_io.f90:
    tri_zone_structure
 
 See TRI_TO_QUAD, NEQAIR_Integration for sample applications of surface reading.
-See TRI_TO_TRI, HEMISPHERES_OF_SIGHT for writing examples.
+See TRI_TO_TRI also for reading multiple zones as one for efficient searching,
+and HEMISPHERES_OF_SIGHT for writing examples.
 See TRIANGULATION_TOOL for driving recently-added geometric operations.
+
+07/21/18 ADT searching of multizone triangulations (or unstructured volumes)
+         requires a way of assembling all zones as one list of all elements.
+         Subroutine tri_read now has this option, via new header fields
+         %combine_zones, %conn, %xyz and %f.  If function values are cell-
+         centered, they will be area-averaged to the vertices for ADT use.
+07/23/18 Tri_read now has an independent option to convert centroid function
+         values to vertices via new header field, %centroids_to_vertices.
+07/26/18 Tecplot won't read a one-function line VARLOCATION=([4-4]=CELLCENTERED)
+         written by tri_zone_write.  Instead, it expects the form
+         VARLOCATION=([4]=CELLCENTERED). Thanks to Jeff Hill for thinking of this.
+04/04/22 Fixed glitches in the run-time formatting of BLOCK order output.  Added zone%zone_type, which has an
+         obscure overlap with %element_type.
+04/10/22 %combine_zones and %centroids_to_vertices now work during the reading of volume datasets as for surface
+         datasets, including quad surfaces.
+04/11/22 Look also for CELLCENTERED in get_element_type now.
+04/22/22 Keywords like VARLOCATION=([1-3]=NODAL,[4-17]=CELLCENTERED) need to be preserved for transmitting to
+         an output file such as from USREFLECT.
+04/27/22 Subroutine tri_zone_read was reading x,y,z,f as a single record in BLOCK mode.  Evidently,
+         f is a new record.
+04/30/22 Subroutine get_element_type was failing to find CELL-CENTERED when it appeared after ZONETYPE.
+         Now, the file header and the zone 1 header are scanned for all useful keywords.
+05/01/22 Added subroutine reverse_handedness for TRIANGULATION_TOOL to use after a reflection.
+08/23/22 A title T="inlet" by chance has ET in it after upcasing, and get_element_type treated it as the
+         element type keyword with a bad value.  Work-around: blank any title in the buffer before searching
+         for any keyword.
+
+
+David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+                (later with ERC, Inc. and AMA, Inc. at NASA ARC)

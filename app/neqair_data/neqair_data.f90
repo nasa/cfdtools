@@ -247,6 +247,10 @@
 !                             meteor cases? TBD) requires lines not starting on
 !                             the body to start at low (free-stream) T.  Do this
 !                             for lines with the first x > ~3*body diameter.
+!     11/29/21    "     "     Allowed for the Stardust option to perform
+!                             gradient-based redistribution if specified.  Try
+!                             the defaults of 1 and 1 for the exponent and the
+!                             shape function only to smooth.
 !
 !  Author: David Saunders, ERC Inc./NASA Ames Research Center, Moffett Field/CA
 !          Later with AMA, Inc. at NASA ARC.
@@ -568,7 +572,8 @@
 !     Option to redistribute each line of sight to [presumably] fewer points,
 !     but not for the Stardust case:
 
-      if (redistribute .and. .not.Stardust_case) then
+!!!   if (redistribute .and. .not.Stardust_case) then
+      if (redistribute) then
          call redistribute_los ()  ! Update everything so that the rest
       end if                       ! works either way
 
@@ -804,7 +809,7 @@
             call graddis2 (npts, x, y, sv, f, nnew, power, ismooth, luncrt, &
                            xnew, ynew, snew, ier)
          else
-            call graddis3d2 (npts, x, y, z, sv, f, nnew, power,ismooth,luncrt, &
+            call graddis3d2 (npts, x, y, z, sv, f, nnew,power,ismooth,-luncrt, &
                              xnew, ynew, znew, snew, ier)
          end if
 

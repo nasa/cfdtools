@@ -57,6 +57,9 @@ HISTORY:
                     it as one more option here, as first done for testing
                     CHANGEN via RESHAPE3D.  Add saving of before and
                     after cell growth rates for this option.
+   12/08/21   DAS   Minimal Fortran 90 translation, prompted by a new option
+                    to tabulate angles between adjacent points (in turn,
+                    prompted by a capsule generatrix issue).
 
 AUTHOR:  David Saunders, Sterling Software/NASA Ames, Mt. View, CA.
          Later with ELORET, Inc. and AMA, Inc. at NASA ARC.

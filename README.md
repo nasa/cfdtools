@@ -62,7 +62,7 @@ add the following:
     add_executable(my_program ...)
     target_link_libraries(my_program cfdtools::<libname>)
 
-CFDTOOLS also supports direct inclusion as a project submodules using CMake's
+CFDTOOLS also supports direct inclusion as a project submodule using CMake's
 ``add_subdirectory`` command.
 
 
@@ -126,6 +126,7 @@ AGREEMENT.
 | **interp3d**                  | 3-space interpolations, intersections, etc. |
 | **intrinsics**                | Contains only trig_functions_in_degrees: g95 cosd, etc. |
 | **kdtree**                    | Matthew Kennel's open source package, now an option in FLOW_INTERP |
+! **lapacksubset**              ! LAPACK routines needed by symevd, symevdsolve added to linsys |
 | **linsys**                    | Linear system solvers, mostly dense factorization methods |
 | **numodules**                 | Miscellaneous utilities: finite differences, standard deviations, etc. |
 | **obsolete**                  | Still linked to by INTEGRATE, MAXMIN, PROFILE, and SMOOTH |
@@ -138,7 +139,7 @@ AGREEMENT.
 | **table_io**                  | I/O utilities for plain text tables (headers + numeric rows) |
 | **tecplot_io**                | Tecplot I/O package for structured multizone data |
 | **triangulation_io**          | Tecplot I/O package for triangulated surface data |
-| **ugridlib**                  | Triangle and tetrahedron utilities |
+| **ugridlib**                  | Triangle and other unstructured surface/volume data utilities |
 | **xyq_io**                    | PLOT2D-type multiblock structured grid I/O utilities, in xyzq_io folder |
 | **xyzq_io**                   | PLOT3D-type multiblock structured grid I/O utilities; see also f_io.f90 |
 
@@ -155,6 +156,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **aerosurf**                  | C    | Wing/body/nacelle surface paneling; underlies shape optimization |
 | **anchor**                    | G    | Applies Optimal_Interpolation package to aerodynamic or other unstructured data |
 | **blayer**                    | C    | Boundary layer analysis of a structured flow solution |
+| **body_point_data**           | CG   | For one body point extract time histories of flow variables as a table |
 | **bsprofile**                 | C    | B-spline curve analogue of PROFILE airfoil utility |
 | **bump_factors**              | C    | Compare related structured surface solutions as ratios |
 | **capsule_grid**              | C    | Automated surface grid for sphere/cone; many aft body options |
@@ -199,6 +201,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **lines_of_sight**            | C    | Body-normal | shock-normal discretized lines for radiation calculations |
 | **lines_of_sight_2d**         | C    | 2-space analogue of 3-space LINES_OF_SIGHT |
 | **loc**                       | P    | Count lines of code & comments in a Fortran source file |
+| **los_attenuation**           | C    | Radio attenuation calculation for one line of sight; multiple options |
 | **makelist**                  | P    | Make a list of integers for given i1, i2, increment |
 | **maxmin**                    | G    | Analogue of SMOOTH for looking at 1st & 2nd derivatives |
 | **merge_blocks**              | C    | Variant of JOIN_GRID allowing for optional function file |
@@ -245,7 +248,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **Stardust_Integration**      | C    | Companion to Stardust_Lines |
 | **surface_curvature**         | C    | Gaussian/mean/principal curvatures for surface/volume grid |
 | **surface_diffs**             | C    | Map Tecplot surface grid 1 to grid 2; save [%]differences |
-| **surface_interp**            | C    | Interpolate 3-space Tecplot surface data at target data point(s) |
+| **surface_interp**            | C    | Interpolate 3-space Tecplot or Plot3D surface data at target surface or list of data point(s) |
 | **surface_interp_2d**         | C    | Interpolate 2-space Tecplot surface data at target data point(s) |
 | **surface_pad**               | C    | Pad structured surface data nonlinearly: 1-D in i and/or j |
 | **surface_patches**           | C    | ADJUST_GRID variant with more surface_patch_utilities options |
@@ -264,6 +267,8 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **triangulation_tool**        | C    | Drives scale/shift/rotate transformations and area/volume/CM/moments of inertia calculations for a Tecplot unstructured surface or volume dataset (1+ zones) |
 | **update_grid**               | C    | Replace one or more grid blocks with same-sized block(s) from other file or files |
 | **upsequence**                | C    | Upsequence coarse cavity/plug/gap filler solution; impose fine local boundary flow |
+! **usflowinterp**              | C    | Interpolation within an unstructured 3D Tecplottable dataset (ADT search techniques)
+! **usinterp**                  | C    | Driver for the optimal interpolation package (scattered data interpolation in n dimensions)
 | **uslos**                     | C    | Merge of LINES_OF_SIGHT & HEMISPHERES_OF_SIGHT for unstructured surfaces |
 | **v2c**                       | C    | Convert grid [+ optional flow]: cell vertices to centers |
 | **wingsections**              | C    | B-spline sections + chord/thickness data --> B-spline wing |
@@ -361,7 +366,15 @@ C = CFD, G = General Numerics, P = Programming Tool
                    public [GitHub](https://www.github.com/nasa/cfdtools). Various
                    small improvements to `radial_interp`, `refine`, `capsule_grid`,
                    and `prepare_neqair_data`.
+* **Nov 07 2021**: Added BODY_POINT_DATA and miscellaneous updates to repository.
 * **Nov 20 2021**: Re-reviewed and approved for open source release by Ames Research
                    center under the NASA Open Source License v1.3. Added updated
                    license file and contributor license agreements.
-
+* **May 19 2022**: Added USINTERP (driver for the optimal interpolation package),
+                   USFLOWINTERP and USREFLECT for operating on Tecplottable outputs
+                   from US3D, multiple new routines in geomlib and ugridlib needed
+                   by these applications, updates to USLOS, triangulation_io and
+                   triangulation_tool, and minor updates to gsmooth, tri_to_tri,
+                   and tri_to_quad.  An lapacksubset library has also been added
+                   because of changes to lib/optinterp/optimal_interpolation.f90.
+                   It is needed by the symmetric eigenvalue routines added to linsys.

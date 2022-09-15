@@ -23,6 +23,8 @@ cfdtools_add_library(linsys
   solbt.f
   solbtc.f
   solve.f90
+  symevd.f90
+  symevdsolve.f90
   symmlq.f
   trdiag.f
   tricps.f

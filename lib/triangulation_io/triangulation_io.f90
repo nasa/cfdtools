@@ -7,10 +7,11 @@
 !  and this version supports Tecplot's format for volume meshes where all elements are defined by the same number of nodes
 !  (4 for tetrahedra, and 8 for hexahedra).  Volume elements may contain collapsed edges if they have been formed by replicating
 !  some nodes as can happen when a tetrahedral volume has been turned into hexahedra.  This case is treated efficiently as a single
-!  tetrahedron per "hex" cell.  The full hex cell case (which can be treated as 5 tets or 6 tets) has not been completed.
+!  tetrahedron per "hex" cell.
 
 !  Tecplot files are treated initially, but provision is made for supporting other unstructured formats.  To read such a file, the
-!  application must assign header%filename, %fileform, %formatted, and %nvertices.
+!  application must assign header%filename, %fileform, %formatted, and %nvertices, although the latter can now be determined with a
+!  preliminary call to subroutine get_element_type.
 
    type tri_header_type
       character (80)     :: filename                ! Name of file if the dataset is to be read or written
@@ -35,9 +36,10 @@
       integer            :: nnodes                  ! # points or nodes forming such a combined triangulation (or volume)
       integer            :: nelements               ! # triangles|tetra/hexahedra forming the combined surface or volume mesh
       integer, dimension (:,:), pointer :: conn     ! Connectivity for all zones if needed for rapid searching, as for tri_type
-      real,    dimension (:,:), pointer :: xyz      ! Element vertex coordinates for all zones for rapid searching   "   "   "
+      real,    dimension (:,:), pointer :: xyz      ! Element vertex coordinates for all zones for rapid searching   "   "   " 
       real,    dimension (:,:), pointer :: f        ! Vertex-centered function values for all zones  "   "   "   "   "   "   "
       character (80)          :: title              ! Dataset title
+      character (32)          :: zone_type          ! Kludge to enable it to be transferred to the (likely only one) zone header
       character (32), pointer :: varname (:)        ! Variable names; embedded blanks are permitted; 32 matches other software
    end type tri_header_type
 
@@ -53,15 +55,17 @@
    type tri_type
       integer                :: nzoneheaderlines    ! # lines in zone header, to facilitate reading zones after counting them
       character (32)         :: zone_title          ! Zone/block title; embedded blanks are permitted; same length as elsewhere
+      character (32)         :: zone_type           ! E.g., FETRIANGLE, FEQUADRILATERAL, FEBRICK; obscure connection w/ element_type
       integer                :: nnodes              ! # points or nodes forming this triangulation (or tetrahedral volume) zone
       integer                :: nelements           ! # triangles|tetra/hexahedra forming this zone of the surface or volume mesh
-      character (8)          :: element_type        ! Assumed to be TRI[ANGLE] for surfaces; TET|HEX for volumes (may be extended)
+      character (16)         :: element_type        ! TRI[ANGLE]|QUAD[RILATERAL] for surfaces; TET|BRICK for vols. (may be extended)
+      character (48)         :: varlocation         ! Introduced for keywords like VARLOCATION=([1-3]=NODAL,[4-17]=CELLCENTERED)
       real                   :: xmin, xmax          ! x data ranges for this zone
       real                   :: ymin, ymax          ! y data ranges for this zone
       real                   :: zmin, zmax          ! z data ranges for this zone
       real                   :: cm(3)               ! Center of mass for this zone
       real                   :: solutiontime        ! Time (or some other useful real number) associated with the zone
-      real                   :: surface_area        ! Total surface area of this zone if it is a triangulation
+      real                   :: surface_area        ! Total surface area of this zone if it is a triangulation 
       real                   :: enclosed_volume     ! Total volume defined by this triangulation zone and header%interior_point
       real                   :: solid_volume        ! Total volume of all elements of this zone of a volume mesh (all tets|hexes)
       logical                :: allocated_conn      ! "if (allocated(zone%conn))" is illegal for a pointer argument;
@@ -129,9 +133,24 @@
 !                            field, %centroids_to_vertices.
 !  07/26/18    "       "     Tecplot won't read a single-function line VARLOCATION=([4-4]=CELLCENTERED) written by tri_zone_write.
 !                            Instead, it expects VARLOCATION=([4]=CELLCENTERED).  Thanks to Jeff Hill for thinking of this.
+!  04/04/22    "       "     Fixed glitches in the run-time formatting of BLOCK order output.  Added zone%zone_type, which has an
+!                            obscure overlap with %element_type.
+!  04/10/22    "       "     %combine_zones and %centroids_to_vertices now work during the reading of volume datasets as for surface
+!                            datasets, including quad surfaces.
+!  04/11/22    "       "     Look also for CELLCENTERED in get_element_type now.
+!  04/22/22    "       "     Keywords like VARLOCATION=([1-3]=NODAL,[4-17]=CELLCENTERED) need to be preserved for transmitting to
+!                            an output file such as from USREFLECT.
+!  04/27/22    "       "     Subroutine tri_zone_read was reading x,y,z,f as a single record in BLOCK mode.  Evidently,
+!                            f is a new record.
+!  04/30/22    "       "     Subroutine get_element_type was failing to find CELL-CENTERED when it appeared after ZONETYPE.
+!                            Now, the file header and the zone 1 header are scanned for all useful keywords.
+!  05/01/22    "       "     Added subroutine reverse_handedness for TRIANGULATION_TOOL to use after a reflection.
+!  08/23/22    "       "     A title T="inlet" by chance has ET in it after upcasing, and get_element_type treated it as the
+!                            element type keyword with a bad value.  Work-around: blank any title in the buffer before searching
+!                            for any keyword.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA (later with ERC, Inc. and AMA, Inc. at NASA ARC).
-!
+! 
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    use tri_header_structure  ! Defines "tri_header" derived data type for one unstructured multizone dataset
@@ -144,13 +163,14 @@
 
 !  Constants used by the package:
 
-   integer,   parameter :: len_string = 64         ! Room and then some for a zone size/type string
-   integer,   parameter :: len_buffer = 500        ! Limit on length of an input line, most likely the DT=(SINGLE SINGLE ... ) line
-   integer,   parameter :: max_zones  = 100        ! Limit on number of zones in a file being read
-   integer,   parameter :: max_length = 1000       ! Limit on length of string into which variable names are packed
-   integer,   parameter :: name_limit = 32         ! Limit on the length of variable names; must match value in modules above
-   integer,   parameter :: nsfield    = 8          ! Width  of a NASTRAN small field
-   integer,   parameter :: nsline     = 80         ! Length of a NASTRAN small field line
+   integer,   parameter :: len_string = 64           ! Room and then some for a zone size/type string
+   integer,   parameter :: len_buffer = 500          ! Limit on length of an input line, likely the DT=(SINGLE SINGLE ... ) line
+   integer,   parameter :: max_keyval = 48           ! Limit on VARLOCATION keyword values
+   integer,   parameter :: max_zones  = 100          ! Limit on number of zones in a file being read
+   integer,   parameter :: max_length = 1000         ! Limit on length of string into which variable names are packed
+   integer,   parameter :: name_limit = 32           ! Limit on the length of variable names; must match value in modules above
+   integer,   parameter :: nsfield    = 8            ! Width  of a NASTRAN small field
+   integer,   parameter :: nsline     = 80           ! Length of a NASTRAN small field line
 
    real,      parameter :: fourth     = 0.25
    real,      parameter :: half       = 0.5
@@ -164,26 +184,27 @@
    character (1), parameter :: blank  = ' ',      &
                                null   = char (0), &
                                quotes = '"'
-   character (4), parameter :: GRID   = 'GRID'     ! For small field 1 of a NASTRAN triangulation grid point definition
-   character (6), parameter :: CTRIA3 = 'CTRIA3'   ! For small field 1 of a NASTRAN triangulation cell definition
+   character (4), parameter :: GRID   = 'GRID'       ! For small field 1 of a NASTRAN triangulation grid point definition
+   character (5), parameter :: UNDEF  = 'UNDEF'      ! For knowing whether to write zone%varlocation
+   character (6), parameter :: CTRIA3 = 'CTRIA3'     ! For small field 1 of a NASTRAN triangulation cell definition
 
 !  Internal variables used by the package:
 
-   integer   :: fileform                           ! Internal copy of header%fileform
-!! integer   :: IsDouble                           ! 0 = single precision data (-r4); 1 = double precision data (-r8)
-   integer   :: nzoneheaderlines (max_zones)       ! Temporary storage for # zone header lines while # zones is being counted
-   integer   :: nelements (max_zones)              !     "        "     "  # elements per zone
-   integer   :: nnodes (max_zones)                 !     "        "     "  # nodes per zone
-   integer   :: numf                               ! Internal copy of header%numf
-   integer   :: nvar                               ! Internal variable = 3 + numf
-   integer   :: nvertices                          ! Internal copy of header%nvertices
-   integer   :: nzones                             ! Internal copy of header%nzones
-   real      :: eps                                ! epsilon (eps) allows IsDouble to be assigned for binary reads & writes
-   logical   :: formatted                          ! Internal copy of header%formatted
-   logical   :: valid, verbose                     ! Pass ios = 1 to tri/vol_header_read to activate printing of header/zone info.
-   character (len_buffer) :: buffer                ! For a line of input; its length is dominated by DT=(SINGLE SINGLE ... ) lines
-   character (max_length) :: packed_names          ! For binary output; reused for some of the reading;
-                                                   ! Fortran 90 doesn't support dynamically variable string lengths
+!! integer   :: IsDouble                             ! 0 = single precision data (-r4); 1 = double precision data (-r8)
+   integer   :: nzoneheaderlines (max_zones)         ! Temporary storage for # zone header lines while # zones is being counted
+   integer   :: nelements (max_zones)                !     "        "     "  # elements per zone
+   integer   :: nnodes (max_zones)                   !     "        "     "  # nodes per zone
+   integer   :: numf                                 ! Internal copy of header%numf
+   integer   :: nvar                                 ! Internal variable = 3 + numf
+   integer   :: nvertices                            ! Internal copy of header%nvertices
+   integer   :: nzones                               ! Internal copy of header%nzones
+   real      :: eps                                  ! epsilon (eps) allows IsDouble to be assigned for binary reads & writes
+   logical   :: formatted                            ! Internal copy of header%formatted
+   logical   :: valid, verbose                       ! Pass ios = 1 to tri/vol_header_read to activate printing of header/zone info.
+   character (len_buffer) :: buffer                  ! For a line of input; its length is dominated by DT=(SINGLE SINGLE ... ) lines
+   character (max_keyval) :: varlocation (max_zones) ! For keywords with values like ([1-3]=NODAL,[4-17]=CELLCENTERED)
+   character (max_length) :: packed_names            ! For binary output; reused for some of the reading;
+                                                     ! Fortran 90 doesn't support dynamically variable string lengths
 !  Parsing utilities used by the package:
 
    logical   :: number
@@ -196,11 +217,12 @@
 
 !  Utilities provided for applications:
 
+   public :: get_element_type       ! Reads enough of an unstructured dataset (surface or volume) to determine zone/element type
    public :: tri_read               ! Reads  an entire unstructured surface dataset
    public :: tri_write              ! Writes an entire unstructured surface dataset
 
    public :: tri_header_read        ! Reads  an unstructured surface dataset header
-   public :: tri_header_write       ! Writes fn unstructured surface dataset header
+   public :: tri_header_write       ! Writes an unstructured surface dataset header
    public :: tri_zone_allocate      ! Allocate the %xyz and %conn and optional %f arrays for one zone of surface triangulation
    public :: tri_zone_read          ! Reads  one zone of an unstructured surface dataset
    public :: tri_zone_write         ! Writes one zone of an unstructured surface dataset
@@ -223,13 +245,14 @@
    public :: vol_read               ! Reads  an entire unstructured volume dataset
    public :: vol_write              ! Writes an entire unstructured volume dataset
 
-   public :: vol_get_element_type   ! Reads enough of an unstructured dataset (surface or volume) to determine ET (element type)
    public :: vol_header_read        ! Reads  an unstructured volume dataset header
-   public :: vol_header_write       ! Writes fn unstructured volume dataset header
+   public :: vol_header_write       ! Writes an unstructured volume dataset header
    public :: vol_zone_allocate      ! Allocate the %xyz and %conn and optional %f arrays for one zone of an unstructured volume
    public :: vol_zone_read          ! Reads  one zone of an unstructured volume
    public :: vol_zone_write         ! Writes one zone of an unstructured volume
 
+   public :: combine_zones          ! Used by tri_read and vol_read; may be applicable elsewhere to transcribe all zones to header
+   public :: reverse_handedness     ! Reverse the handedness of all zones by reversing the order of the connectivity pointers
    public :: deallocate_vol_zones   ! Deallocates any allocated arrays of the indicated zone(s) of an unstructured volume
 
    public :: vol_data_range         ! Computes the x/y/z data ranges over all volume zones
@@ -248,6 +271,204 @@
    contains
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+      subroutine get_element_type (lun, header, ios)
+!
+!     This afterthought was prompted by the TRIANGULATION_TOOL driving program when it needed to be extended to drive the volume
+!     grid analogues of the triangulation utilities: the user should not have to be prompted for the element size, and whether the
+!     function data are vertex- or cell-centered.  Since the existing reading utilities assume that header%nvertices is known (and
+!     assigned) by the application, it is simplest to open the file here, locate the element type (assumed to be the same for all
+!     zones), then close the file.  Some files don't have enough info in the dataset header, so we have to look in the first zone
+!     header as well.  In fact we now scan all the way down until the first numeric line of zone 1 is encountered.
+!
+!     Sample file and zone 1 header:
+!
+!     VARIABLES=x,y,z,t,tv,nsN2,nsO2,nsNO,nsN,nsO
+!     ZONE N=513107, E=495360, T="US3D_Data", VARLOCATION=([1-3]=NODAL,[4-10]=CELLCENTERED)
+!     ZONETYPE=FEBRICK, DATAPACKING=BLOCK
+!     SOLUTIONTIME =  1.180566166E-01, STRANDID = 0
+!
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!     Arguments:
+
+      integer,                intent (in)    :: lun     ! Logical unit number
+      type (tri_header_type), intent (inout) :: header  ! Data structure containing dataset header information; input with
+                                                        ! file name and form; output with %nvertices
+      integer,                intent (inout) :: ios     ! 0 on output means no error detected
+
+!     Local constants:
+
+      character (19), parameter :: routine = ' get_element_type: '
+
+!     Local variables:
+
+      integer :: first, header_case, last, mark, nvertices
+
+!     Procedure:
+
+      logical, external :: alpha  ! Detects non-numeric strings
+
+!     Execution:
+
+      if (header%formatted) then
+
+         open (lun, file=trim (header%filename), status='old', iostat=ios)
+
+      else ! Binary input has not been implemented
+
+         write (*, '(/, 2a)') routine, 'Reading of Tecplot binaries is not an option yet.'
+
+      end if
+
+      if (ios /= 0) then
+         write (*, '(3a)') routine, 'Trouble opening file ', trim (header%filename)
+         go to 900
+      end if
+
+      header%fileform = undefined
+
+      if (header%formatted) then
+
+!        Read the file header lines up to and including the first 'ZONE' line.
+
+!        ZONE N=513107, E=495360, T="US3D_Data", VARLOCATION=([1-3]=NODAL,[4-10]=CELLCENTERED)
+!        ZONETYPE=FEBRICK, DATAPACKING=BLOCK
+
+         do  ! Until a zone header is found
+            read (lun, '(a)') buffer;  last = len_trim (buffer)
+            call blank_title ()  ! In case a title contains letters of a keyword such as ET
+            call upcase (buffer(1:last))
+            if (index (buffer(1:last), 'ZONE') > 0) exit
+         end do
+
+!        ZONETYPE=FETriangle can clash with ET=Triangle, so look for it first:
+!        (Later:  But ZONETYPE belongs in a zone header, not a file header.
+!        Still, a single zone header (common) might act as part of the file header.)
+!        Later still: try to detect CELLCENTERED as well.
+ 
+         header_case = 0
+
+         do  ! Until either ZONETYPE or ET is found
+            first = index (buffer(1:last), 'ZONETYPE')
+            if (first > 0) then
+               first = first + 8
+               header_case = 1
+               exit
+            else
+               first = index (buffer(1:last), 'ET')
+               if (first > 0) then
+                  first = first + 2
+                  header_case = 2
+                  exit
+               end if
+            end if
+
+            first = index (buffer(1:last), 'CELLCENTERED')
+            if (first > 0) header%fileform = 2
+
+            read (lun, '(a)') buffer;  last = len_trim (buffer)
+            call blank_title ()
+            call upcase (buffer(1:last))
+         end do
+
+         if (header_case == 0) then
+            write (*, '(3a)') routine, 'Element type not apparent: ', &
+               'neither ET= nor ZONETYPE= found.'
+            go to 900
+         end if
+
+         call scan2 (buffer(1:last), ' =,', first, last, mark)
+
+         select case (header_case)
+            case (1)  ! ZONETYPE=...
+               header%zone_type = buffer(first:first+5)  ! Kludge; transfer to zone%zone_type later
+               select case (buffer(first:first+5)) ! FExxxx (ORDERED is not expected)
+                  case ('FELINE')
+                     nvertices = 2
+                  case ('FETRIA')
+                     nvertices = 3
+                  case ('FEQUAD', 'FETETR')
+                     nvertices = 4
+                  case ('FEHEXA', 'FEBRIC')
+                     nvertices = 8
+                  case default
+                     write (*, '(3a)') routine, 'Unknown finite element zone type: ', buffer(first:mark)
+                     go to 900
+               end select
+            case (2)  ! ET=...
+               select case (buffer(first:first+2)) ! Unknown if TET is legal for tetrahedral volumes; assume so
+                  case ('TRI')
+                     nvertices = 3
+                  case ('QUA', 'TET')
+                     nvertices = 4
+                  case ('HEX', 'BRI') ! 'BRICK'
+                     nvertices = 8
+                  case default
+                     write (*, '(3a)') routine, 'Unknown element type: ', buffer(first:mark)
+                     go to 900
+               end select
+         end select
+
+         write (*, '(3a)') routine, 'Element type found: ', buffer(first:mark)
+
+      else  ! Binary input is incomplete
+      end if
+
+      header%nvertices = nvertices
+
+!     The original code above has been left intact.  Look for undefined keywords down to the first numeric line:
+
+      do ! Until buffer appears numeric
+
+!!       read (lun, '(a)') buffer;  last = len_trim (buffer)   ! The buffer may contain CELLCENTERED
+!!       call upcase (buffer(1:last))
+
+         if (.not. alpha (buffer(1:last))) exit
+
+         if (header%fileform == undefined) then
+            first = index (buffer(1:last), 'CELLCENTERED')
+            if (first > 0) header%fileform = 2
+         end if
+
+!        Any others will go here.
+
+         read (lun, '(a)') buffer;  last = len_trim (buffer)
+         call upcase (buffer(1:last))
+
+      end do
+
+      if (header%fileform == undefined) header%fileform = 1  ! Vertex-centered
+
+      ios = 0
+      go to 999
+
+ 900  ios = 999
+
+ 999  close (lun)
+
+      end subroutine get_element_type
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine blank_title ()  ! Look in a buffer for a title in double quotes and blank it to avoid clashes with keywords.
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      integer :: i1, i2, last
+
+      last = len_trim (buffer)
+      i1 = index (buffer(1:last), quotes)
+
+      if (i1 > 0) then
+          i2 = i1 + index (buffer(i1+1:last), quotes)
+          if (i2 > 0 .and. i2 > i1+1) then
+             buffer(i1+1:I2-1) = blank
+          else  ! Shouldn't be a problem
+          end if
+      end if
+
+      end subroutine blank_title
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       subroutine tri_read (lun, header, grid, ios)
 
@@ -261,9 +482,8 @@
 !     07/21/18  ADT searching of multizone unstructured datasets requires treating all elements of all zones as a single list.
 !               This option has been enabled here via new header variables as explained above, starting with header%combine_zones.
 !               The zones are read and packed one zone at a time, and they are NOT deallocated in case the application needs to do
-!               more than just searching/interpolation.  If the function data are cell-centered, they are area-averaged to vertices
-!               (for surface_zones; volume averaging of volume-cell centroid function values has not been implemented yet). This
-!               conversion may also be requested via header%centroids_to_vertices even if header%combine_zones = F.
+!               more than just searching/interpolation.  If the function data are cell-centered, they are area-averaged to vertices.
+!               This conversion may also be requested via header%centroids_to_vertices even if header%combine_zones = F.
 !
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -287,6 +507,8 @@
 !     Execution:
 !     ----------
 
+      verbose = ios == 1
+
 !     Open the file, read the header records, determine the number of zones, allocate an array of unstructured zone structures,
 !     and set up the zone dimensions by scanning till EOF:
 
@@ -294,27 +516,12 @@
       if (ios /= 0) go to 999
 
       combine = header%combine_zones
-      if (combine) then  ! Count all nodes and all elements of all zones
-         nz = header%nzones
-         nf = header%numf
-         nn = 0;  ne = 0
-         do iz = 1, nz
-            nn = nn + grid(iz)%nnodes
-            ne = ne + grid(iz)%nelements
-         end do
-
-         nv = header%nvertices
-         allocate (header%conn(nv,ne), header%xyz(3,nn), header%f(nf,nn))
-         header%nnodes = nn
-         header%nelements = ne
-         if (verbose) write (*, '(a, i7)') ' # combined nodes:', nn, ' # combined cells:', ne
-      end if
 
 !     Allocate and read each zone:
 
-      ie = 0;  in = 0  ! Packing offsets
-
       do iz = 1, header%nzones
+
+         if (verbose) ios = 1
 
          call tri_zone_allocate (header, grid(iz), ios)
          if (ios /= 0) then
@@ -322,6 +529,8 @@
             write (*, '(2a)')    ' File name: ', trim (header%filename)
             go to 999
          end if
+
+         if (verbose) ios = 1
 
          call tri_zone_read (lun, header, grid(iz), ios)
          if (ios /= 0) then
@@ -334,8 +543,9 @@
          ntri  = grid(iz)%nelements
          nvert = grid(iz)%nnodes
 
-         if (combine .or. header%centroids_to_vertices) then
+         if (header%numf > 0 .and. header%centroids_to_vertices) then
             if (header%fileform == 2) then  ! Convert function values from centroids to vertices
+               nf = header%numf
                allocate (tri_area(ntri), area_total(nvert))
 
                call tri_areas (nvert, ntri, grid(iz)%xyz, grid(iz)%conn, tri_area, area_total)
@@ -348,19 +558,13 @@
                deallocate (grid(iz)%f);  allocate (grid(iz)%f(nf,nvert))
 
                grid(iz)%f(:,:) = fnode(:,:);  deallocate(fnode)
+               header%fileform = 1
             end if
          end if
 
-         if (combine) then  ! Pack the zone data into the header space for all zones:
-            header%conn(:,ie+1:ie+ntri)  = grid(iz)%conn(:,:) + in
-            header%xyz (:,in+1:in+nvert) = grid(iz)%xyz(:,:)
-            header%f   (:,in+1:in+nvert) = grid(iz)%f(:,:)
-            ie = ie + ntri
-            in = in + nvert
-            if (verbose) write (*, '(a, 2i10)') ' Zone packing offsets ie & in:', ie, in
-         end if
-
       end do
+
+      if (combine) call combine_zones (header, grid)
 
 !!    if (verbose .and. combine) then
 !!       write (*, '(3es25.15)') header%xyz(:,:)
@@ -500,7 +704,7 @@
 
 !     Arguments:
 
-      integer,                intent (in)    :: lun     ! Logical unit number
+      integer,                intent (in)    :: lun     ! Logical unit number; the file is opened here
       type (tri_header_type), intent (inout) :: header  ! Data structure containing dataset header information; input with
                                                         ! file name, form, and %nvertices
       type (tri_type),        pointer        :: grid(:) ! Array of derived data types for unstructured data zones, allocated here
@@ -519,9 +723,9 @@
 
       verbose = ios == 1
 
-      formatted = header%formatted  ! Internal copies
-      fileform  = header%fileform
-      nvertices = header%nvertices  ! # cell vertices, not zone%nnodes
+      formatted = header%formatted    ! Internal copies
+      nvertices = header%nvertices    ! # cell vertices, not zone%nnodes
+      header%zone_type = 'UNDEFINED'  ! Part of a kludge to get zone_type into output zone header(s)
 
       if (formatted) then
 
@@ -537,11 +741,9 @@
 !!          IsDouble = 0
 !!       end if
 
-         if (header%fileform == 1) then
-!!          ios = Tec_xxx (...) ! Some utility not available yet in the Tec_io library
-            write (*, '(/, 2a)') routine, 'Reading of Tecplot binaries is not an option yet.'
-            ios = 999
-         end if
+!!       ios = Tec_xxx (...) ! Some utility not available yet in the Tec_io library
+         write (*, '(/, 2a)') routine, 'Reading of Tecplot binaries is not an option yet.'
+         ios = 999
 
       end if
 
@@ -556,7 +758,6 @@
 !        Variable names are not assigned here either, because they may not be in the file header; count_zones assigns them.
 
          call read_file_header () ! Local procedure below
-
          if (ios /= 0) then
             write (*, '(3a)') routine, 'Trouble reading file header: ', trim (header%filename)
             go to 999
@@ -566,7 +767,6 @@
 !        If variable names weren't in the file header, they'll be counted from zone 1 and defaulted as X, Y, Z, V1, V2, ...
 
          call count_zones ()      ! Local procedure below
-
          if (ios /= 0) then
             write (*, '(3a)') routine, 'Trouble counting zones: ', trim (header%filename)
             go to 999
@@ -604,6 +804,7 @@
          grid(iz)%nelements        = nelements(iz)
          grid(iz)%nzoneheaderlines = nzoneheaderlines(iz)
          grid(iz)%solutiontime     = undefined
+         grid(iz)%varlocation      = varlocation(iz)
       end do
 
       if (verbose) then
@@ -664,8 +865,6 @@
 
          do ! While the first token on a line is not 'ZONE'
 
-!!          write (6, '(a, l2, i4)') ' read_file_header: read_a_line, nfileheaderlines =', read_a_line, nfileheaderlines
-
             if (read_a_line) then
                read (lun, '(a)') buffer
                lentrim = len_trim (buffer);  last = lentrim  ! SCAN2 expects last as input, and can update it
@@ -681,11 +880,9 @@
             call scan2  (buffer(1:lentrim), ' =', first, last, mark)
             call upcase (buffer(first:mark))
 
-!!          write (6, '(a, 3i5, 2a)') ' read_file_header: first, mark, last =', first, mark, last, '  b(f:m): ', buffer(first:mark)
-
             select case (buffer(first:first))
 
-            case ('T') ! TITLE, which could follow the keyword on the next line
+            case ('T') ! Dataset TITLE, which could follow the keyword on the next line
 
                nfileheaderlines = nfileheaderlines + 1
                first = mark + 2
@@ -746,7 +943,7 @@
                      nfileheaderlines = nfileheaderlines + 1
 
                      call pack_names ()
-
+               
                   else ! No more variables
 
                      read_a_line = false
@@ -880,6 +1077,8 @@
                      call unknown_keyword ()
                   end if
 
+                  varlocation(nz) = UNDEF  ! Where else should this go?
+
                else if (mark - first == 7) then ! ZONETYPE
 
                   if (buffer(first:mark) == 'ZONETYPE') then  ! The application will know if it's FETriangle or FETet...
@@ -906,7 +1105,7 @@
 
             case ('D')  ! Data types or DATAPACKING
 
-               if (mark - first == 1) then  ! DT = (....LE ....LE ...LE )
+               if (mark - first == 1) then  ! DT = (....LE ....LE ...LE ) 
 
                   if (buffer(first:mark) == 'DT') then
 
@@ -962,8 +1161,11 @@
                      call next_token ()
 
                      if (nz == 1) then
-                        header%datapacking = 0   ! POINT
-                        if (buffer(first:mark) == 'BLOCK') header%datapacking = 1
+                        if (buffer(first:mark) == 'POINT') then
+                           header%datapacking = 0;  !! header%fileform = 1  ! Vertex-centered
+                        else  ! 'BLOCK'
+                           header%datapacking = 1;  !! header%fileform = 2  ! ?  (Not necessarily; see subroutine get_element_type.)
+                        end if
                      end if
 
                   else
@@ -983,16 +1185,14 @@
                   call next_token ()
                   call char_to_integer (buffer, first, mark, nelements(nz))
                else
-
                   valid = false
                   if (mark - first == 1) valid = buffer(first:mark) == 'ET'  ! Element type
-
+               
                   if (valid) then
                      call next_token ()  ! Skip it - can't save it till the right # zones has been allocated
                   else
                      call unknown_keyword ()
                   end if
-
                end if
 
                call next_token ()
@@ -1003,7 +1203,7 @@
                   call next_token ()
                   valid = false
                   if (mark - first == 6) then
-                     if (buffer(first:mark) == 'FEBLOCK') then
+                     if (buffer(first:mark) == 'FEBLOCK') then 
                         if (nz == 1) header%datapacking = 1
                         valid = true
                      else if  (buffer(first:mark) == 'FEPOINT') then
@@ -1048,13 +1248,19 @@
 
                call next_token ()
 
-            case ('V')  ! VARLOCATION = ...  ! Ignore it and the rest of its line, to avoid parsing ([4-8]=CELLCENTERED)
-
+            case ('V')  ! VARLOCATION = ...  ! Something like VARLOCATION=([1-3]=NODAL,[4-17]=CELLCENTERED) may need to be
+                                             ! transmitted to an output file
                if (mark - first == 10) then
 
-                  if (buffer(first:mark) == 'VARLOCATION') then
-                     write (*, '(3a)') ' *** Ignoring nonstandard keyword and value: ', buffer(first:last), '.  Proceeding.'
-                     mark = last  ! Force new line
+                  if (buffer(first:mark) == 'VARLOCATION') then  ! Special handling of the keyword value: the () delimiters
+                     first = mark + 1                            ! have to be restored
+                     call scan4 (buffer(1:last), '(', first, last, mark)
+                     varlocation(nz)(1:1) = '('
+                     varlocation(nz)(2:mark-first+2) = buffer(first:mark)
+                     varlocation(nz)(mark-first+3:mark-first+3) = ')'
+
+!!                   write (*, '(3a)') ' *** Ignoring nonstandard keyword and value: ', buffer(first:last), '.  Proceeding.'
+!!                   mark = last  ! Force new line
                   else
                      call unknown_keyword ()
                   end if
@@ -1129,8 +1335,8 @@
          if (ios /= -len_buffer) ios = 0  ! See case 'D' above
 
          if (verbose) then
-            write (*, '(a, i5)') ' # zones found:', nz, ' # variables:  ', nvar
-            if (nz == 1) write (*, '(a, i9)') ' # nodes:   ', nnodes(1), ' # elements:', nelements(1)
+            write (*, '(a, i6)') ' # zones found:', nz, ' # variables:  ', nvar
+            if (nz == 1) write (*, '(a, i9)') ' # nodes:   ', nnodes(1), ' # elements:', nelements(1) 
          end if
 
          end subroutine count_zones
@@ -1299,7 +1505,6 @@
 !     Execution:
 
       formatted = header%formatted  ! Internal copies
-      fileform  = header%fileform
       nvertices = header%nvertices  ! Per cell
       numf      = header%numf
 
@@ -1484,11 +1689,8 @@
 
             if (formatted) then
 
-               if (numf == 0) then
-                  read (lun, *, iostat=ios) zone%xyz(1,:), zone%xyz(2,:), zone%xyz(3,:)
-               else
-                  read (lun, *, iostat=ios) zone%xyz(1,:), zone%xyz(2,:), zone%xyz(3,:), (zone%f(n,:), n = 1, numf)
-               end if
+               read (lun, *, iostat=ios) zone%xyz(1,:), zone%xyz(2,:), zone%xyz(3,:)
+               if (numf > 0) read (lun, *, iostat=ios) (zone%f(n,:), n = 1, numf)
 
                if (ios /= 0) then
                   write (*, '(/, a, 3i4, a, i9)') &
@@ -1501,6 +1703,7 @@
                   write (*, '(/, a, i4, a, i9)') &
                      ' Trouble reading block order connectivity data. Unit:', lun, '  # elements:', nelements
                   write (*, '(a, 2i9)') ' Zone connectivity dimensions: ', size (zone%conn, 1), size (zone%conn, 2)
+                  write (*, '(a, i3)')  ' header%fileform:', header%fileform
                   go to 99
                end if
 
@@ -1525,6 +1728,8 @@
 
 !        Execution:
 
+         zone%zone_type = header%zone_type  ! May be 'UNDEFINED'; part of a kludge; it's unclear when the zone type is needed
+
          line = 0;  mark = 0;  last = 0
 
 !        Always (re)start the loop over possible keywords by locating the next keyword if any (in contrast to count_zones).
@@ -1545,9 +1750,26 @@
                      call next_zone_token ()
                   end if
 
-               else  ! ZONETYPE is assumed to be known to the application (triangles or tets)
+               else  ! ZONETYPE  ! Get the next token
 
-                  call next_zone_token ()  ! Skip the FETxxx value;  same action if it's an unknown keyword
+                  first = mark + 2
+                  call scan2 (buffer(1:lentrim), ' =,', first, last, mark)
+                  zone%zone_type   = buffer(first:mark)
+
+                  if (buffer(first:mark) == 'FETRIANGLE') then
+                     zone%zone_type = 'FETRIANGLE';       header%nvertices = 3
+                  else if (buffer(first:mark) == 'FEQUADRILATERAL') then
+                     zone%zone_type = 'FEQUADRILATERAL';  header%nvertices = 4
+                  else if (buffer(first:mark) == 'FETETRAHEDRON') then
+                     zone%zone_type = 'FETETRAHEDRON';    header%nvertices = 4
+                  else if (buffer(first:mark) == 'FETETRAHEDRON') then
+                     zone%zone_type = 'FEPYRAMID';        header%nvertices = 5
+                  else if (buffer(first:mark) == 'FEBRICK') then
+                     zone%zone_type = 'FEBRICK';          header%nvertices = 8
+                  end if
+
+                  zone%element_type = zone%zone_type
+                  header%zone_type  = zone%zone_type
 
                end if
 
@@ -1618,6 +1840,17 @@
                   call next_zone_token ()  ! Unknown keyword - ignore it, and skip its value
                end if
 
+            case ('V')  ! VARLOCATION = ...  ! Ignore it and the rest of its line
+
+               if (mark - first == 10) then
+                  if (buffer(first:mark) == 'VARLOCATION') then
+                     write (*, '(2a)') ' *** Read_zone_header: Ignoring keyword, value, and rest of line: ', buffer(first:last)
+                     mark = last  ! Force new line
+                  else
+                     call next_zone_token ()
+                  end if
+               end if
+
             case default ! Must be an unknown keyword such as STRANDID:
 
                call next_zone_token ()  ! Get and skip its value and keep going
@@ -1639,9 +1872,6 @@
 !        EOF is NOT considered a possibility here.
 
          first = mark + 2
-
-!!       write (6, '(a, 6i6)') ' next_zone_token: nzh, line, first, mark, last, lentrim:', &
-!!                              zone%nzoneheaderlines, line, first, mark, last, lentrim
 
          if (first > last) then
 
@@ -1723,18 +1953,17 @@
 
 !     Local variables:
 
-      integer              :: in, iv, lc, le, ln, nelements, nnodes
-      character (14), save :: form1    = '(a, i*, a, i*)'
-      character (11), save :: form2    = '(***es16.8)'
-      character (5),  save :: form3    = '(*i*)'
-      character (6),  save :: centered = '[4-*] '
+      integer                :: i, in, iv, lc, le, ln, nelements, nnodes
+      character (14), static :: form1    = '(a, i*, a, i*)'
+      character (11), static :: form2    = '(***es16.8)'
+      character (5),  static :: form3    = '(*i*)'
+      character (6),  static :: centered = '[4-*] '
 
 !     Execution:
 
       numf       = header%numf
       nvar       = 3 + numf
       formatted  = header%formatted
-      fileform   = header%fileform
       nvertices  = header%nvertices
       nnodes     = zone%nnodes
       nelements  = zone%nelements
@@ -1744,42 +1973,53 @@
          call ndigits (nnodes, ln);       write (form1(6:6),   '(i1)') ln
          call ndigits (nelements, le);    write (form1(13:13), '(i1)') le
          write (lun, form1) 'Nodes = ', nnodes, ', Elements = ', nelements
+         write (*, '(a, i3)') ' Writing file with header%fileform =', header%fileform
 
-         select case (fileform)
+         select case (header%fileform)
 
             case (1)  ! Vertex-centered functions, if any
 
                write (lun, '(2a)') 'F=FEPOINT, ET=', trim (zone%element_type)
                if (numf == 0) then
-                   write (lun, '(3es16.8)') zone%xyz(:,:)
+                  write (lun, '(3es16.8)') zone%xyz(:,:)
                else
                   write (form2(2:4), '(i3)') nvar
                   write (lun, form2) (zone%xyz(:,in), zone%f(:,in), in = 1, nnodes)
                end if
 
-            case (2)  ! Cell-centered functions: surfaces only, for now
+            case (2)  ! Cell-centered functions, if any
 
-               write (lun, '(a)') 'ZONETYPE=FETriangle', &
-                                  'DATAPACKING=BLOCK'
-               if (nvar < 10) then
-                  lc = 5
-                  write (centered(4:4), '(i1)') nvar
+               write (lun, '(3a)') 'ZONETYPE=', trim (zone%zone_type), &
+                                  ', DATAPACKING=BLOCK'
+
+!              The following is potentially problematic.  The use of %varlocation was introduced to deal with transmitting
+!              something like VARLOCATION=([1-3]=NODAL,[4-17]=CELLCENTERED) from input to output, later than the alternative
+!              handling of VARLOCATION below:
+
+               if (zone%varlocation(1:5) /= 'UNDEF') then
+                  write (lun, '(2a)') 'VARLOCATION=', zone%varlocation(1:len_trim (zone%varlocation))
                else
-                  lc = 6
-                  write (centered(4:5), '(i2)') nvar;  centered(6:6) = ']'
+                  if (nvar < 10) then
+                     lc = 5
+                     write (centered(4:4), '(i1)') nvar
+                  else
+                     lc = 6
+                     write (centered(4:5), '(i2)') nvar;  centered(6:6) = ']'
+                  end if
+                  if (numf > 1) then
+                     write (lun, '(3a)') 'VARLOCATION=(', centered(1:lc), '=CELLCENTERED)'
+                  else  ! For a single function, [4-4] is not allowed -- just [4]
+                     write (lun, '(a)') 'VARLOCATION=([4]=CELLCENTERED)'
+                  end if
                end if
-               if (numf > 1) then
-                  write (lun, '(3a)') 'VARLOCATION=(', centered(1:lc), '=CELLCENTERED)'
-               else  ! For a single function, [4-4] is not allowed -- just [4]
-                  write (lun, '(a)') 'VARLOCATION=([4]=CELLCENTERED)'
-               end if
-               write (lun, '(5es16.8)') (zone%xyz(iv,1:nnodes),  iv = 1, nvertices)
+
+               write (lun, '(5es16.8)') (zone%xyz(iv,1:nnodes),  iv = 1, 3)
                write (lun, '(5es16.8)') (zone%f(iv,1:nelements), iv = 1, numf)
 
          end select
 
          write (form3(2:2), '(i1)') nvertices
-         write (form3(4:4), '(i1)') le + 1    ! Assume nelements < 100,000,000
+         write (form3(4:4), '(i1)') ln + 1    ! Assume nnodes < 100,000,000
          write (lun, form3) zone%conn(:,:)
 
       else
@@ -2286,11 +2526,19 @@
       subroutine vol_read (lun, header, grid, ios)
 
 !     Read one 3-space unstructured volume dataset, binary or ASCII, with BLOCK or POINT data packing.
+!     The quad surface case is included here, although changing tri_read to surf_read would be clearer, except that too many
+!     existing applications would be affected.
+!
 !     The first 3 variables are returned as the x, y, z fields of each zone in grid(:).
 !     Remaining variables become the "f" field packed in "point" order (n-tuples, where n = numf = # variables - 3).
 !     The input file title is also returned, along with the variable names (up to name_limit characters each).
 !     Titles for the zone or zones are returned in the appropriate field of each element of the grid array.
 !     The file is opened and closed here.
+!
+!     ADT searching of multizone unstructured datasets requires treating all elements of all zones as a single list.
+!     The zones are read and packed one zone at a time, and they are NOT deallocated in case the application needs to do
+!     more than just searching/interpolation.  If the function data are cell-centered, they are volume-averaged to the vertices.
+!     This conversion may also be requested via header%centroids_to_vertices even if header%combine_zones = F.
 !
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -2307,41 +2555,79 @@
                                                          ! standard output; early return follows
 !     Local variables:
 
-      integer :: iz
+      integer :: iosin, iz, ncells, nf, nfheader, nnodes, nv, nz
+      real, allocatable :: vol_total(:), vol(:), fnode(:,:)
 
 !     Execution:
 !     ----------
+
+      iosin = ios
 
 !     Open the file, read the header records, determine the number of zones, allocate an array of unstructured zone structures,
 !     and set up the zone dimensions by scanning till EOF:
 
       call vol_header_read (lun, header, grid, ios)
-
       if (ios /= 0) go to 999
+
+      nv = header%nvertices
+      nf = header%numf
+      nz = header%nzones
 
 !     Allocate and read each zone:
 
-      do iz = 1, header%nzones
+      do iz = 1, nz
 
+         ios = iosin
          call vol_zone_allocate (header, grid(iz), ios)
-
          if (ios /= 0) then
-            write (*, '(a, i5)') ' vol_read: Trouble allocating zone #', iz
+            write (*, '(a, i6)') ' vol_read: Trouble allocating zone #', iz
             write (*, '(2a)')    ' File name: ', trim (header%filename)
             go to 999
          end if
 
+         ios = iosin
          call vol_zone_read (lun, header, grid(iz), ios)
-
          if (ios /= 0) then
-            write (*, '(a, i4)')  ' vol_read:  Trouble reading zone #', iz
+            write (*, '(a, i6)')  ' vol_read:  Trouble reading zone #', iz
             write (*, '(2a)')     ' File name: ', trim (header%filename)
             write (*, '(a, 3i9)') ' # nodes, # elements, # functions: ', grid(iz)%nnodes, grid(iz)%nelements, numf
             write (*, '(a, i3)')  ' # vertices per cell:', header%nvertices
             go to 999
          end if
 
+         ncells = grid(iz)%nelements
+         nnodes = grid(iz)%nnodes
+
+         if (header%numf > 0 .and. header%centroids_to_vertices) then
+            if (header%fileform == 2) then  ! Convert function values from centroids to vertices
+               allocate (vol(ncells), vol_total(nnodes), fnode(nf,nnodes))
+
+               if (nv == 4 .and. grid(1)%zone_type == 'FEQUADRILATERAL') then  ! Quad surface: use the volume arrays for areas
+
+                  call quad_centers_to_vertices (nnodes, ncells, nv, nf, grid(iz)%xyz, grid(iz)%conn, grid(iz)%f, vol, vol_total, &
+                                                 fnode, ios)
+               else
+
+                  call vol_centers_to_vertices  (nnodes, ncells, nv, nf, grid(iz)%xyz, grid(iz)%conn, grid(iz)%f, vol, vol_total, &
+                                                 fnode, ios)
+               end if
+
+               if (ios /= 0) then
+                  write (*, '(a, i3)') 'Vol_read: Trouble converting centroid functions to vertices.  Zone #:', iz
+                  go to 999
+               end if
+
+               deallocate (vol, vol_total)
+               deallocate (grid(iz)%f);  allocate (grid(iz)%f(nf,nnodes))
+
+               grid(iz)%f(:,:) = fnode(:,:);  deallocate(fnode)
+               header%fileform = 1
+            end if
+         end if
+
       end do
+
+      if (header%combine_zones) call combine_zones (header, grid)
 
   999 continue
 
@@ -2418,131 +2704,6 @@
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
-      subroutine vol_get_element_type (lun, header, ios)
-!
-!
-!     This afterthought was prompted by the TRIANGULATION_TOOL driving program when it needed to be extended to drive the volume
-!     grid analogues of the triangulation utilities: the user should not have to be prompted for the element size; the file name
-!     should suffice.  Since the existing reading utilities assume that header%nvertices is known (and assigned) by the application,
-!     it is simplest to open the file here, locate the element type (assumed to be the same for all zones), then close the file.
-!
-!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!     Arguments:
-
-      integer,                intent (in)    :: lun     ! Logical unit number
-      type (tri_header_type), intent (inout) :: header  ! Data structure containing dataset header information; input with
-                                                        ! file name and form; output with %nvertices
-      integer,                intent (inout) :: ios     ! 0 on output means no error detected
-
-!     Local constants:
-
-      character (23), parameter :: routine = ' vol_get_element_type: '
-
-!     Local variables:
-
-      integer :: first, header_case, last, mark, nvertices
-
-!     Execution:
-
-      if (header%formatted) then
-
-         open (lun, file=trim (header%filename), status='old', iostat=ios)
-
-      else ! Binary input has not been implemented
-
-         write (*, '(/, 2a)') routine, 'Reading of Tecplot binaries is not an option yet.'
-
-      end if
-
-      if (ios /= 0) then
-         write (*, '(3a)') routine, 'Trouble opening file ', trim (header%filename)
-         go to 900
-      end if
-
-      if (header%formatted) then
-
-!        Read the file header lines up to and including the first 'ZONE' line.
-
-         do  ! Until a zone header is found
-            read (lun, '(a)') buffer;  last = len_trim (buffer)
-            call upcase (buffer(1:last))
-            if (index (buffer(1:last), 'ZONE') > 0) exit
-         end do
-
-!        ZONETYPE=FETriangle can clash with ET=Triangle, so look for it first:
-
-         header_case = 0
-         do  ! Until either ZONETYPE or ET is found
-            first = index (buffer(1:last), 'ZONETYPE')
-            if (first > 0) then
-               first = first + 8
-               header_case = 1
-               exit
-            else
-               first = index (buffer(1:last), 'ET')
-               if (first > 0) then
-                  first = first + 2
-                  header_case = 2
-                  exit
-               end if
-            end if
-            read (lun, '(a)') buffer;  last = len_trim (buffer)
-            call upcase (buffer(1:last))
-         end do
-
-         if (header_case == 0) then
-            write (*, '(3a)') routine, 'Element type not apparent: ', &
-               'neither ET= nor ZONETYPE= found.'
-            go to 900
-         end if
-
-         call scan2 (buffer(1:last), ' =', first, last, mark)
-
-         select case (header_case)
-            case (1)  ! ZONETYPE=...
-               select case (buffer(first:first+5)) ! FExxxx (ORDERED is not expected)
-                  case ('FELINE')
-                     nvertices = 2
-                  case ('FETRIA')
-                     nvertices = 3
-                  case ('FEQUAD', 'FETETR')
-                     nvertices = 4
-                  case ('FEHEXA', 'FEBRIC')
-                     nvertices = 8
-                  case default
-                     write (*, '(3a)') routine, 'Unknown finite element zone type: ', buffer(first:mark)
-                     go to 900
-               end select
-            case (2)  ! ET=...
-               select case (buffer(first:first+2)) ! Unknown if TET is legal for tetrahedral volumes; assume so
-                  case ('TRI')
-                     nvertices = 3
-                  case ('TET')
-                     nvertices = 4
-                  case ('HEX', 'BRI') ! 'BRICK'
-                     nvertices = 8
-                  case default
-                     write (*, '(3a)') routine, 'Unknown element type: ', buffer(first:mark)
-                     go to 900
-               end select
-         end select
-
-      else  ! Binary input is incomplete
-      end if
-
-      header%nvertices = nvertices
-      ios = 0
-      go to 999
-
- 900  ios = 999
-
- 999  close (lun)
-
-      end subroutine vol_get_element_type
-
-!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
       subroutine vol_header_read (lun, header, grid, ios)
 !
 !     Open a file of 3-space unstructured volume data and read the file header and zone header records.
@@ -2584,10 +2745,14 @@
 
 !     Execution:
 
-      call tri_header_read (lun, header, grid, ios)     ! Should work for triangles and volume elements
+      call tri_header_read (lun, header, grid, ios)     ! Should work for surface and volume elements
 
       if (ios /= 0) then
          write (*, '(2a, i4)') routine, ' Error reading the file header.  Unit number:', lun, ' File name: ', trim (header%filename)
+      end if
+
+      if (header%nvertices == 4) then  ! Surface, not volume
+         header%zone_type = 'FEQUADRILATERAL'
       end if
 
       end subroutine vol_header_read
@@ -2698,6 +2863,11 @@
 !     Execution:
 
       call tri_zone_read (lun, header, zone, ios)
+
+      if (header%nvertices == 4) then  ! Surface, not volume
+         zone%element_type = 'QUADRILATERAL'
+         zone%zone_type =  'FEQUADRILATERAL'
+      end if
 
       end subroutine vol_zone_read
 
@@ -3061,7 +3231,7 @@
 !     Local constants:                               ! see also vol_center_of_mass
 
       character (26), parameter :: routine = ' vol_zone_center_of_mass: '
-
+      
 !     Local variables:
 
       integer :: i1, i2, i3, i4, i5, icell, ios, n
@@ -3153,10 +3323,99 @@
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+      subroutine combine_zones (header, grid)
+
+!     Concatenate the contents of all grid zones as single lists in the header, as needed for rapid searching.
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!     Arguments:
+
+      type (tri_header_type), intent (inout) :: header   ! Data structure containing dataset header information
+      type (tri_type), pointer               :: grid(:)  ! Array of unstructured data zones fully initialized
+
+!     Local variables:
+
+      integer :: iz, je, jf, jn, ncells, ncc_or_vc, ne, nf, nn, nnodes, nv
+
+!     Execution:
+
+!     Count the elements/cells and the vertices/nodes for all zones:
+
+      nn = 0;  ne = 0
+      do iz = 1, header%nzones
+         nn = nn + grid(iz)%nnodes
+         ne = ne + grid(iz)%nelements
+      end do
+
+      nv        = header%nvertices
+      nf        = header%numf
+      ncc_or_vc = nn
+      if (header%fileform == 2) ncc_or_vc = ne
+
+      allocate (header%xyz(3,nn), header%conn(nv,ne))
+      if (nf > 0) allocate (header%f(nf,ncc_or_vc))
+
+      header%nnodes = nn
+      header%nelements = ne
+      write (*, '(a, i7)') ' # combined nodes:', nn, ' # combined cells:', ne
+
+      jn = 0;  je = 0;  jf = 0  ! Packing offsets
+
+      do iz = 1, header%nzones
+         nnodes = grid(iz)%nnodes
+         ncells = grid(iz)%nelements
+         header%xyz (:,jn+1:jn+nnodes) = grid(iz)%xyz(:,:)
+         header%conn(:,je+1:je+ncells) = grid(iz)%conn(:,:) + jn
+         if (nf > 0) then
+            ncc_or_vc = nnodes
+            if (header%fileform == 2) ncc_or_vc = ncells
+            header%f(:,jf+1:jf+ncc_or_vc) = grid(iz)%f(:,:)
+         end if
+         jn = jn + nnodes
+         je = je + ncells
+         jf = jf + ncc_or_vc
+         write (*, '(a, i3)') ' header%fileform:', header%fileform
+         write (*, '(a, 3i10)') ' Zone packing offsets jn, je, jf:', jn, je, jf
+      end do
+
+      end subroutine combine_zones
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      subroutine reverse_handedness (header, grid)
+
+!     Reverse the handedness of all zones by reversing the order of the connectivity pointers.
+!     Must be used before combine_zones if the combined zone is also to have its handedness reversed.
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!     Arguments:
+
+      type (tri_header_type), intent (inout) :: header   ! Data structure containing dataset header information
+      type (tri_type), pointer               :: grid(:)  ! Array of unstructured data zones fully initialized
+
+!     Local variables:
+
+      integer :: ie, iz, nv
+
+!     Execution:
+
+      nv = header%nvertices
+      do iz = 1, header%nzones
+         do ie = 1, grid(iz)%nelements
+            grid(iz)%conn(1:nv,ie) = grid(iz)%conn(nv:1:-1,ie)
+         end do
+      end do
+
+      end subroutine reverse_handedness
+
+!     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
       subroutine cross_product (a, b, c)  ! This should be an F90 intrinsic;  it is private to this module
 
 !     Calculate the cross product c = a x b for vectors in three-space.  The argument description is obvious.
-!
+!   
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !     Arguments:
@@ -3277,7 +3536,7 @@
 !     Execution:
 
       buffer(1:nsline)  = blank  ! 8 fields
-      igpid = 0
+      igpid = 0   
 
       buffer(1:nsfield) = GRID   ! Field 1
       call left_justify (nsfield, igpid, buffer(2*nsfield+1:3*nsfield))  ! Field 3

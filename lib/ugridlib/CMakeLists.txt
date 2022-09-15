@@ -1,4 +1,5 @@
 cfdtools_add_library(ugridlib
+  cell_volumes.f90
   cut_triangles.f
   cutorder.f
   cutorder_nf.f
@@ -7,6 +8,9 @@ cfdtools_add_library(ugridlib
   cutsurfi.f
   cutsurfi_nf.f
   nonlinear_tri_interp.f90
+  quad_areas.f90
+  quad_centers_to_vertices.f90
+  quad_to_tri.f90
   search_tri_2d.f90
   solid_angle_quadrature_3.f90
   solid_angle_tri.f90
@@ -18,6 +22,7 @@ cfdtools_add_library(ugridlib
   tri_centers_to_vertices.f90
   tri_coefs.f
   triangulate_patches.f
+  vol_centers_to_vertices.f90
 )
 target_link_libraries(cfdtools_ugridlib
   PRIVATE

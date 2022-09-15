@@ -1,0 +1,105 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   program los_attenuation
+!
+!  Description:
+!
+!     For the input line of sight data (los.g and los.f in Plot3D format) and
+!     mission-specific radio frequency or frequencies, calculate a measure of
+!     the expected radio attenuation.  The formulation used initially here is
+!     that employed by program Radio_Attenuation, c. 2016, which exploited the
+!     existence of a substantial aerothermal database for the Orion spacecraft.
+!     It generated a secondary database for all signal directions from multiple
+!     antennas.
+!
+!     This version can also read los.dat (point-order Tecplot file), and it
+!     allows for variable function numbers for p, T, eND.
+!
+!  Reference:
+!
+!     Mitigation of Communication Blackout During Re-entry Using Static Magnetic
+!     Field, Neha Mehra, Rajesh K. Singh, and Subhash C. Bera,
+!     Progress in Electromagnetic Research B, Vol. 63, pp. 161-172, 2015
+!
+!  Formulation Correction From Radio_Attenuation:
+!
+!     03/17/2016    Rick Thompson determined that plasma frequency
+!                   omegap is an angular frequency in radians/sec.
+!                   Therefore, the radio frequencies should be in
+!                   the same units, so multiply Hz by 2 pi.
+!
+!  Possible Issue:
+!
+!     Is this formulation Earth-specific?
+!     This version includes an electron number density-only method that should
+!     be applicable to any atmosphere, and is invoked via atmosphere = 'any'.
+!
+!  Namelist Controls (attenuation.inp; omit trailing comments)
+!
+!     $attenuation
+!     los_form                                   (1|2 = los.g + los.f | los.dat)
+!     time = 50.5                                            (BET time, seconds)
+!     bp = 1.23 2.34 3.45 30. 0. (x,y,z,cone,clock coords. of radio transmitter)
+!     receiver = 'MRO'                (receiving asset; 'DTO' = direct to Earth)
+!     atmosphere = 'Earth'    (any planet or 'Titan' or 'any', case-insensitive)
+!     frequency  = 400.                                                    (MHz)
+!     ip = 1                                    (function numbers for p, T, eND)
+!     iT = 2
+!     ie = 3
+!     $end
+!
+!  LOS data:
+!
+!     The initial formulation expects p, T, electron number density as functions
+!     1, 2, 3 in los.f, in SI units.  Any further functions will be ignored.
+!     [This has now been generalized via ip, iT, ie which default to 1, 2, 3.]
+!     Other forms of the attenuation calculations may require a different set of
+!     functions, including eND alone.  Since a given atmosphere may be treated
+!     with more than one formulation, use of a planet name to define the formu-
+!     lation is problematic.
+!        Suggestion:
+!     Introduce names 'Earth1', 'Earth2', ... if the need arises.
+!
+!     Since the plottable outputs contain p and T, they should be included in
+!     the LOS dataset whether the attenuation calculation uses them or now.
+!
+!  Output:
+!
+!     o  Teclotable file of LOS data and the integrand, integrands.dat:
+!
+!        # time (s): 50.5
+!        # bp x/y/z (m): 1.23 2.34 3.45 30. 0.
+!        # receiver: 'MRO'
+!        # atmosphere: 'Mars'
+!        # frequency (MHz): 400.
+!        # attenuation 1(dB): 50.
+!        # eNDmax  (per m^3): 1.234e20 
+!        # eNDcrit (per m^3): 1.012e20 
+!        variables=arc[m],p[Pa],T[K],eND[m^-3],integrand[?]
+!        0.000000E+00 4.123456E+01 3.456789E+03 1.234567E+18
+!        1.123456E-05  :            :            :
+!         :            :            :            :
+!
+!  History:
+!
+!     Jan-Jul 2016  D.A.Saunders  Radio_Attenuation implementation for Orion.
+!     08-07-2022      "     "     Design of single-LOS adaptation.
+!     08-10-2022      "     "     Allow for atmosphere specifics; initial code.
+!     08-12-2022      "     "     Realized that a planet name may not be
+!                                 sufficient to define what is expected in the
+!                                 los.f file.  See discussion above.
+!     08-17-2022      "     "     Critical density was set in the wrong place.
+!                                 Allow for reading the line of sight data as a
+!                                 point-order Tecplot file, los.dat.  Allow for
+!                                 variable function numbers for p, T, eND.
+!     08-19-2022      "     "     Introduced the electrons-only method shown in
+!                                 slides by summer intern Trevor Hedges, and
+!                                 invoked with atmosphere = 'any'.  This meant
+!                                 moving a bunch of constants up to the top
+!                                 level so that variations of the attenuation
+!                                 formulation can share them.
+!     08-xx-2022      "     "     Initial testing completed.
+!
+!  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

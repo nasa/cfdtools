@@ -1,62 +1,93 @@
-SURFACE_INTERP Description:
-
-   Read a structured surface dataset (Tecplot ASCII) and a second target
-   dataset of one or more patches (possibly unstructured points in a
-   simpler format).  Interpolate the first dataset at each target point
-   and save results as a Tecplot file and (for the simpler input format)
-   as a tabulation for possible pasting into a spreadsheet.  The output
-   file(s) may contain just a subset of the input functions.
-
-Control file format (standard input):
-
-   SURFACE_INTERP control file
-   target_points.dat      ! Target file name
-   1                      ! Target format: 1 = list of points; 2 = Tecplot
-   Subset of functions in output file(s):
-   1 4 2
-   A_CFD03TS_DPLR_RTFCG_A40_PhyMod1_BL_EE.dat      ! File to be searched
-   A_CFD03TS_DPLR_RTFCG_A40_PhyMod1_BL_EE_BP.dat   ! Plottable results
-   A_CFD03TS_DPLR_RTFCG_A40_PhyMod1_BL_EE_BP.txt   ! Tabulated results
-   2 1 1                  ! Block,i,j for debug output; use 0s to suppress
-  [BLOCK                  ! BLOCK|POINT overrides default of POINT output]
-  [7.890     0.           ! Optional X & F; if x > X, set finterp(:) = F]
-
-Random target points format (mode 1):
-
-   x1   y1   z1   Body point 1      ! Any string may follow the coordinates
-   x2   y2   z2   Body point 2      ! else x is inserted as a tag
-   x3   y3   z3   Wing point 1
-   :    :    :    :
-
-Tabulated output format (mode 1):
-
-   x1   y1   z1   f11  f41  f21  Body point 1 (or x1)  Min. distance
-   x2   y2   z2   f12  f42  f22  Body point 2 (or x2)    "      "
-   x3   y3   z3   f13  f43  f23  Wing point 1 (or x3)    "      "
-   :    :    :    :
-
-07/31/05  David Saunders  Initial implementation, adapted from BUMP_FACTORS
-                          in a hurry during Discovery's return to flight.
-08/12/05    "      "      Random target pts. may now be read from a simple
-                          list rather than requiring Tecplot format.  The
-                          smooth/damage nomenclature has been changed to
-                          surface/target.
-12/04/05    "      "      Added optional X and F to deal with radiative
-                          heating that goes to zero beyond some X for CEV.
-10/04/06    "      "      Installed Tecplot 360 version of the I/O package.
-10/30/06    "      "      Turned on verbose Tecplot I/O after a mystery
-                          showed up reading output from BLAYER.
-11/01/06    "      "      Avoid blank zone titles for unlabeled target pts.
-11/03/06    "      "      For the random points input case, write the
-                          plottable results as a single (n,1,1) zone rather
-                          than one zone per point.
-03/26/07    "      "      Todd White asked for minimum distances to be
-                          added to the tabulation for the list-of-points
-                          case.
-05/02/07    "      "      The mean squared minimum distance didn't have
-                          npts inside the square root.
-02/05/14    "      "      All ADT variants are now in a single module with
-                          generic build_adt and search_adt interfaces.
-
-Author:  David Saunders, ELORET/NASA Ames Research Center, CA
-         (Now with ERC, Inc. at NASA ARC.)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   program surface_interp
+!
+!  Description:
+!
+!     Original:
+!        Read a structured surface dataset (Tecplot ASCII) and a second target
+!        dataset of one or more zones (possibly unstructured points in a simpler
+!        format).  Interpolate the first dataset at each target point and save
+!        results as a Tecplot file and (for the simpler target format) as a
+!        tabulation for possible pasting into a spreadsheet.  The output file(s)
+!        may contain just a subset of the input functions.
+!
+!     Current:
+!        Interpolate within a surface dataset at the points of a second dataset.
+!        Both datasets may be one of these choices:
+!           Tecplot/structured, Tecplot unstructured (tri or quad cells), Plot3D
+!        The target points may also be a simple list of (x,y,z) coordinates.
+!        The interpolated results match the format of the target dataset, with
+!        any subset of the input functions being output.
+!
+!  Strategy:
+!
+!     The ADT (Alternating Digital Tree) search technique employed always finds
+!     the point not outside the surface grid being searched that is nearest to
+!     the target point, along with corresponding interpolation coefficients for
+!     use within the relevant cell.  Thus, extrapolation is not an option, so
+!     the target points are assumed to be on or very close to the surface being
+!     searched.
+!
+!  Control file format (standard input):
+!
+!     SURFACE_INTERP control file
+!     SRL-surf.gu      ! File to interp. in (*.g[u] if Plot3D; *.f[u] assumed)
+!     1                ! 1|2|3 = Plot3D|Tecplot structured|Tecplot unstructured
+!     target-surf.dat  ! Target file to interpolate to
+!     2                ! 1|2|3|4 = Plot3D|Tec struct.|Tec unstruct.|(x,y,z) list
+!     Subset of functions in output file(s):
+!     1 2 3
+!     SRL.interp.dat   ! Plottable results; *.f[u] if Plot3D target grid
+!     SRL.interp.txt   ! Tabulated results (target mode 4 only)
+!     F                ! Interpolation details at initial target point?
+!     2                ! 1|2 = BLOCK|POINT order output
+!     0.779347  0.     ! X & F to use for x > X
+!
+!  Random target points format (mode 4):
+!
+!     x1   y1   z1   Body point 1       ! Any string may follow the coordinates
+!     x2   y2   z2   Body point 2       ! else x is inserted as a tag
+!     x3   y3   z3   Wing point 1
+!     :    :    :    :
+!
+!  Tabulated output format (mode 1):
+!
+!     x1   y1   z1   f11  f41  f21  Body point 1 (or x1)  Min. distance
+!     x2   y2   z2   f12  f42  f22  Body point 2 (or x2)    "      "
+!     x3   y3   z3   f13  f43  f23  Wing point 1 (or x3)    "      "
+!     :    :    :    :
+!
+!  History:
+!
+!     07/31/05  D.A.Saunders  Initial implementation, adapted from BUMP_FACTORS
+!                             in a hurry during Discovery's return to flight.
+!     08/12/05    "    "      Random target points may now be read from a simple
+!                             list rather than requiring Tecplot format.  The
+!                             smooth/damage nomenclature has been changed to
+!                             surface/target.
+!     12/04/05    "    "      Added optional X and F to deal with radiative
+!                             heating that goes to zero beyond some X for CEV.
+!     10/04/06    "    "      Installed Tecplot 360 version of the I/O package.
+!     10/30/06    "    "      Turned on verbose Tecplot I/O after a mystery
+!                             showed up reading output from BLAYER.
+!     11/01/06    "    "      Avoid blank zone titles for unlabeled target pts.
+!     11/03/06    "    "      For the random points input case, write the
+!                             plottable results as a single (n,1,1) zone rather
+!                             than one zone per point.
+!     03/26/07    "    "      Todd White asked for minimum distances to be added
+!                             to the tabulation for the list-of-points case.
+!     05/02/07    "    "      The mean squared minimum distance didn't have npts
+!                             inside the square root.
+!     02/05/14    "    "      All ADT variants are now in a single module with
+!                             generic build_adt and search_adt interfaces.
+!     05/20/22    "    "      Redesigned the control file to handle all of the
+!                             likely options for input surface and target data.
+!     05/31/22    "    "      Finished initial rewrite.  Many permutations to
+!                             test.
+!     06/02/22    "    "      All options seem to be working.
+!
+!  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
+!           (Later with ERC, Inc. then with AMA, Inc. at NASA ARC.)
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

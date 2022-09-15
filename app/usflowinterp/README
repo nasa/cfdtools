@@ -1,0 +1,56 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   program usflowinterp
+
+!  Purpose:
+!
+!     Interpolate flow field data from a US3D flow solution on to target points
+!     defined in the specified form such as a Plot3D multiblock grid.  This was
+!     prompted by the need to set up line-of-sight data for radiation calcula-
+!     tions, analogous to flow_interp which is restricted to structured multi-
+!     block flow solutions.
+!
+!  Method:
+!
+!     The flow grid may contain mixed cell types defined in the Fluent format.
+!     An ADT (alternating digital tree) search tree is built from all of the
+!     flow field cells.  The search for each target point always returns the
+!     cell closest to the target, and the point not outside that cell that is
+!     closest, along with corresponding interpolation coefficients for the cell
+!     which can be used to interpolate the flow variables from the cell vertex
+!     values.  This implies use of vertex-centered flow data.  If the input data
+!     are cell-centered, they will be converted to the vertices internally here.
+!
+!     Potential Issue:  Indications elsewhere are that all zones of an un-
+!                       structured dataset contain the same kind of cells.
+!                       Cross that bridge if we come to it.
+!
+!  Control File (Standard Input):
+!
+!     Usflowinterp control file
+!     cylinder.dat             ! Input grid + flow field data file
+!     1                        ! 1|2|? = Tecplot|x|? input volume data format
+!     T                        ! T|F = formatted | unformatted input volume
+!     T                        ! T|F = cell-centered | vertex-centered
+!     los.g                    ! Target point file name
+!     1                        ! 1|2 = Plot3D/structured | Tecplot/unstructured
+!     los.f                    ! Interpolated flow file name (same format)
+!
+!  History:
+!
+!     03/08/2022     D.A.Saunders  Initial design.
+!     03/28-31/2022    "     "     Initial testing; seems to be working.
+!     04/04/2022       "     "     Combining of zones and moving centroid data
+!                                  to the vertices are now done in the
+!                                  triangulation_io package.
+!     04/20/2022       "     "     So is determining %nvertices (via new public
+!                                  subroutine get_element_type).
+!     06/22-23/2022    "     "     Handled the unstructured target case that
+!                                  had been left as a stub.
+!     06/24/2022       "     "     Change zone%element_type = 'FE*' to '*' for
+!                                  output.  Missing DATAPACKING keyword in the
+!                                  doesn't seem to bother Tecplot.
+!
+!  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
+!     
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

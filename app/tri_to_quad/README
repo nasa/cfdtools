@@ -94,6 +94,10 @@ History:
                   build_adt and search_adt interfaces.
    07/02/14   "   The tri_* modules come from triangulation_io.f90, not
                   tecplot_io_module (comments were wrong).
+   07/23/18   "   Updated to use the Tecplot 360 version of tecplot_io, and
+                  also the extended triangulation_io, which now handles
+                  multi-zone triangulations and cell-centered functions.
+   05/03/22   "   One glitch following triangulation_io extensions.
 
 Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA
-                         Now with ERC Incorporated/NASA ARC.
+                         Later with ERC, Inc. and AMA, Inc. at NASA ARC.

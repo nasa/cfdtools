@@ -113,6 +113,16 @@
 !                    option 22.  An additional surface dataset is written with a
 !                    single function in favor of adding the areas to any
 !                    existing functions (which may not be cell-centered).
+!     04/05/22   "   The vertices <-> centroids conversions work for volumes as
+!                    well as for surface datasets now.  The (harder) conversion
+!                    from centers to vertices via area- or volume-weighted
+!                    averaging of cells sharing a common vertex is actually done
+!                    in triangulation_io.f90.
+!     04/11/22   "   Vertex- or cell-centering is automatically detected now.
+!     04/22/22   "   Saving of merged zones was working for tri surfaces only.
+!     04/30/22   "   The reflecting options called for recovering the handedness
+!                    (by reversing the connectivity pointers order), which is
+!                    now done by reverse_handedness in triangulation_io.
 !
 !  Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA
 !                Later with AMA, Inc. at NASA ARC.
@@ -144,7 +154,7 @@
 !  Variables:
 
    integer :: &
-      choice, i, ios, iz, l, n
+      choice, i, ios, iz, l, n, nvertices
 
    logical :: &
       cr, eof, nastran, tri, yes
@@ -194,8 +204,8 @@
       '  23: Apply rotation matrix from (22)', &
       '  24: Smooth a 1-zone bumpy surface',   &
       '  25: Multizone surface --> one zone',  &
-      '  26: Cell-centrd. surf. --> vertex-c.',&
-      '  27: Vertex-centrd. surf --> centrds.',&
+      '  26: Cell-centered --> vertex-cntrd.', &
+      '  27: Vertex-centered --> centroids',   &
       '  99: Done',                            &
       '                                   '/   ! Last ' ' eases display
                                                ! of menu as two columns.
@@ -208,31 +218,34 @@
 
    header%formatted = .true.  ! Unformatted has not been handled
 
-!  Determine the element type without a prompt:
+!  Determine the element type without a prompt; look for CELLCENTERED too:
 
-   call vol_get_element_type (lunin, header, ios)
+   call get_element_type (lunin, header, ios)
    if (ios /= 0) go to 99
 
+   nvertices = header%nvertices
    write (luncrt, '(a, i3)') &
-      ' # vertices per element found for zone 1:', header%nvertices, &
+      ' # vertices per element found for zone 1:', nvertices, &
       ' Any further zones are assumed to contain the same element type.'
 
    tri = header%nvertices == 3
-   header%combine_zones = tri  ! Do it during reading; may be all that is needed
+   header%combine_zones         = .true.  ! In header%xyz, etc.
    header%centroids_to_vertices = .false. ! Reread the file if this is requested
 
-   header%fileform = 1        ! Vertex-centered
-   call readi (luncrt, &
-               'Vertex-centered or cell-centered fn. data? [1|2; <cr> = 1] ', &
-               lunkbd, header%fileform, cr, eof)
-   if (eof) go to 99
+!! Avoid parsing something like VARLOCATION=([1-3]=NODAL,[4-17]=CELLCENTERED):
+
+!! header%fileform = 1        ! Vertex-centered
+!! call readi (luncrt, &
+!!             'Vertex-centered or cell-centered fn. data? [1|2; <cr> = 1] ', &
+!!             lunkbd, header%fileform, cr, eof)
+!! if (eof) go to 99
 
 !  (Re)open and read the input dataset:
 
    ios = 1  ! Verbose mode
 
    if (tri) then
-      call tri_read (lunin, header, xyzf, ios)  ! Read entire dataset
+      call tri_read (lunin, header, xyzf, ios)  ! Read the entire dataset
    else
       call vol_read (lunin, header, xyzf, ios)
    end if
@@ -241,6 +254,12 @@
       write (luncrt, '(/, a)') &
          'Trouble reading input dataset: aborting.'
       go to 99
+   end if
+
+   if (header%numf > 0) then
+      write (luncrt, '(a, i4)') &
+         ' # functions per element found for zone 1:          ', header%numf, &
+         ' File form (1 = vertex-centered; 2 = cell-centered):', header%fileform
    end if
 
 !  Determine the x/y/z data range.  This also sets a default for the enclosed
@@ -309,19 +328,34 @@
 
       else if (choice == 26) then  ! "Cell-centered fns. to vertex-centered."
 
-         if (.not. tri) then
-            write (luncrt, '(/, a)') &
-               ' This option has been implemented for triangulations only.'
-            go to 99
-         end if
-
 !        Reread the file with this option turned on:
 
          header%centroids_to_vertices = .true.
-         call tri_read (lunin, header, xyzf, ios)
+         ios = 1
+
+         if (tri) then
+            call tri_read (lunin, header, xyzf, ios)
+            xyzf(:)%element_type = 'TRIANGLE'
+            xyzf(:)%zone_type    = 'FETRIANGLE'
+            header%zone_type     = xyzf(1)%zone_type
+         else
+            call vol_read (lunin, header, xyzf, ios)
+
+            select case (header%nvertices)
+               case (4)
+                  header%zone_type = xyzf(1)%zone_type  ! FEQUADRILATERAL
+                                                        ! FETETRAHEDRON
+               case (5)
+                  header%zone_type = 'FEPYRAMID'
+               case (8)
+                  header%zone_type = 'FEBRICK'
+            end select
+
+            header%zone_type = xyzf(1)%zone_type
+         end if
+
          write (luncrt, '(a, i7)') ' # zones found:', header%nzones
          header%fileform = 1
-         xyzf(:)%element_type = 'TRIANGLE'
 
       else if (choice == 27) then  ! "Vertex-centered fns. --> centroids"
 
@@ -330,14 +364,9 @@
             go to 210
          end if
 
-         if (.not. tri) then
-            write (luncrt, '(/, a)') &
-               ' This option has been implemented for triangulations only.'
-            go to 99
-         end if
-
          do iz = 1, header%nzones
-            call tri_zone_v2c (iz, header%numf, xyzf(iz))  ! Internal procedure
+            call zone_v2c (iz, nvertices, xyzf(iz)%nnodes, xyzf(iz)%nelements, &
+                           header%numf, xyzf(iz))  ! Internal pr.
          end do
          header%fileform = 2
 
@@ -358,6 +387,15 @@
 
          end do ! Next zone
 
+!        The input handedness may need recovering:
+
+         if (choice >= 7 .and. choice <= 9) then
+            call reverse_handedness (header, xyzf)
+            deallocate (header%xyz, header%conn)        ! Because the zones were
+            if (header%numf > 0) deallocate (header%f)  ! combined during the read
+            call combine_zones (header, xyzf)
+         end if
+
       end if
 
 !!!go to 200
@@ -365,7 +403,7 @@
 
 800 continue
 
-!  Save transformed triangulation?
+!  Save transformed dataset?
 
    filename_out = ' '
    write (luncrt, '(/, a)') &
@@ -397,25 +435,30 @@
             call nas_sf_tri_write (lunout, header, xyzf, ios)
          else if (choice /= 25) then
             call tri_write (lunout, header, xyzf, ios)
-         else  ! Choice = 25 is a special retrofitted case
-
-!           The merged zones are not in a tri_type data structure.  Kludge it:
-
-            call deallocate_tri_zones (1, header%nzones, header%numf, xyzf, ios)
-            header%nzones     = 1
-            xyzf(1)%nnodes    = header%nnodes
-            xyzf(1)%nelements = header%nelements
-            call tri_zone_allocate (header, xyzf(1), ios)
-            if (ios /=  0) go to 99
-
-            xyzf(1)%conn = header%conn
-            xyzf(1)%xyz  = header%xyz
-            xyzf(1)%f    = header%f
-            
-            call tri_write (lunout, header, xyzf, ios)
          end if
-      else
+      else if (choice /= 25) then
          call vol_write (lunout, header, xyzf, ios)
+      end if
+
+      if (choice == 25) then  ! Save the merged zones as one
+
+         call deallocate_tri_zones (1, header%nzones, header%numf, xyzf, ios)
+         header%nzones     = 1
+         xyzf(1)%nnodes    = header%nnodes
+         xyzf(1)%nelements = header%nelements
+         call tri_zone_allocate (header, xyzf(1), ios)
+         if (ios /=  0) go to 99
+
+         xyzf(1)%conn = header%conn
+         xyzf(1)%xyz  = header%xyz
+         xyzf(1)%f    = header%f
+            
+         if (tri) then
+            call tri_write (lunout, header, xyzf, ios)
+         else
+            call vol_write (lunout, header, xyzf, ios)
+         end if
+
       end if
 
       if (ios /= 0) then
@@ -837,42 +880,44 @@
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      subroutine tri_zone_v2c (iz, nf, xyzf)  ! For one zone, f(vert.)-->f(cen.)
+      subroutine zone_v2c (iz, nv, nn, ne, nf, xyzf) ! f(vert)-->f(cent), 1 zone
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !     Arguments:
 
       integer,         intent (in)    :: iz    ! Zone number
+      integer,         intent (in)    :: nv    ! Number of vertices per cell
+      integer,         intent (in)    :: nn    ! Number of nodes in zone
+      integer,         intent (in)    :: ne    ! Number of elements in zone
       integer,         intent (in)    :: nf    ! Number of functions
       type (tri_type), intent (inout) :: xyzf  ! Zone iz data structure
 
-!     Local constants:
-
-      real, parameter :: third = 1./3.
-
 !     Local variables:
 
-      integer :: i1, i2, i3, ic, nc
+      integer :: ie, in, iv
+      real :: oneovernv, sum(nf)
       real, allocatable :: fcentroid(:,:)
 
 !     Execution:
 
       write (luncrt, '(a, i7)') ' Converting functions for zone', iz
-      nc = xyzf%nelements
-      allocate (fcentroid(nf,nc))
+      oneovernv = 1./real (nv)
+      allocate (fcentroid(nf,ne))
 
-      do ic = 1, nc
-         i1 = xyzf%conn(1,ic)
-         i2 = xyzf%conn(2,ic)
-         i3 = xyzf%conn(3,ic)
-         fcentroid(:,ic) = (xyzf%f(:,i1) + xyzf%f(:,i2) + xyzf%f(:,i3))*third
+      do ie = 1, ne
+         sum(:) = 0.
+         do iv = 1, nv
+            in = xyzf%conn(iv,ie)
+            sum(:) = sum(:) + xyzf%f(:,iv)
+         end do
+         fcentroid(:,ie) = sum(:)*oneovernv
       end do
 
-      deallocate (xyzf%f);  allocate (xyzf%f(nf,nc))
+      deallocate (xyzf%f);  allocate (xyzf%f(nf,ne))
       xyzf%f(:,:) = fcentroid(:,:)
       deallocate (fcentroid)
 
-      end subroutine tri_zone_v2c
+      end subroutine zone_v2c
 
    end program triangulation_tool

@@ -1,87 +1,87 @@
+Module triangulation_io packages I/O for unstructured surface or volume
+datasets in 3-space.  For surface datasets, two types of Tecplot format
+are supported: triangulations with optional function values that are
+either vertex-centered or cell-centered.  Hooks appear for binary Tecplot
+files, but only ASCII files may be read or written presently.
 
-Description for program triangulation_tool:
+   public :: tri_read               ! Read  an entire unstructured surface
+   public :: tri_write              ! Write an entire unstructured surface
 
-   Read one surface triangulation file, perform the indicated analysis or
-analyses, and (if indicated) save the result as another triangulation.
-Initially, this serves as a driver for testing geometric property additions
-to triangulation_io.f90.
+   public :: tri_header_read        ! Read  an unstructured surface header
+   public :: tri_header_write       ! Write fn unstructured surface header
+   public :: tri_zone_allocate      ! Allocate the arrays for one surface zone
+   public :: tri_zone_read          ! Read  one zone of a surface dataset
+   public :: tri_zone_write         ! Write one zone of a surface dataset
 
-   The triangulation may contain more than one zone (but probably doesn't).
+   public :: deallocate_tri_zones   ! Deallocate arrays of indicated zones
 
-   No control file is needed - just some prompts.
+   public :: tri_data_range         ! x/y/z data ranges over all surface zones
+   public :: tri_area               ! Total wetted area over all surface zones
+   public :: tri_volume             ! Total volume enclosed by surface zone(s)
+   public :: tri_center_of_mass     ! CM of all surface zones (and of each zone)
+   public :: tri_moments_of_inertia ! Surf. moments of inertia about Ox/y/z
+   public :: tri_apply_rotation_R   ! Apply matrix from tri_moments_of_inertia
+   public :: tri_zone_data_range    ! x/y/z data ranges for one surface zone
+   public :: tri_zone_area          ! Total wetted area of a triangulated zone
+   public :: tri_zone_volume        ! Volume def. by surface zone & interior pt.
+   public :: tri_zone_center_of_mass! CM of surf. zone + cell centroids & areas
 
-Input Tecplot data format (vertex-centered):
+!  Analogous utilities for volume meshes (tets or hexahedra);
+!  some can use the tri* utility directly, but this avoids confusion:
 
-   VARIABLES = "X", "Y", "Z", "TEMP", "PRESS", "CP", "MACHE", "ASOUNDE", ...
-   ZONE N=96000, E=32000, F=FEPOINT, ET=TRIANGLE
-   0.000000  0.000000 0.000000 2838.386719 51330.925781 1.552663 0.609412 ...
-   0.000883 -0.007150 0.113643 2838.386719 51330.925781 1.552663 0.609412 ...
-   0.000883  0.000000 0.113868 2838.386719 51330.925781 1.552663 0.609412 ...
-   ::::::::::::::::
-   ::::::::::::::::
-   4.882953  0.000000 0.011285 950.867676 16.506409 -0.001166 5.062649 ...
-   1 2 3
-   4 5 6
-   7 8 9
-   10 11 12
-   ::::::::
-   ::::::::
-   95992 95993 95994
-   95995 95996 95997
-   95998 95999 96000
+   public :: vol_read               ! Read  an entire unstructured volume
+   public :: vol_write              ! Write an entire unstructured volume
 
-Alternative cell-centered Tecplot input format (DPLR overset grid tools):
+   public :: vol_get_element_type   ! Read enough of a surf|vol to determine ET
+   public :: vol_header_read        ! Read  unstructured volume dataset header
+   public :: vol_header_write       ! Write unstructured volume dataset header
+   public :: vol_zone_allocate      ! Allocate arrays for a zone of volume
+   public :: vol_zone_read          ! Read  one zone of an unstructured volume
+   public :: vol_zone_write         ! Write one zone of an unstructured volume
 
-   TITLE     = ""
-   VARIABLES = "x"
-   "y"
-   "z"
-   "p"
-   "Chm"
-   "h"
-   "qw"
-   "Re_c"
-   ZONE T="ZONE 001"
-    STRANDID=0, SOLUTIONTIME=0
-    Nodes=9367, Elements=18438, ZONETYPE=FETriangle
-    DATAPACKING=BLOCK
-    VARLOCATION=([4-8]=CELLCENTERED)
-    FACENEIGHBORCONNECTIONS=55014
-    FACENEIGHBORMODE=LOCALONETOONE
-    FEFACENEIGHBORSCOMPLETE=YES
-    DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )
-    3.756540120E-01 3.601163924E-01 3.451932967E-01 3.309260905E-01  ...
-   ::::::::::::::::
+   public :: deallocate_vol_zones   ! Deallocate arrays of the indicated zone(s)
 
-  Format for a Tecplot unstructured volume file:
+   public :: vol_data_range         ! Compute x/y/z data ranges over all zones
+   public :: vol_volume             ! Total volume of all elements of all zones
+   public :: vol_center_of_mass     ! CM of all vol. zones (and of each zone)
+   public :: vol_moments_of_inertia ! Vol. moments of inertia about Ox/y/z
+   public :: vol_apply_rotation_R   ! Applies matrix from vol_moments_of_inertia
+   public :: vol_zone_data_range    ! x/y/z data ranges for one volume zone
+   public :: vol_zone_volume        ! Volume of all cells of one volume zone
+   public :: vol_zone_center_of_mass! CM of vol. zone + cell centroids & volumes
 
-    variables = x y z
-    zone T="grid", n=      505286 , e=     2759284 ,et=brick,     f=fepoint
-     2.273000031709671E-002  1.339999958872795E-003  0.119850002229214
-     2.288999967277050E-002 -1.100000008591451E-004  0.119819998741150
-    ::::::::::::::::
-     7.481993472351248E-002 -1.206158433734931E-002 -1.534229517647054E-002
-     98307    98308    98309    98309    98310    98310    98310    98310
-     98308    98307    98309    98309    98311    98311    98311    98311
-    ::::::::::::::::
-    263981   238511   270276   270276   270277   270277   270277   270277
-    318887   318885   378503   378503   378505   378505   378505   378505
+Two derived data types also appear in triangulation_io.f90:
 
+   tri_header_structure
+   tri_zone_structure
 
-    If, as in this example, each hex cell is actually formed by duplicating
-    vertex 3 of a tetrahedron as vertex 4, and vertex 4 as vertices 6,7,8,
-    then volumes are treated as single tetrahedra -- not as 5 or 6 of them.
+See TRI_TO_QUAD, NEQAIR_Integration for sample applications of surface reading.
+See TRI_TO_TRI also for reading multiple zones as one for efficient searching,
+and HEMISPHERES_OF_SIGHT for writing examples.
+See TRIANGULATION_TOOL for driving recently-added geometric operations.
 
-History:
+07/21/18 ADT searching of multizone triangulations (or unstructured volumes)
+         requires a way of assembling all zones as one list of all elements.
+         Subroutine tri_read now has this option, via new header fields
+         %combine_zones, %conn, %xyz and %f.  If function values are cell-
+         centered, they will be area-averaged to the vertices for ADT use.
+07/23/18 Tri_read now has an independent option to convert centroid function
+         values to vertices via new header field, %centroids_to_vertices.
+07/26/18 Tecplot won't read a one-function line VARLOCATION=([4-4]=CELLCENTERED)
+         written by tri_zone_write.  Instead, it expects the form
+         VARLOCATION=([4]=CELLCENTERED). Thanks to Jeff Hill for thinking of this.
+04/04/22 Fixed glitches in the run-time formatting of BLOCK order output.  Added zone%zone_type, which has an
+         obscure overlap with %element_type.
+04/10/22 %combine_zones and %centroids_to_vertices now work during the reading of volume datasets as for surface
+         datasets, including quad surfaces.
+04/11/22 Look also for CELLCENTERED in get_element_type now.
+04/22/22 Keywords like VARLOCATION=([1-3]=NODAL,[4-17]=CELLCENTERED) need to be preserved for transmitting to
+         an output file such as from USREFLECT.
+04/27/22 Subroutine tri_zone_read was reading x,y,z,f as a single record in BLOCK mode.  Evidently,
+         f is a new record.
+04/30/22 Subroutine get_element_type was failing to find CELL-CENTERED when it appeared after ZONETYPE.
+         Now, the file header and the zone 1 header are scanned for all useful keywords.
+05/01/22 Added subroutine reverse_handedness for TRIANGULATION_TOOL to use after a reflection.
 
-   10/17/14  DAS  Initial adaptation of TRI_TO_TRI as a driver for applying
-                  geometric utilities that have been added to the surface
-                  triangulation module triangulation_io.f90:
-                  x/y/z/data ranges, surface area, and enclose volume.
-                  Further extensions are expected.
-   10/20/14   "   More geometric options along the lines of ADJUST_GRID.
-   10/21/14   "   Surface enter of mass and moments of inertia options.
-   11/17/14   "   Volume grid analogues of the triangulation utilities have
-                  been added to triangulation_io.f90 and are driven here.
-
-Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA
+David Saunders, ELORET Corporation/NASA Ames Research Center, CA
+                (later with ERC, Inc. and AMA, Inc. at NASA ARC)

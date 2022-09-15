@@ -85,5 +85,19 @@ History:
    08/08/13   "   All ADT variants are in one module now with generic
                   build_adt and search_adt interfaces.
    07/03/14   "   TRI_TO_TRI adapted from TRI_TO_QUAD.
+   04/21/17   "   The tri_area(:) array name clashed with a callable utility
+                  added subsequently to triangulation_io.f90.  It has been
+                  renamed as triang_area(:).
+   07/20/18   "   Hemispherical integration of radiance data involves multi-
+                  zone triangulations.  Interpolation of such surface data
+                  to a different triangulation is now an option following
+                  an extension within triangulation_io that concatenates
+                  all zones as a single zone within new header fields, for
+                  rapid searching via the ADT scheme, which builds all cells
+                  of all zones into its search tree rather than treating one
+                  zone at a time.
+   05/03/22   "   One glitch following triangulation_io extensions.
+
 
 Author:  David Saunders, ERC, Inc./NASA Ames Research Center, CA
+              Later with AMA, Inc. at ARC.

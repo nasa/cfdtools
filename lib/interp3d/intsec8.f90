@@ -34,7 +34,7 @@
 !     allocate (conn(3,ntri))   ! Triangle connectivity info.
 !     allocate (coord(3,nnode)) ! (x,y,z)s of nodes pointed to be conn(1:3,*)
 !
-!     call build_unstructured_surface_adt (nnode, ntri, conn, coord)
+!     call build_adt (nnode, ntri, conn, coord)
 !
 !  History:
 !
@@ -55,8 +55,11 @@
 !  08/05/13   "   All ADT variants have been merged as adt_utilities (generic
 !                 build and search interfaces) for distribution purposes.  This
 !                 makes INTSEC7 a redundant substitute for INTSEC6 now.
+!  03/05/22   "   ADT utilities now have generic calls identified by their
+!                 argument lists.
 !
 !  Author:  David Saunders, ERC, Inc. at NASA Ames Research Center, CA
+!                  Now with AMA, Inc. at ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
