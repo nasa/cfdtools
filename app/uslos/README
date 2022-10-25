@@ -73,6 +73,21 @@ Input Surface Triangulation Format (inner and outer, in separate files):
    use the Tecplotable output of Newtonian Cp predictions.  The Cps will be
    ignored.  They are vertex-centered, so tri_header%fileform = 1 here.
 
+Unit Spherical Octant Triangulation Choice:
+
+   This version of USLOS has the SLOS option to read a previously generated
+   unit triangulation that the Equal_Area_Triangulation variant of the
+   NPOPT_DRIVER framework can now produce.  If nedge is specified as 25
+   (say), we look for the file unit_sphere_octant_25.dat (likewise for
+   other nedge values).  If the file is not found, subroutine spherical_-
+   triangulation is employed as originally.
+
+   In principle, the integrations w.r.t. solid angle of radiances
+   calculated for each line of sight will be more accurate if the solid
+   angle elements are essentially equal, although it is expected that the
+   two kinds of triangulation will produce very similar results for a given
+   value of nedge.
+
 Outputs:
 
    PLOT3D-type output is retained as for the structured case (one or more
@@ -171,6 +186,10 @@ History:
    04/25/2022     "    "     Cleared up confusion over %centers_to_vertices:
                              any functions are ignored by USLOS, so this
                              switch is irrelevant once %numf <-- 0.
+   09/30/2022     "    "     The option to read an optimized (more nearly
+                             equal cell areas) unit spherical octant tri-
+                             angulation has been belatedly installed as in
+                             SLOS.  See description above.
 
 Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 

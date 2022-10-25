@@ -148,6 +148,8 @@
 !  08/23/22    "       "     A title T="inlet" by chance has ET in it after upcasing, and get_element_type treated it as the
 !                            element type keyword with a bad value.  Work-around: blank any title in the buffer before searching
 !                            for any keyword.
+!  10/20/22    "       "     Subroutine tri_zone_write wrote zone%xyz(:,:), but eliminating duplicate boundary points can mean that
+!                            not all of the initial %xyz array remains used.  The nf=0 case needs explicit indexing as for nf/=0.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA (later with ERC, Inc. and AMA, Inc. at NASA ARC).
 ! 
@@ -1981,7 +1983,8 @@
 
                write (lun, '(2a)') 'F=FEPOINT, ET=', trim (zone%element_type)
                if (numf == 0) then
-                  write (lun, '(3es16.8)') zone%xyz(:,:)
+!!!!!             write (lun, '(3es16.8)') zone%xyz(:,:)  ! Removing repeated (x,y,z)s can mean a shorter array
+                  write (lun, '(3es16.8)') (zone%xyz(:,in), in = 1, nnodes)
                else
                   write (form2(2:4), '(i3)') nvar
                   write (lun, form2) (zone%xyz(:,in), zone%f(:,in), in = 1, nnodes)

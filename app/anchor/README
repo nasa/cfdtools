@@ -1,108 +1,170 @@
-   This program can be employed to drive a quite general Kriging-type
-method of interpolating unstructured data (see NO-ANCHORING OPTION
-below), but first: an explanation of what prompted it at NASA Ames
-Research Center, from the program header:
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-INTRODUCTION:
+   program anchor
 
-   Anchoring refers to determining corrections for low-fidelity
-calculations from a limited number of more expensive higher-fidelity
-calculations.  Where the high-fidelity "observations" are available,
-the corrected results should match, while far away from them the
-adjustments should be essentially zero.
-
-   This application is prompted by the need to correct Euler calculations
-of aerodynamic lift and drag coefficients using a limited number of more
-costly Navier-Stokes solutions.  It is implemented in a general enough way
-that it may find other uses.
-
-   The data points are treated as unstructured, and the interpolation
-method is a form of Kriging known as Optimal Interpolation.  Since both
-the low and high fidelity datasets are being interpolated, it may seem
-that the datasets should have independent variance estimates. However,
-only low-fidelity error estimates are meaningful because it is actually
-DIFFERENCES between high and low fidelity data that are involved in the
-second set of interpolations.  The same estimates are applied to all
-points of a given dataset, meaning they're crude at best.  Provision is
-made for specifying different error variances for the different functions
-(originally assumed to be comparable).
-
-ASSUMPTIONS:
-
-   o  Allow for any number of coordinate dimensions and any number of
-      functions at each point.
-   o  Read and write one data point per line; count the number of input
-      data points by reading to EOF.
-   o  Outputs are assumed to be desired as a rectangular table defined by a
-      list of coordinates in each dimension (original design; this version
-      can alternatively read an unstructured list of target points at which
-      to interpolate, in which case derivative outputs are not an option).
-      For rectangular-table mode, the table coordinates are read from the
-      control file, with each dimension starting on a new line.
-      For the arbitrary-list-of-points-at-which-to-interpolate mode, those
-      target points are read one tuple per line until EOF from the file
-      indicated on the control line following some meaningful rectangular
-      table definition (acting as a place holder, but ignored after being
-      read).  This line is skipped if the table definition is to be used,
-      but it must be present.
-   o  Results are tabulated in Fortran order (first coordinate varying
-      first, etc.) if they are in rectangular table form, else they are
-      tabulated in the input target point order.  Plottable results are
-      also written in Tecplot format with POINT order.  The file name is
-      derived from the tabulation name by adding ".Tec.dat".  This file
-      includes any high-fidelity points as a second zone.
-
-OUTLINE:
-
-   o  A short control file specifies file names & interpolation parameters.
-      It is read from standard input.
-   o  Interpolate the lo-fi functions at the hi-fi coordinates and at the
-      target coordinates (concatenated to do both in one call).
-   o  Interpolate the  (hi-fi - lo-fi) function differences at the target
-      output coordinates.
-   o  Add the interpolated corrections to the lo-fi functions evaluated at
-      the target coordinates.
-
-NO-ANCHORING OPTION:
-
-   If the high fidelity file name is "none", only initial interpolations of
-   the low-fi data are performed.  This provides a way of testing control
-   inputs on one set of interpolations, and/or performing Kriging-type
-   interpolation within a single dataset (the "low-fi" data) without the
-   "anchoring" idea in the picture.
-
-SAMPLE CONTROL FILE:
-
-   ------------------------------------------------------------------------
-   ANCHOR Control File
-   ------------------------------------------------------------------------
-   2  3              ! # coordinates and # functions
-   Mach Alpha        ! coordinate names
-   CL CD CM          ! function names
-   cbaero.dat        ! low fidelity data input file
-   overflow.dat      ! high fidelity data input file or "none"
-   anchored.dat      ! output results file (structured table | just a list)
-   derivatives.dat   ! output derivatives (plottable) or "none"
-   1                 ! target point mode: 1 = rectangular table; 2 = list
-   14  52            ! dimens. of output table, mode = 1; coords. follow:
-   0.5 0.7 0.9 0.95 1.05 1.1 1.2 1.6 2.0 2.5 3.0 4.0 6.0 8.0
-   0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110
-   115 120 125 130 132 134 136 138 140 142 144 146 148 150 152 154 156 158
-   160 162 164 166 168 170 172 174 176 176 180
-   target.dat        ! file name of target pts., mode=2; ignore if mode=1
-   ------------------------------------------------------------------------
-   Interpolation Controls
-   ------------------------------------------------------------------------
-   40                ! # nearest neighbors used for each interpolation
-   4.   40.          ! data correlation lengths in coordinate space
-   G    G            ! correlation functions: G = Gaussian, L = Linear
-   0.1               ! adaptation control in [0, ~0.5]; 0 = no adaptation
-   1.e-6 1.e-6 1.e-6 ! function error variances >= 0
-   ------------------------------------------------------------------------
-   Interpolation Controls
-   ------------------------------------------------------------------------
-   40                ! # nearest neighbors used for each interpolation
-   4.   40.          ! data correlation lengths in coordinate space
-   G    G            ! correlation functions: G = Gaussian, L = Linear
-   0.1               ! adaptation control in [0, ~0.5]; 0 = no adaptation
-   0.0   0.0   0.0   ! function error variances >= 0
+!  INTRODUCTION:
+!
+!     Anchoring refers to determining corrections for low-fidelity calculations
+!  from a limited number of more expensive higher-fidelity calculations.  Where
+!  the high-fidelity "observations" are available, the corrected results should
+!  match, while far away from them the adjustments should be essentially zero.
+!
+!     A related issue is determining where to compute the high-fidelity results.
+!  The short answer is to add them where gradients in the preliminary estimates
+!  are highest.  (Actually, in 1- or 2-D, adding fidelity in the high-curvature
+!  regions makes most sense. These correspond roughly to high 2nd derivatives.)
+!  This aspect is not covered here (yet).
+!
+!     This application is prompted by the need to correct Euler calculations of
+!  aerodynamic lift and drag coefficients using a limited number of more costly
+!  Navier-Stokes solutions.   It is implemented in a general enough way that it
+!  may find other uses.
+!
+!     The data points are treated as unstructured, and the interpolation method
+!  is a form of Kriging known as Optimal Interpolation.  Since both the low and
+!  high fidelity datasets are being interpolated, it may seem that the datasets
+!  should have independent variance estimates. However, only low-fidelity error
+!  estimates are meaningful because it is actually DIFFERENCES between high and
+!  low fidelity data that are involved in the second set of interpolations. The
+!  same estimates are applied to all points of a given dataset, meaning they're
+!  crude at best.    Provision is made for specifying different error variances
+!  for the different functions (originally assumed to be comparable).
+!
+!  ASSUMPTIONS:
+!
+!     o  Allow for any number of coordinate dimensions and any number of
+!        functions at each point.
+!     o  Read and write one data point per line; count the number of input data
+!        points by reading to EOF.
+!     o  Outputs are assumed to be desired as a rectangular table defined by a
+!        list of coordinates in each dimension (original design; this version
+!        can alternatively read an unstructured list of target points at which
+!        to interpolate, in which case derivative outputs are not an option).
+!        For rectangular-table mode, the table coordinates are read from the
+!        control file, with each dimension starting on a new line.
+!        For the arbitrary-list-of-points-at-which-to-interpolate mode, those
+!        target points are read one tuple per line until EOF from the file
+!        indicated on the control line following some meaningful rectangular
+!        table definition (acting as a place holder, but ignored after being
+!        read).  This line is skipped if the table definition is to be used,
+!        but it must be present.
+!     o  Results are tabulated in Fortran order (first coordinate varying first,
+!        etc.) if they are in rectangular table form, else they are tabulated
+!        in the input target point order.  Plottable results are also written
+!        in Tecplot format with POINT order.  The file name is derived from the
+!        tabulation name by adding ".Tec.dat".  This file includes any high-
+!        fidelity points as a second zone.
+!
+!  OUTLINE:
+!
+!     o  A short control file specifies file names and interpolation parameters.
+!        It is read from standard input.
+!     o  Interpolate the lo-fi functions at the hi-fi coordinates and at the
+!        target coordinates (concatenated to do both in one call).
+!     o  Interpolate the  (hi-fi - lo-fi) function differences at the target
+!        output coordinates.
+!     o  Add the interpolated corrections to the lo-fi functions evaluated at
+!        the target coordinates.
+!
+!  NO-ANCHORING OPTION:
+!
+!     If the high fidelity file name is "none", only the initial interpolations
+!     of the low-fi data are performed.  This provides a way of testing control
+!     inputs on one set of interpolations, and/or performing Kriging-type
+!     interpolation within a single dataset (the "low-fi" data) without the
+!     "anchoring" idea in the picture.
+!
+!  SAMPLE CONTROL FILE:
+!
+!     --------------------------------------------------------------------------
+!     ANCHOR Control File
+!     --------------------------------------------------------------------------
+!     2  3              ! # coordinates and # functions
+!     Mach Alpha        ! coordinate names
+!     CL CD CM          ! function names
+!     cbaero.dat        ! low fidelity data input file
+!     overflow.dat      ! high fidelity data input file or "none"
+!     anchored.dat      ! output results file (structured table or just a list)
+!     derivatives.dat   ! output derivatives (plottable) or "none"
+!     1                 ! target point mode: 1 = rectangular table; 2 = list
+!     14  52            ! dimensions of output table, mode = 1; coords. follow:
+!     0.5 0.7 0.9 0.95 1.05 1.1 1.2 1.6 2.0 2.5 3.0 4.0 6.0 8.0
+!     0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115
+!     120 125 130 132 134 136 138 140 142 144 146 148 150 152 154 156 158 160
+!     162 164 166 168 170 172 174 176 176 180
+!     target.dat        ! file name of target pts., mode = 2; ignore if mode = 1
+!     --------------------------------------------------------------------------
+!     Interpolation Controls
+!     --------------------------------------------------------------------------
+!     40                ! # nearest neighbors used for each interpolation
+!     4.   40.          ! data correlation lengths in coordinate space
+!     G    G            ! correlation functions: G = Gaussian, L = Linear
+!     0.1               ! adaptation control in [0, ~0.5]; 0 = no adaptation
+!     1.e-6 1.e-6 1.e-6 ! function error variances >= 0
+!     --------------------------------------------------------------------------
+!     Interpolation Controls
+!     --------------------------------------------------------------------------
+!     40                ! # nearest neighbors used for each interpolation
+!     4.   40.          ! data correlation lengths in coordinate space
+!     G    G            ! correlation functions: G = Gaussian, L = Linear
+!     0.1               ! adaptation control in [0, ~0.5]; 0 = no adaptation
+!     0.0   0.0   0.0   ! function error variances >= 0
+!
+!  HISTORY:
+!
+!    01/17/07- D.A.Saunders  Initial design ...
+!    01/19/07                ... and implementation.
+!    01/26/07    "     "     Replaced PLOT3D outputs with Tecplot format;
+!                            separated the lo-fi & hi-fi interpolation controls.
+!    02/06/07    "     "     Skip the anchoring procedures if the hi-fi dataset
+!                            name matches the lo-fi dataset name, to allow the
+!                            interpolation method to be tested more easily.
+!    02/07/07    "     "     Linear correlation function option appears to work
+!                            better than Gaussian for CL, CD data.
+!    02/13/07    "     "     The Optimal Interpolation package now provides for
+!                            a choice of correlation functions, and the scheme
+!                            for dealing with wide data-spacing variations by
+!                            adapting the correlation lengths is no longer hard-
+!                            coded.
+!    03/14/07    "     "     Added calculation of derivatives of the structured
+!                            interpolations via finite differencing. The hope is
+!                            that they will highlight where high-fidelity data
+!                            points are desirable, since the error variances
+!                            produced by the optimal interpolation procedure
+!                            seem to indicate little other than where the data
+!                            points are sparse (which could be intentional if
+!                            the functions are ~constant or linear in those
+!                            regions).
+!    03/15/07    "     "     Omitting the function data from the plottable file
+!                            of derivatives and curvature was unwise - we may
+!                            want to plot (say) CD vs. Mach and Alpha but color
+!                            the surface with contours of (say) d^2CD/dMach^2.
+!    05/19/07    "     "     Added the option to interpolate at an arbitrary
+!                            list of points read from a file.  Some rectangular
+!                            table definition should remain in the control file
+!                            as a place holder, but it will be ignored after
+!                            being read if "output mode" = 2.  In this case, the
+!                            target list of coordinates is read one tuple per
+!                            line from the file named on a new control line
+!                            following the table coordinates (for which each
+!                            dimension should start on a new line).
+!    11/14/08    "     "     The optimal interpolation package now handles
+!                            different observation error variances for the
+!                            different functions.
+!    08/31/16    "     "     The OI package now has a "verbose" argument, and
+!                            an option to use a simple inverse-distance-weighted
+!                            method (via a negative "adapt").
+!    09/20/22    "     "     A normalize argument has been added to optiminterp,
+!                            among other changes therein.  See also the more
+!                            recent USINTERP for interpolating scattered data.
+!
+!  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
+!           Now with AMA, Inc. at NASA ARC.
+!
+!  NOTE:
+!
+!     The anchoring example proved difficult to settle on acceptable inputs for
+!     the hi-fi (OVERFLOW) data, presumably because of the sparsity in several
+!     areas.  Reliable interpolation of scattered data is a challenge!
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

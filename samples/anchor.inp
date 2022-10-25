@@ -8,24 +8,26 @@ cfi_aide_data.txt    ! low fidelity data input file
 overflow4.txt        ! high fidelity data input file, or "none"
 interpolated.dat     ! output results file (structured table)
 derivatives.dat      ! derivatives in plottable form, or "none"
+1                    ! target point mode: 1 = rectangular table; 2 = list
 16  52               ! dimensions of anchored data table; coordinates follow
 0.5 0.7 0.9 0.95 1.05 1.1 1.2 1.6 2 2.5 3 4 5 6 8 9.26
 0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 115 120
 125 130 132 134 136 138 140 142 144 146 148 150 152 154 156 158 160 162 164 166
 168 170 172 174 176 178 180
+none                 ! filename_targets or 'none'
 --------------------------------------------------------------------------------
 Low-fidelity Data Interpolation Controls
 --------------------------------------------------------------------------------
- 35                  ! # nearest neighbors used for each interpolation
- -10. 30.            ! correlation length in coordinate space
-  L   G              ! correlation functions
-  0.5                ! adaptation control in [0., ~0.5]; 0 => no adaptation
+ 30                  ! # nearest neighbors used for each interpolation
+  10. 30.            ! correlation length in coordinate space
+  G   G              ! correlation functions
+  0.                 ! adaptation control in [0., ~0.5]; 0 => no adaptation
 1.e-4  1.e-4  1.e-4  ! variance of low-fidelity functions >= 0
 --------------------------------------------------------------------------------
 High-fidelity Data Interpolation Controls
 --------------------------------------------------------------------------------
- 25                  ! # nearest neighbors used for each interpolation
-  1.  20.            ! correlation length in coordinate space
+ 10                  ! # nearest neighbors used for each interpolation
+  10. 30.            ! correlation length in coordinate space
   L   L              ! correlation functions
-  0.5                ! adaptation control in [0., ~0.5]; 0 => no adaptation
-0.e-6  0.e-6  0.e-6  ! variance of high-fidelity functions >= 0
+  0.                 ! adaptation control in [0., ~0.5]; 0 => no adaptation
+1.e-5  1.e-5  1.e-5  ! variance of high-fidelity functions >= 0

@@ -1,19 +1,70 @@
-Program DECONSTRUCT description:
-
-   Convert a multiblock structured surface or volume grid to a surface
-triangulation or tetrahedral volume mesh.  Quadrilaterals become pairs
-of triangles; hex cells become five tetrahedra each.
-
-Outputs are in Tecplot format, as a single zone.
-
-Procedures:
-
-   XYZQ_IO package  I/O utilities for PLOT3D grid and function files
-
-History:
-
-   08/16/04  D. Saunders  Initial adaptation of EXTRACT_BLOCKS, to
-                          provide data for testing the tetrahedral mesh
-                          variant of the ADT search package.
-
-Author:  David Saunders, ELORET/NASA Ames, Moffett Field, CA.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+      program deconstruct
+!
+!     Description:
+!
+!        (Originally, for testing unstructured grid forms oF ADT searching:)
+!
+!        Convert a multiblock structured surface or volume grid to a surface
+!     triangulation or tetrahedral volume mesh.  Quadrilaterals become pairs
+!     of triangles; hex cells become five tetrahedra each.
+!
+!        (This version:)
+!
+!        Preserving the input quad surface cells or hex volume cells is now
+!     an option, as needed for use by US3D,  Avoiding duplicate vertices is
+!     an added complication, that has initially been handled with a "brute-
+!     force" method that will be slow on a large grid.
+!
+!        Outputs are in Tecplot format, as a single zone.
+!
+!        This version now allows for an accompanying function file that has
+!     to be vertex-centered.  Note that a cell-centered output from DPLR is
+!     really the grid formed by the cell centroids along with the cell-cen-
+!     tered solution at those centroids,  so the files are actually vertex-
+!     centered.   Output many be in either point or block order, the latter
+!     being more efficient for Tecplot.
+!
+!        A function file option has NOT been implemented for the original
+!     cell-splitting options.
+!
+!     Control File Format (standard input):
+!
+!        surface_grid.g               ! Structured grid
+!        none                         ! Matching flow solution
+!        n                            ! Subdivide cells?
+!        y                            ! Eliminate repeated (x,y,z)s?
+!        unstructured-unique-surf.dat ! Unstructured output (Tecplottable)
+!        y                            ! Point order? n = block order
+!
+!
+!     Procedures:
+!
+!        triangulation_io  I/O utilities for unstructured data
+!        xyzq_io package   I/O utilities for PLOT3D grid and function files
+!
+!     History:
+!
+!        08/16/04  D.A.Saunders  Initial adaptation of EXTRACT_BLOCKS, to
+!                                provide data for testing the tetrahedral mesh
+!                                variant of the ADT search package.
+!        09/25/2022   "     "    Option to preserve quad/hex cells.
+!                                Duplicate vertices are NOT suppressed.
+!        10/14/2022   "     "    75 years since Chuck Yeager/Bell X-1/Mach 1+.
+!                                Debugging proved unusually difficult.
+!                                Performance on a big voolume grid may be
+!                                intolerable.  Example: a 6-block volume grid
+!                                with 942590 points required about 17 minutes
+!                                with no function data.
+!        10/18-21/22  "     "    Handled optional function data, starting with
+!                                introduction of triangulation_io.  This means
+!                                working with xyz(3,npoints) rather than the
+!                                original x,y,z vectors.
+!        10/23/2022   "     "    An input control file can be used in lieu of
+!                                interactive inputs.
+!
+!     Author:  David Saunders, ELORET, Inc. at NASA Ames Research Center, CA.
+!              Now with AMA, Inc. at Ames.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -1,0 +1,6 @@
+forebody-state-vars-cc.gu    ! Structured grid
+forebody-state-vars-cc.fu    ! Matching flow solution
+n                            ! Subdivide cells?
+y                            ! Eliminate repeated (x,y,z)s?
+6b-hex-unique.dat            ! Output unstructured dataset (Tecplottable)
+y                            ! Point order? n = block order

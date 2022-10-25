@@ -1,0 +1,10 @@
+cfdtools_add_executable(morph_line_sgement
+  morph_line_sgement.f90
+)
+target_link_libraries(cfdtools_morph_line_sgement
+  cfdtools_geomlib
+  cfdtools_gridlib
+  cfdtools_interplib
+  cfdtools_numodules
+  cfdtools_searchlib
+)

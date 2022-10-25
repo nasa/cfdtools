@@ -35,6 +35,8 @@
 !     01/15/21  DAS  Date of intsec9 source from which this is derived.
 !     03/05/22   "   Initial adaptation of usintsec from intsec9, using the
 !                    existing intsec8 (twice) in place of intsec6.
+!     09/30/22   "   bad_local_min_recovery was using tline instead of sl(1:2)
+!                    in the recovery intsec8 call.
 !
 !  Author:  David Saunders, AMA,, Inc. at NASA Ames Research Center, CA.
 !
@@ -91,7 +93,7 @@
 
 !  Local variables:
 
-   integer :: ieval, istat, lunerr, numfun
+   integer :: i, ieval, istat, lunerr, numfun
    real    :: t, ta, tb, tol, dtolsq, xyztarget(3)
    logical :: new_plscrv3d, two_points
    logical, save :: first = .true.
@@ -126,6 +128,8 @@
    if (dsq > dtolsq) then
       write (*, '(a, i6, es13.6)') &
          ' *** Usintsec trouble. Line #, dsqmin:', linenum, dsq
+      write (*, '(a, /, (i4, 4es16.7))') ' i, x, y, z, t: ', &
+         (i, xline(i), yline(i), zline(i), tline(i), i = 1, nline)
 
       call bad_local_min_recovery ()  ! Brute force recovery method
 
@@ -144,7 +148,7 @@
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       integer, parameter :: nu = 256 ! # uniform points for fine discretization
-      integer, parameter :: nl = 2   ! Always a 2-point line for intsec6 here
+      integer, parameter :: nl = 2   ! Always a 2-point line for intsec8 here
 
       integer :: i, iuse, ilocmin(1)
       real    :: dtu, distsq(nu), sl(nl), su(nu), xu(nu), yu(nu), zu(nu)
@@ -178,7 +182,7 @@
       sl(2)   = su(iuse)
 
       call intsec8 (nnode, ntri, conn, coord,                      &
-                    nline, xline, yline, zline, tline, lcs_method, &
+                    nline, xline, yline, zline, sl, lcs_method, &
                     itri, pint, qint, rint, tint, xyzint, dsq)
 
       if (dsq < dtolsq) then

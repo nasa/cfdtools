@@ -1,0 +1,24 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   program morph_line_segment
+!
+!  Description:
+!
+!     For a given 3-space line segment, redistribute it to the desired number
+!     of points by imposing the relative point distribution of a second 3-space
+!     line segment via arc-length based local spline interpolation.
+!     This capability facilitates deriving a new capsule generatrix with the
+!     same point counts in the various segments as an existing generatrix, which
+!     in turn can enable reusing computational flow field solutions as starting
+!     guesses for the new geometry.
+!
+!     See also the earlier redistribute_xy for further line segment operations.
+!
+!  History:
+!
+!     10/03/2022  D.A.Saunders  Initial implementation, to simplify adapting the
+!                               Mars SRL capsule DAC-2.1 as the similar DAC-2.
+!
+!  Aurhor:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

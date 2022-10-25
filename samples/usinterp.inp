@@ -1,0 +1,14 @@
+USINTERP Control File
+3                     ! Number of coordinate dimensions; nd >= 1
+2                     ! Number of functions at each data point
+no-noise.dat          ! Input dataset
+target.dat            ! Target coordinates dataset
+no-noise.interp.dat   ! Output results
+(3es16.8, 4es15.7)    ! Run-time output format
+30                    ! Number of nearest neighbors to interpolate within
+T                     ! T|F; T => normalize the input coordinates
+T                     ! T|F; T => diagnostic output is written to fort.50
+G    G    G           ! nd correlation functions: each is G or L
+10. 10.  1.           ! nd cor. lengths in data units
+0.   0.               ! nf observation variances >= 0.
+0.                    ! Adapt: -1.|0.|1.; -1. => simple inverse dist. weights

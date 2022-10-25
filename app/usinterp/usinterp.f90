@@ -240,7 +240,7 @@
    table_interp_at_data_pts%nrows = ndata
    table_interp_at_data_pts%ncols = nd + nf + nf
    table_interp_at_data_pts%filename  = 'interpolations_at_data_pts.dat'
-   table_interp_at_data_pts%header(1) = 'Squared difference sums(s):'
+   table_interp_at_data_pts%header(1) = '# Squared difference sums(s):'
 
    do j = 1, nf
       sumsq = 0.

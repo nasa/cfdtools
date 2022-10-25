@@ -85,7 +85,8 @@ See TRIANGULATION_TOOL for driving recently-added geometric operations.
 08/23/22 A title T="inlet" by chance has ET in it after upcasing, and get_element_type treated it as the
          element type keyword with a bad value.  Work-around: blank any title in the buffer before searching
          for any keyword.
-
+10/20/22 Subroutine tri_zone_write wrote zone%xyz(:,:), but eliminating duplicate boundary points can mean that
+         not all of the initial %xyz array remains used.  The nf=0 case needs explicit indexing as for nf/=0.
 
 David Saunders, ELORET Corporation/NASA Ames Research Center, CA
                 (later with ERC, Inc. and AMA, Inc. at NASA ARC)

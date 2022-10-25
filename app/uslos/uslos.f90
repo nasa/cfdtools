@@ -78,6 +78,21 @@
 !     use the Tecplotable output of Newtonian Cp predictions.  The Cps will be
 !     ignored.  They are vertex-centered, so tri_header%fileform = 1 here.
 !
+!  Unit Spherical Octant Triangulation Choice:
+!
+!     This version of USLOS has the SLOS option to read a previously generated
+!     unit triangulation that the Equal_Area_Triangulation variant of the
+!     NPOPT_DRIVER framework can now produce.  If nedge is specified as 25
+!     (say), we look for the file unit_sphere_octant_25.dat (likewise for
+!     other nedge values).  If the file is not found, subroutine spherical_-
+!     triangulation is employed as originally.
+!
+!     In principle, the integrations w.r.t. solid angle of radiances
+!     calculated for each line of sight will be more accurate if the solid
+!     angle elements are essentially equal, although it is expected that the
+!     two kinds of triangulation will produce very similar results for a given
+!     value of nedge.
+!
 !  Outputs:
 !
 !     PLOT3D-type output is retained as for the structured case (one or more
@@ -176,6 +191,10 @@
 !     04/25/2022     "    "     Cleared up confusion over %centers_to_vertices:
 !                               any functions are ignored by USLOS, so this
 !                               switch is irrelevant once %numf <- 0.
+!     09/30/2022     "    "     The option to read an optimized (more nearly
+!                               equal cell areas) unit spherical octant tri-
+!                               angulation has been belatedly installed as in
+!                               SLOS.  See description above.
 !
 !  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
 !
@@ -467,7 +486,9 @@
 
    ninside  = 0;  dmax  = zero
    noutside = 0;  dmean = zero
-   dtolsq = (bbox_diagonal*1.e-6)**2
+   dtolsq = (bbox_diagonal*1.e-5)**2
+   write (luncrt, '(a, 2es15.7)') &
+      ' bbox_diagonal, dtolsq:', bbox_diagonal, dtolsq
 
    do l = 1, nbps
 
@@ -815,11 +836,22 @@
 !     Execution:
 !     ----------
 
-!     Generate the indicated triangulation of a quadrant of a unit hemisphere:
+!     Option to read an optimized triangulation:
 
       allocate (unit_hemi_quadrant(1))  ! Not a scalar because it's a pointer
 
-      call spherical_triangulation (ne, unit_hemi_quadrant(1))
+      call numbered_name ('unit_sphere_octant_', ne, tri_header%filename, l)
+      l = l + 4
+      tri_header%filename(l-3:l)   = '.dat'
+      tri_header%fileform          =  2   ! Cell-centered fn. (solid angle)
+      tri_header%formatted         = true
+      tri_header%nvertices         = 3
+
+      call tri_read (lunhemi1, tri_header, unit_hemi_quadrant, ios)
+
+!     If an optimized triangulation wasn't found, generate one:
+
+      if (ios /= 0) call spherical_triangulation (ne, unit_hemi_quadrant(1))
 
 !     This unit quadrant has all of x, y, z in [0, 1], and the rotational trans-
 !     formations that complete the hemisphere should be about its Oz axis, not

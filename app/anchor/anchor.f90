@@ -94,7 +94,7 @@
 !     162 164 166 168 170 172 174 176 176 180
 !     target.dat        ! file name of target pts., mode = 2; ignore if mode = 1
 !     --------------------------------------------------------------------------
-!     Interpolation Controls
+!     Low-fidelity Data Interpolation Controls
 !     --------------------------------------------------------------------------
 !     40                ! # nearest neighbors used for each interpolation
 !     4.   40.          ! data correlation lengths in coordinate space
@@ -102,7 +102,7 @@
 !     0.1               ! adaptation control in [0, ~0.5]; 0 = no adaptation
 !     1.e-6 1.e-6 1.e-6 ! function error variances >= 0
 !     --------------------------------------------------------------------------
-!     Interpolation Controls
+!     High-fidelity Data Interpolation Controls
 !     --------------------------------------------------------------------------
 !     40                ! # nearest neighbors used for each interpolation
 !     4.   40.          ! data correlation lengths in coordinate space
@@ -154,6 +154,9 @@
 !    08/31/16    "     "     The OI package now has a "verbose" argument, and
 !                            an option to use a simple inverse-distance-weighted
 !                            method (via a negative "adapt").
+!    09/20/22    "     "     A normalize argument has been added to optiminterp,
+!                            among other changes therein.  See also the more
+!                            recent USINTERP for interpolating scattered data.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
 !           Now with AMA, Inc. at NASA ARC.
@@ -166,15 +169,16 @@
 
 !  Constants:
 
-   integer, parameter :: &
-      luncrt = 6,        &  ! For diagnostics
-      lunctl = 5,        &  ! Control file (standard input)
-      lunin  = 1,        &  ! Input data files
-      lunout = 2            ! Tabulated results and plottable form of them
+   integer, parameter ::  &
+      luncrt = 6,         &  ! For diagnostics
+      lunctl = 5,         &  ! Control file (standard input)
+      lunin  = 1,         &  ! Input data files
+      lunout = 2             ! Tabulated results and plottable form of them
 
-   logical, parameter :: &
-      verbose = .false.     ! The input scheme doesn't lend itself to adding
-                            ! this new control 
+   logical, parameter ::  &
+      normalize = .true., &  ! Wise when the independent variables are disparate
+      verbose = .false.      ! The input scheme doesn't lend itself to adding
+                             ! this new control 
 !  Variables:
 
    integer :: &
@@ -189,21 +193,21 @@
       adapt_lofi, adapt_hifi
 
    real, allocatable, dimension (:) :: &
-      cor_lengths_lofi,  &  ! Correlation lengths in each dimension for ...
-      cor_lengths_hifi,  &  ! ... the low-fidelity and high-fidelity data
-      variances_lofi,    &  ! Function error variances, 1/function (lo-fi data)
-      variances_hifi,    &  ! .................................... (hi-fi data)
-      x_table               ! Rectangular coordinates for interpolated results
+      cor_lengths_lofi,   &  ! Correlation lengths in each dimension for ...
+      cor_lengths_hifi,   &  ! ... the low-fidelity and high-fidelity data
+      variances_lofi,     &  ! Function error variances, 1/function (lo-fi data)
+      variances_hifi,     &  ! .................................... (hi-fi data)
+      x_table                ! Rectangular coordinates for interpolated results
 
    real, allocatable, dimension (:,:) :: &
-      x_lofi, f_lofi,    &  ! Low fidelity data to be corrected
-      x_hifi, f_hifi,    &  ! Higher fidelity data
-      x_interp,          &  ! At which lo-fi data are to be interpolated
-      f_lo_interp,       &  ! Corresponding interpolations
-      f_hi_minus_lo,     &  ! Differences at hi-fi points
-      x_target,          &  ! Output table coordinates (expanded)
-      f_target,          &  ! Desired table of corrected function values
-      variances_interp      ! Interpolated function error variances, minimized
+      x_lofi, f_lofi,     &  ! Low fidelity data to be corrected
+      x_hifi, f_hifi,     &  ! Higher fidelity data
+      x_interp,           &  ! At which lo-fi data are to be interpolated
+      f_lo_interp,        &  ! Corresponding interpolations
+      f_hi_minus_lo,      &  ! Differences at hi-fi points
+      x_target,           &  ! Output table coordinates (expanded)
+      f_target,           &  ! Desired table of corrected function values
+      variances_interp       ! Interpolated function error variances, minimized
 
    real, allocatable, dimension (:,:,:) :: &
       f1, f2, fk            ! Corresponding 1st & 2nd derivatives & curvature-
@@ -237,7 +241,8 @@
 
       call optiminterp (x_lofi, f_lofi, variances_lofi, cor_lengths_lofi,      &
                         adapt_lofi, cor_functions_lofi, num_neighbors_lofi,    &
-                        x_target, verbose, f_target, variances_interp)
+                        x_target, normalize, verbose, f_target,                &
+                        variances_interp)
 
       if (derivatives) then
 
@@ -283,7 +288,8 @@
 
    call optiminterp (x_lofi, f_lofi, variances_lofi, cor_lengths_lofi,         &
                      adapt_lofi, cor_functions_lofi, num_neighbors_lofi,       &
-                     x_interp, verbose, f_lo_interp, variances_interp)
+                     x_interp, normalize, verbose, f_lo_interp,                &
+                     variances_interp)
 
 !  Corrections at the high-fidelity coordinates:
 
@@ -308,7 +314,7 @@
 
    call optiminterp (x_hifi, f_hi_minus_lo, variances_hifi, cor_lengths_hifi,  &
                      adapt_hifi, cor_functions_hifi, num_neighbors_hifi,       &
-                     x_target, verbose, f_target, variances_interp)
+                     x_target, normalize, verbose, f_target, variances_interp)
 
    open  (9, file='f_corrections_at_target.f', status='unknown')
    write (9, '(i1)') 1
