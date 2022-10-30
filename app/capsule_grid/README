@@ -60,8 +60,28 @@ details.
                           work in the absence of a rounded shoulder aft
                           of the underlying cone and a nose cap larger
                           than that cone.
-06/25/2021    "    "      Splitting aft surface patches at a given x
-                          with new dimensions in the form 4n+1 for
-                          possible coarsening is now an option via
-                          new input x_parachute_cone > 0. (meaning 16
-                          output surface patches, not 12).
+06/17/2021 -  "    "      Parachute cones with different TPS material have
+06/25/2021                required splitting of aft body surface patches
+                          for BC purposes (catalycity).  The dimensions
+                          either side of the split need to be of the form
+                          4n + 1 in order for the initial fine grid to be
+                          coarsened once for production use (221) and
+                          coarsened again for grid sequencing (441|442)
+                          during an initial unaligned grid solution.
+                          Introduced x_parachute_cone control. Patch
+                          dimensions either side of this x > 0. will be
+                          adjusted to the closest 4n+1 form as well.
+                          The number of surface patches becomes 16.
+09/07/2021 -  "    "      New asymmetric and lower_generatrix inputs
+09/29/2021                enable handling of an asymmetric forebody with
+                          an optional axisymmetric aft body, as prompted
+                          by Mars Sample Return Lander configuration V21.
+10/29/2022    "    "      The parachute cone split option, which forces
+                          point counts either side to be 4n + 1, means
+                          there is likely to be redistribution (splining)
+                          across the PC lid corner.  Now we look for such
+                          a corner and preserve it exactly.  The same may
+                          be needed upstream of the split, although the
+                          shoulder step corner of SRL DAC-2.2 seems to be
+                          unaffected.
+

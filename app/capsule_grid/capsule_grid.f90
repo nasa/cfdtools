@@ -3,12 +3,20 @@
    program capsule_grid
 !
 !  CAPSULE_GRID combines the functions of its precursors, HEAT_SHIELD+FOREBODY_-
-!  REGRID and AFT_BODY, for axisymmetric capsules (only).  [AFT_BODY assumes
-!  axisymmetry too; HEAT_SHIELD+FOREBODY_REGRID do not.]  CAPSULE_GRID can omit
-!  the aft body if only a symmetric forebody surface grid is required.  If both
-!  fore- and aft body are being treated, CAPSULE_GRID eliminates some of the
-!  steps required when the surfaces are generated separately and turned into a
-!  volume grid.  If only an aft body is to be treated, use AFT_BODY instead.
+!  REGRID and AFT_BODY, for axisymmetric capsules.  [AFT_BODY assumed axisym-
+!  too; HEAT_SHIELD+FOREBODY_REGRID did not.]  CAPSULE_GRID can omit the aft
+!  body if only a forebody surface grid is required.  An asymmetric forebody
+!  can also be gridded with an optional symmetric aft body.  The asymmetric
+!  case requires a second input generatrix, and the two generatrics are blended
+!  via linear combinations of vertical distances from the ordinate of the nose,
+!  which may be off-center.  The aft-most points of an asymmetric forebody form
+!  an exact circle.  Further details appear below.  Most of the documentation
+!  refers to axisymmetric capsules.  The asymmetric option is a belated addition
+!  with the restriction that the normal input_generatrix representing the upper
+!  symmetry plane cross-section has the desired point distribution, while the
+!  lower_generatrix is interpolated to the abscissas of input_generatrix(1:m)
+!  where m = ng_split if an aft body is present, else m = numi_forebody = the
+!  input number of (upper) generatrix points.
 !
 !  Note:  Both forebody-only and fore+aft-body cases now have an "umbrella"
 !         option to model flexible TPS with folding ribs.  They both start,
@@ -82,9 +90,11 @@
 !     $FOREBODY_INPUTS
 !     verbose = F,                 ! T turns on lots of pt. distribution output
 !     aft_body_too = T,            ! Option to suppress the aft body
+!     asymmetric = F,              ! T requires an input lower_generatrix
 !     units_in_inches = F,         ! Option suited to arc-jets in the US of A
 !     geometric_scale = 1.,        ! Option to scale the indicated geometry
 !     input_generatrix = '...',    ! Full generatrix file; 'none' => analytic
+!     lower_generatrix = '...',    ! If asymmetric = T, forward portion is used
 !     spherecone = T,              ! T => half_cone_angle >= 0, else biconic
 !     numi_forebody = 201,         ! # grid points on forebody generatrix
 !     numj = 121,                  ! # spokes in body of revolution (4m + 1)
@@ -158,7 +168,29 @@
 !     points ng_split:ng.  If ng_split = 0 in this case, it defaults to the
 !     index of the input geometry point with maximum radius.
 !
-!     See the next item for use of ng_split < 0.
+!     See the Curvature-Based Gridding item below for use of ng_split < 0.
+!
+!  Clarification of Asymmetric Option:
+!
+!        (1) Two generatrices are expected as input: input_generatrix is used
+!     as is for the upper symmetry plane generatrix, and may need to be the
+!     result of a preliminary axisymmetric gridding: forebody only, or full body
+!     if aft_body_too = T; and lower_generatrix for the lower symmetry plane
+!     generatrix, of which only the portion directly below input_generatrix
+!     (1:numi_forebody) is used.  This portion is actually interpolated to the
+!     abscissas of the upper forebody symmetry plane generatrix in order to
+!     enable blending of vertical distances from the nose ordinate according to
+!     azimuthal angle.  Any lower body generatrix points beyond the x of upper
+!     point ng_split are ignored, as the aft body is assumed to be symmetric,
+!     which implies that the blended spokes of the forebody must all lie on the
+!     circle formed by the foremost portion of any aft body, present or not.
+!
+!        (2) Since the Hypgen volume grid generator requires a single spoked
+!     surface grid to grow off hyperbolically, if full body is specified, the
+!     two spoked forms of the fore and aft bodies that are normally written for
+!     diagnostic purposes are suppressed here and instead are merged as a single
+!     surface patch before being saved as spoked_surface.gu (unformatted as part
+!     of having Hypgen produce an unformatted volume grid).
 !
 !  Clarification of Curvature-Based Gridding Controls:
 !
@@ -643,6 +675,18 @@
 !                               dimensions either side of this x > 0. will be
 !                               adjusted to the closest 4n+1 form as well.
 !                               The number of surface patches becomes 16.
+!     09/07/2021 -  "    "      New asymmetric and lower_generatrix inputs
+!     09/29/2021                enable handling of an asymmetric forebody with
+!                               an optional axisymmetric aft body, as prompted
+!                               by Mars Sample Return Lander configuration V21.
+!     10/29/2022    "    "      The parachute cone split option, which forces
+!                               point counts either side to be 4n + 1, means
+!                               there is likely to be redistribution (splining)
+!                               across the PC lid corner.  Now we look for such
+!                               a corner and preserve it exactly.  The same may
+!                               be needed upstream of the split, although the
+!                               shoulder step corner of SRL DAC-2.2 seems to be
+!                               unaffected.
 !  Author:
 !
 !     David Saunders, ERC, Inc. at NASA Ames Research Center, Moffett Field, CA
@@ -695,11 +739,11 @@
 !  Variables:
 
    integer :: &
-      i0_umbrella, i1_umbrella, i2_umbrella, ib, ier, imatch, ios, &
+      i, i0_umbrella, i1_umbrella, i2_umbrella, ib, ier, imatch, ios, &
       ismooth_aft, ismooth_fore, lunprint, &
-      nb, nblend_fore_aft, nblocks, ncones, nedges, ng_split, ni_outer, &
-      ni_regrid, ni_regrid_aft_body, ni_regrid_forebody, ni_template, &
-      ntoroids, ni_spoke, nj_quarter, nj_semi, nj_spoke, nj_template, &
+      nb, nblend_fore_aft, nblocks, ncones, nedges, ngen2, ng_split, ni_outer, &
+      ni, ni_regrid, ni_regrid_aft_body, ni_regrid_forebody, ni_template, &
+      ni_spoke, nj, nj_quarter, nj_semi, nj_spoke, nj_template, ntoroids, &
       numi, numi_aft_body, numi_forebody, numi_generatrix, numi_internal, &
       numi_total, numf, numj, nvertices, rounding_mode, ivertex(mxcones), &
       ni_round(mxcones)
@@ -715,19 +759,20 @@
       sting_stretch_multiplier, x_aft(mxcones), x_nose, x_parachute_cone
 
    logical :: &
-      aft_body_too, analytic, cell_centered, collapsed, &
+      aft_body_too, analytic, asymmetric, cell_centered, collapsed, &
       flat_blend_aft, flat_blend_fore, &
       resolve_the_ridges, ripple_case, round_the_ridges, spherecone, &
       sting_case, umbrella_case, units_in_inches, use_input_generatrix, &
       verbose
 
-   character :: &
-      input_generatrix*80, nose_patch_file_name*80, output_generatrix*80, &
-      surface_grid_file_name*80
+   character (128) :: &
+      input_generatrix, lower_generatrix, nose_patch_file_name, &
+      output_generatrix, surface_grid_file_name
 
    real, allocatable, dimension (:) :: &
-      xfore, rfore,                    &  ! For the interim discretization
+      xfore, rfore,                    &  ! For an interim discretization
       xgen, rgen, sgen,                &  ! For the output generatrix
+      xgen2, rgen2,                    &  ! Lower input gen, asymmetric case
       xgen_new, rgen_new, sgen_new        ! Moved here for non-analytic case
 
    real, allocatable, dimension (:) :: &  ! For changing pt. counts along lines
@@ -753,15 +798,15 @@
       template                  ! Normalized quarter circle grid, with x = 0.
 
    namelist /FOREBODY_INPUTS/ &
-      verbose, aft_body_too, units_in_inches, geometric_scale, &
-      input_generatrix, spherecone, numi_forebody, numj, x_nose, r_nose, &
-      radius_nose, radius_base, radius_shoulder, radius_vertex, &
-      half_cone_angle, half_cone_angle_fore, half_cone_angle_aft, &
-      radius_cone_juncture, skirt_angle, skirt_length, nose_patch_file_name, &
-      output_generatrix, surface_grid_file_name, flat_blend_fore, power_fore, &
-      ni_regrid_forebody, ripple_case, ntoroids, peak_ripple, umbrella_case, &
-      nedges, peak_deflection, rib_deflection, frustum_radius, &
-      resolve_the_ridges, rib_thickness, round_the_ridges
+      verbose, aft_body_too, asymmetric, units_in_inches, geometric_scale, &
+      input_generatrix, lower_generatrix, spherecone, numi_forebody, numj, &
+      x_nose, r_nose, radius_nose, radius_base, radius_shoulder, &
+      radius_vertex, half_cone_angle, half_cone_angle_fore, &
+      half_cone_angle_aft, radius_cone_juncture, skirt_angle, skirt_length, &
+      nose_patch_file_name, output_generatrix, surface_grid_file_name, &
+      flat_blend_fore, power_fore, ni_regrid_forebody, ripple_case, ntoroids, &
+      peak_ripple, umbrella_case, nedges, peak_deflection, rib_deflection, &
+      frustum_radius, resolve_the_ridges, rib_thickness, round_the_ridges
 
    namelist /AFT_BODY_INPUTS/ &
       sting_case, numi_aft_body, ncones, flat_blend_aft, power_aft, ng_split, &
@@ -793,6 +838,61 @@
 
    end if
 
+   if (asymmetric) then          ! Forebody (only) is reworked
+
+      if (aft_body_too) then     ! Avoid losing the regridded aft body;
+                                 ! see subroutine save_result
+         nblocks = 6
+         do i = 1, nblocks
+            ni = new_grid(i)%ni;  new_aft(i)%ni = ni
+            nj = new_grid(i)%nj;  new_aft(i)%nj = nj
+                                  new_aft(i)%nk = 1
+            allocate (new_aft(i)%x(ni,nj,1), new_aft(i)%y(ni,nj,1), &
+                      new_aft(i)%z(ni,nj,1))
+
+            new_aft(i)%x(:,:,:) = new_grid(i)%x(:,:,:)
+            deallocate (new_grid(i)%x)
+            new_aft(i)%y(:,:,:) = new_grid(i)%y(:,:,:)
+            deallocate (new_grid(i)%y)
+            new_aft(i)%z(:,:,:) = new_grid(i)%z(:,:,:)
+            deallocate (new_grid(i)%z)
+         end do
+
+      end if
+
+!     Overwrite interim forebody from upper generatrix with an asymmetric one
+!     formed via linear combinations weighted according to azimuthal angle,
+!     plus morphing of each spoke to terminate on the Ox-centered circle
+!     formed by the [optional] aft body that is assumed to be symmetric.
+
+      call blend_forebody (numi_forebody, xfore, rfore, ngen2, xgen2, rgen2, &
+                           numj, spoke_fore%x, spoke_fore%y, spoke_fore%z)
+
+      numi = numi_forebody
+      ni_regrid = ni_regrid_forebody
+
+      call initial_regrid (true)
+
+      call project_to_nose ()
+
+      do i = 1, nblocks  ! For compatibility with save_result ()
+          ni = new_grid(i)%ni;  new_fore(i)%ni = ni
+          nj = new_grid(i)%nj;  new_fore(i)%nj = nj
+                                new_fore(i)%nk = 1
+         deallocate (new_fore(i)%x, new_fore(i)%y, new_fore(i)%z)
+         allocate (new_fore(i)%x(ni,nj,1), new_fore(i)%y(ni,nj,1), &
+                   new_fore(i)%z(ni,nj,1))
+
+         new_fore(i)%x(:,:,:) = new_grid(i)%x(:,:,:)
+         deallocate (new_grid(i)%x)
+         new_fore(i)%y(:,:,:) = new_grid(i)%y(:,:,:)
+         deallocate (new_grid(i)%y)
+         new_fore(i)%z(:,:,:) = new_grid(i)%z(:,:,:)
+         deallocate (new_grid(i)%z)
+      end do
+
+   end if
+
    call save_result ()           ! And clean up
 
    contains
@@ -813,9 +913,11 @@
 !     $FOREBODY_INPUTS
       verbose = false              ! T sheds light on some CURVDIS heuristics
       aft_body_too = false         ! Option to suppress the aft body
+      asymmetric = false           ! T requires input lower_generatrix
       units_in_inches = false      ! Option suited to arc-jets in the US of A
       geometric_scale = one        ! Option to scale the indicated geometry
       input_generatrix = 'none'    ! Full generatrix file; 'none' => analytic
+      lower_generatrix = 'none'    ! Forebody (at least) needed if asymmetric
       spherecone = true            ! T => half_cone_angle >= 0, else biconic
       numi_forebody = 201          ! # forebody grid points
       numj = 121                   ! # spokes in body of revolution (4m + 1)
@@ -1374,9 +1476,13 @@
          spoke_grid%z(:,:,:) = spoke_fore%z(:,:,:)
 
          if (.not. umbrella_case) then
-            deallocate (spoke_fore%x, spoke_fore%y, spoke_fore%z)
+            if (.not. asymmetric) then
+               deallocate (spoke_fore%x, spoke_fore%y, spoke_fore%z)
+            end if
          else
-            ! We replace the axisymmetric spokes with the faceted spokes later.
+            ! We replace the axisymmetric spokes with the faceted spokes later
+            ! for the umbrella case, or we redo the forebody spokes by blending
+            ! upper and lower cross-sections.
          end if  ! See the save_result procedure.
 
          ni_regrid_aft_body = ni_regrid  ! But any rounding can change it
@@ -1388,7 +1494,7 @@
          close (lungen1)
       end if
 
-      deallocate (xgen, rgen)
+      if (.not. asymmetric) deallocate (xgen, rgen)
 
 !     Set up to regrid the nose of the forebody:
 
@@ -1410,8 +1516,7 @@
 
 !     Execution:
 
-      open (lungen, file=input_generatrix, status='old', iostat=ios)
-
+      open (lunin1, file=input_generatrix, status='old', iostat=ios)
       if (ios /= 0) then
          write (luncrt, '(/, 2a)') 'Trouble opening input generatrix ', &
             trim (input_generatrix)
@@ -1420,20 +1525,50 @@
 
       ng = 0
       do  ! Until EOF
-         read (lungen, *, iostat=ios)
+         read (lunin1, *, iostat=ios)
          if (ios < 0) exit
          ng = ng + 1
       end do
 
       allocate (xg(ng), rg(ng))
 
-      rewind (lungen)
+      rewind (lunin1)
       do i = 1, ng  ! Ignore any 3rd column
-         read (lungen, *) xg(i), rg(i)
+         read (lunin1, *) xg(i), rg(i)
          xg(i) = scale_factor *  xg(i)
          rg(i) = scale_factor *  rg(i)
       end do
-      close  (lungen)
+      close  (lunin1)
+
+!     Read a second, lower section here for an asymmetric case:
+
+      if (asymmetric) then
+
+         open (lunin1, file=lower_generatrix, status='old', iostat=ios)
+         if (ios /= 0) then
+            write (luncrt, '(/, 2a)') 'Trouble opening lower generatrix ', &
+               trim (lower_generatrix)
+            stop
+         end if
+
+         ngen2 = 0
+         do  ! Until EOF
+            read (lunin1, *, iostat=ios)
+            if (ios < 0) exit
+            ngen2 = ngen2 + 1
+         end do
+
+         allocate (xgen2(ngen2), rgen2(ngen2))
+
+         rewind (lunin1)
+         do i = 1, ngen2  ! Ignore any 3rd column
+            read (lunin1, *) xgen2(i), rgen2(i)
+            xgen2(i) = scale_factor *  xgen2(i)
+            rgen2(i) = scale_factor *  rgen2(i)
+         end do
+         close  (lunin1)
+
+      end if  ! Asymmetric case
 
       use_input_generatrix = ng == numi_generatrix
 
@@ -1539,7 +1674,7 @@
                                 (rgen(ni) - rgen(ni-1))**2)
 
 !!!         ni = 8   ! Anything reasonable, assuming ng_split is sensible;
-!!!                  ! it's hard to make it scale safely with numi_aft_body
+!!!                  ! it's hard to make it scale safely with numi_aft_body.
 !           The choice of 8 has been found to be poor when tight spacing on the
 !           shoulder is being blended with larger spacing on the aft cone.
 !           Spacing can actually be largest in the middle of the blend interval.
@@ -1607,6 +1742,12 @@
       write (lungen1, '(2es15.7, f3.0)') &
          (xgen(i), rgen(i), zero, i = 1, numi_generatrix)
       close (lungen1)
+
+      if (asymmetric) then  ! xgen/rgen forebody may be lost to an aft body
+         allocate (xfore(numi_forebody), rfore(numi_forebody))
+         xfore(:) = xgen(1:numi_forebody)
+         rfore(:) = rgen(1:numi_forebody)
+      end if
 
       deallocate (xg, rg)
 
@@ -2606,12 +2747,17 @@
 !     Replace the nose portion of the spoked surface with patches to avoid the
 !     singular point.  A planar template patch is morphed appropriately.
 !     Only the patch transposes for right-handedness differ between the nose and
-!     the nose-like reflected rounded aft body operated on.
+!     the nose-like reflected aft body operated on.
+!     With the introduction of an asymmetric option, this routine is called once
+!     for a symmetric result from the upper generatrix (forebody and optional
+!     aft body) then it is called again for the asymmetric forebody.  Setting up
+!     for that asymmetric call is not obvious.  And we have to avoid losing a
+!     regridded aft body.
 !     --------------------------------------------------------------------------
 
 !     Arguments:
 
-      logical, intent (in) :: nose  ! T => nose; F => rounded aft body
+      logical, intent (in) :: nose  ! T => nose; F => aft body
 
 !     Local constants:
 
@@ -2621,6 +2767,7 @@
 !     Local variables:
 
       integer :: i, ii, it, iu, j, jj, jt, ju, ni, nj
+      integer :: nosecall = 0
       real    :: total, xfudge, yfudge, zfudge, yscale, zscale, zshift
       real, allocatable, dimension (:,:,:,:) :: uvw
       type (grid_type) :: nose_patch           ! Scaling template helps WARPQ3D
@@ -2631,6 +2778,24 @@
 !     Originally, the template was assumed to be uniform along all edges, but
 !     only the circular edges must be so: allow for nonuniformity along the
 !     straight edges in case tightening the spacing towards the apex helps.
+!     (It is actually not a good idea for DPLR.)
+
+!     Awkward set-up for the asymmetric nose call:
+
+      if (nose) nosecall = nosecall + 1
+
+      if (nosecall > 1) then
+         deallocate (spoke_grid%x, spoke_grid%y, spoke_grid%z)
+         allocate (spoke_grid%x(numi_forebody,numj,1), &
+                   spoke_grid%y(numi_forebody,numj,1), &
+                   spoke_grid%z(numi_forebody,numj,1))
+         spoke_grid%ni = numi_forebody
+         spoke_grid%nj = numj
+         spoke_grid%nk = 1
+         spoke_grid%x(:,:,:) = spoke_fore%x(:,:,:)  ! From the call to
+         spoke_grid%y(:,:,:) = spoke_fore%y(:,:,:)  ! blend_forebody in
+         spoke_grid%z(:,:,:) = spoke_fore%z(:,:,:)  ! the main program
+      end if
 
       nblocks = 6
 
@@ -2666,7 +2831,7 @@
          spoke_grid%y = spoke_aft%y
          spoke_grid%z = spoke_aft%z
 
-         if (.not. umbrella_case) then  ! Else see the save_result procedure
+         if (.not. umbrella_case .and. .not. asymmetric) then
             deallocate (spoke_aft%x, spoke_aft%y, spoke_aft%z)
          end if
 
@@ -2920,7 +3085,7 @@
 
       deallocate (uvw)
 
-      if (.not. nose) then
+      if (.not. nose .and. .not. asymmetric) then
          do ib = 1, nb
             deallocate (template(ib)%x, template(ib)%y, template(ib)%z)
          end do
@@ -3719,24 +3884,28 @@
 
          deallocate (spoke_aft%x, spoke_aft%y, spoke_aft%z)
 
-         nblocks = nblocks + 4
+         nblocks = nblocks + 4     ! End sting case
 
       else if (aft_body_too) then  ! Shuffle to concatenate blocks for the I/O
 
-         do i = 1, nblocks
-            ni = new_grid(i)%ni;  new_aft(i)%ni = ni
-            nj = new_grid(i)%nj;  new_aft(i)%nj = nj
-                                  new_aft(i)%nk = 1
-            allocate (new_aft(i)%x(ni,nj,1), new_aft(i)%y(ni,nj,1), &
-                      new_aft(i)%z(ni,nj,1))
+         if (.not. asymmetric) then  ! Else done in main program
 
-            new_aft(i)%x(:,:,:) = new_grid(i)%x(:,:,:)
-            deallocate (new_grid(i)%x)
-            new_aft(i)%y(:,:,:) = new_grid(i)%y(:,:,:)
-            deallocate (new_grid(i)%y)
-            new_aft(i)%z(:,:,:) = new_grid(i)%z(:,:,:)
-            deallocate (new_grid(i)%z)
-         end do
+            do i = 1, nblocks
+               ni = new_grid(i)%ni;  new_aft(i)%ni = ni
+               nj = new_grid(i)%nj;  new_aft(i)%nj = nj
+                                     new_aft(i)%nk = 1
+               allocate (new_aft(i)%x(ni,nj,1), new_aft(i)%y(ni,nj,1), &
+                         new_aft(i)%z(ni,nj,1))
+
+               new_aft(i)%x(:,:,:) = new_grid(i)%x(:,:,:)
+               deallocate (new_grid(i)%x)
+               new_aft(i)%y(:,:,:) = new_grid(i)%y(:,:,:)
+               deallocate (new_grid(i)%y)
+               new_aft(i)%z(:,:,:) = new_grid(i)%z(:,:,:)
+               deallocate (new_grid(i)%z)
+            end do
+
+         end if
 
          deallocate (new_grid);  allocate (new_grid(2*nblocks))
 
@@ -3765,10 +3934,13 @@
 
          if (umbrella_case) call morph_aft_to_umbrella ()  ! See procedure below
 
+         if (asymmetric) call merge_spokes ()  ! Hypgen needs a single patch
+
       end if
 
       if (x_parachute_cone > zero) then
          write (luncrt, '(/, a, f16.8)') 'x_parachute_cone:', x_parachute_cone
+
          call split_at_parachute_cone ()
          if (ier /= 0) then
             write (luncrt, '(a)') &
@@ -3832,6 +4004,10 @@
 !     is within initial aft patches 7-10, split those patches at this x for BC
 !     purposes, and adjust the point counts to be of the form 4n + 1 on either
 !     side of the split for grid coarsening purposes.
+!     Belated realization:  this redistribution can span a parachute cone lid
+!     corner.  Now, the corner is preserved exactly, and any redistribution is
+!     limited to [x_parachute_cone, lid corner].
+!     Programmer warning: i increases upstream from the corner.
 !     --------------------------------------------------------------------------
 
 !     Local constants:
@@ -3841,13 +4017,14 @@
 !     Local variables:
 
       integer :: &
-         i, ib, ibnew, ileft, isplit, j, mi, newmi, nf, ni, newni, mj, newmj, &
-         nj, newnj
+         i, ib, ibnew, icrvmax, ileft, isplit, j, mi, newmi, newni, nf, ni, &
+         nicone, mj, newmj, nj, newnj
       real :: &
-         dxsq, dxsqmin, ssplit, stotal, xsplit, ysplit, zsplit, unused(3)
+         abscrv, crvmax, dxsq, dxsqmin, ssplit, stotal, &
+         xsplit, ysplit, zsplit, unused(3)
       real, allocatable, dimension (:) :: &
-         sinterim, snorm1, snorm2, s1, x1, y1, z1, s2, x2, y2, z2, &
-         xinterim, yinterim, zinterim
+         curvature, fp, fpp, sinterim, snorm1, snorm2, &
+         s1, x1, y1, z1, s2, x2, y2, z2, xinterim, yinterim, zinterim
       type (grid_type), pointer :: &
          before_split (:)
 
@@ -3898,15 +4075,38 @@
          end if
       end do
 
-      newni = isplit/4             ! First part of split
-      newni = 4*newni + 1          ! To allow two levels of coarsening
-      mi    = ni - isplit + 1      ! Second part of the split to redistribute
+!     Look for a parachute lid corner that may be sharp and should be preserved
+!     exactly.  Limit any redistributing to [x_parachute_cone, x lid corner].
+!     i increases upstream, so it's the lower indices that need to include a
+!     lid corner exactly.  Leave the points on the lid alone; redistribute up=
+!     stream of the corner only, but the total point count needs to be 4n+1.
+
+      allocate (curvature(ni), fp(ni), fpp(ni))
+
+      call fd12k (ni, xinterim, zinterim, fp, fpp, curvature)
+
+      crvmax = -1.
+      do i = 1, ni
+         abscrv = abs (curvature(i))
+         if (abscrv > crvmax) then
+             crvmax = abscrv;  icrvmax = i
+         end if
+      end do
+
+      nicone = isplit - icrvmax + 1
+
+      newni = nicone/4            ! Cone part aft of the split is redistributed
+      newni = 4*newni + 1         ! To allow two levels of coarsening
+
+      mi    = ni - isplit  + 1    ! Second part of the split to redistribute
       newmi = mi/4
       newmi = 4*newmi + 1
-      write (luncrt, '(a, 2i4)') 'isplit,   mi:', isplit, mi, &
-                                 'newni, newmi:', newni, newmi
+      write (luncrt, '(a, 2i4)') 'ni, nj before split:', ni, nj, &
+                                 'isplit,          mi:', isplit, mi, &
+                                 'icrvmax,     nicone:', icrvmax, nicone, &
+                                 'newni,        newmi:', newni, newmi
 
-      allocate (snorm1(isplit), snorm2(mi))
+      allocate (snorm1(nicone), snorm2(mi))
       allocate (x1(newni), y1(newni), z1(newni), s1(newni))  ! s1, s2 will be
       allocate (x2(newmi), y2(newmi), z2(newmi), s2(newmi))  ! new normalized s
 
@@ -3927,13 +4127,14 @@
             call chords3d (ni, xinterim, yinterim, zinterim, false, stotal, &
                            sinterim)
 
-            snorm1(1:isplit) =  sinterim(1:isplit)  / sinterim(isplit)
+            snorm1(1:nicone) = (sinterim(icrvmax:isplit) - sinterim(icrvmax)) / &
+                               (sinterim(isplit) - sinterim(icrvmax))
             snorm2(1:mi)     = (sinterim(isplit:ni) - sinterim(isplit)) / &
-                                            (stotal - sinterim(isplit))
+                               (sinterim(ni)        - sinterim(isplit))
 
 !           Change existing normalized arcs to similar distribs. of desired #s:
 
-            call changen1d (1, isplit, snorm1, 1, newni, s1)
+            call changen1d (1, nicone, snorm1, 1, newni, s1)
             call changen1d (1, mi,     snorm2, 1, newmi, s2)
 
 !           Find the original arc length corresponding to the x split:
@@ -3963,20 +4164,25 @@
 !           Adjust the points either side of the split to have the same relative
 !           spacing as the points before the shift of point isplit:
 
-            call adjustn2 (ni, 1, isplit, xinterim, yinterim, zinterim, &
+            call adjustn2 (ni, icrvmax, isplit, xinterim, yinterim, zinterim, &
                            1, newni, s1, x1, y1, z1, method)
 
             if (j == 1) then
-               new_grid(ibnew)%ni = newni
+               new_grid(ibnew)%ni = newni + icrvmax - 1
                new_grid(ibnew)%nj = nj
                new_grid(ibnew)%nk = 1
-               allocate (new_grid(ibnew)%x(newni,nj,1), &
-                         new_grid(ibnew)%y(newni,nj,1), &
-                         new_grid(ibnew)%z(newni,nj,1))
+               allocate (new_grid(ibnew)%x(newni+icrvmax-1,nj,1), &
+                         new_grid(ibnew)%y(newni+icrvmax-1,nj,1), &
+                         new_grid(ibnew)%z(newni+icrvmax-1,nj,1))
             end if
-            new_grid(ibnew)%x(:,j,1) = x1(:)
-            new_grid(ibnew)%y(:,j,1) = y1(:)
-            new_grid(ibnew)%z(:,j,1) = z1(:)
+
+            new_grid(ibnew)%x(1:icrvmax,j,1) = xinterim(1:icrvmax)
+            new_grid(ibnew)%y(1:icrvmax,j,1) = yinterim(1:icrvmax)
+            new_grid(ibnew)%z(1:icrvmax,j,1) = zinterim(1:icrvmax)
+
+            new_grid(ibnew)%x(icrvmax:icrvmax+newni-1,j,1) = x1(:)
+            new_grid(ibnew)%y(icrvmax:icrvmax+newni-1,j,1) = y1(:)
+            new_grid(ibnew)%z(icrvmax:icrvmax+newni-1,j,1) = z1(:)
 
             call adjustn2 (ni, isplit, ni, xinterim, yinterim, zinterim, &
                            1, newmi, s2, x2, y2, z2, method)
@@ -3989,6 +4195,7 @@
                          new_grid(ibnew+1)%y(newmi,nj,1), &
                          new_grid(ibnew+1)%z(newmi,nj,1))
             end if
+
             new_grid(ibnew+1)%x(:,j,1) = x2(:)
             new_grid(ibnew+1)%y(:,j,1) = y2(:)
             new_grid(ibnew+1)%z(:,j,1) = z2(:)
@@ -4200,5 +4407,219 @@
       deallocate (spoke_aft%x,  spoke_aft%y,  spoke_aft%z)
 
       end subroutine morph_aft_to_umbrella
+
+!     --------------------------------------------------------------------------
+      subroutine blend_forebody (ngen1, xgen1, zgen1, ngen2, xgen2, zgen2, &
+                                 nspokes, xspoke, yspoke, zspoke)
+!     Description:
+!
+!     This was prompted by a spacecraft capsule with an asymmetric forebody.
+!     We assume the three-dimensional surface can be defined by spokes that are
+!     linear combinations of the upper and lower generatrices.  It is fair to
+!     expect equal numbers of defining points with similar distributions.  The
+!     azimuthal angle of each intermediate spoke then defines the weighting.
+!
+!     (Later:) The upper and lower generatrices should be defined at common Xs
+!     for the linear combination idea to work.  This is now ensured here, and
+!     the upper generatrix's ngen1 point count is used for the output spokes.
+!     (It is not viable to use a third point count (say ngen) for the output
+!     because their distribution is all important; it is that of gen1.)
+!
+!     Note that if the nose is not at y = 0, the distances from the nose rather
+!     than the y coordinates are what have to be worked with.
+!
+!     Further assumptions:
+!
+!     o  The two generatrices have a common initial point at the nose.
+!     o  x is streamwise; y is spanwise; z is up.
+!
+!     History:
+!
+!     08/18/2021  D.A.Saunders  Initial implementation, for the Mars Sample
+!                               Return Lander (SRL) configuration V21.
+!     08/19/2021    "     "     Handle a nose not on Ox; require common xs in
+!                               the two partial generatrices. (But see the
+!                               08/29/2021 update.  ngen1 is taken to be the
+!                               point count in the output spokes.)
+!     08/21/2021    "     "     The missing step is to morph each outer spoke
+!                               end to the circle needed to match a symmetric
+!                               aft body.
+!     08/29/2021    "     "     Interpolate the given lower generatrix at the
+!                               abscissas of the upper generatrix here so that
+!                               it doesn't have to be done externally.
+!                               The output spokes have ngen1 points.
+!     09/08/2021    "     "     Ad hoc subroutine slightly adapted as internal
+!                               procedure here.
+!
+!     Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA.
+!     --------------------------------------------------------------------------
+
+      implicit none
+
+!     Arguments:
+
+      integer, intent (in)  :: &
+         ngen1                   ! # points in the upper generatrix and in the
+                                 ! output spokes
+
+      real,    intent (in), dimension (ngen1) :: &
+         xgen1, zgen1            ! Upper generatrix coordinates (y = 0.);
+                                 ! xgen1(:) is used for the output spokes
+
+      integer, intent (in)  :: &
+         ngen2                   ! # points in the lower generatrix, which is
+                                 ! interpolated here to the upper abscissas
+
+      real,    intent (in), dimension (ngen2) :: &
+         xgen2, zgen2            ! lower generatrix coordinates (y = 0.)
+
+      integer, intent (in)  :: &
+         nspokes                 ! Specified azimuthal resolution (uniform
+                                 ! spacing)
+
+      real,    intent (out), dimension (ngen1,nspokes) :: &
+         xspoke, yspoke, zspoke  ! Spoked surface, starboard half, top to bottom
+
+!     Local constants:
+
+      real,          parameter :: one = 1., zero = 0.
+      character (1), parameter :: method = 'B'  ! "Bessel" = loose/not monotonic
+
+!     Local variables:
+
+      integer :: i
+      real    :: angle, dtheta, px, py, pz, p0x, p0y, p0z, qx, qy, qz, &
+                 q0x, q0y, q0z, w, x12, y12, z12, znose
+
+      real, dimension (ngen1) :: tgen2, xblend, yblend, zblend, zinterp2
+      real, dimension (1)     :: xrim, yrim, zrim
+
+!     Procedures:
+
+      external ::  &
+         lcsfit,   &             ! Local cubic spline imposes gen1 Xs on gen2
+         nuline3d, &             ! Morphs a 3-space line given new end points
+         rotate3d                ! Rotates (x,y,z)s about line PQ by some angle
+
+!     Execution:
+
+!     Put gen2 on the same Xs as gen1:
+
+      call lcsfit (ngen2, xgen2, zgen2, .true., method, ngen1, xgen1, &
+                   zinterp2,  zblend)  ! Unusued derivatives
+
+      px = xgen1(1);  qx = px + one  ! Ends of rotation axis through the nose
+      py = zero;      qy = zero
+      pz = zgen1(1);  qz = pz
+
+      p0x = px;       q0x = p0x + one  ! Ends of axis along Ox
+      p0y = zero;     q0y = zero
+      p0z = zero;     q0z = zero
+
+      xspoke(:,1) = xgen1(:)
+      yspoke(:,1) = zero;
+      zspoke(:,1) = zgen1(:);  znose = zgen1(1)
+      tgen2(:)    = (znose + znose) - zinterp2(:) ! Reflect zgen2(:) about znose
+
+      x12 = xgen1(ngen1)  ! 12 o'clock rim pt. forming desired circle for
+      y12 = zero          ! the output rim
+      z12 = zgen1(ngen1)
+
+      dtheta = 180. / real (nspokes-1)
+
+      do i = 2, nspokes - 1
+         angle = -dtheta * real (i-1)  ! RH rule; we want the starboard half
+         w = abs (angle / 180.)
+         xblend(:) = xgen1(:)  ! = xgen2(:) now
+         yblend(:) = zero
+         zblend(:) = znose + (one-w)*(zgen1(:) - znose) + w*(tgen2(:) - znose)
+
+         call rotate3d (ngen1, xblend, yblend, zblend, &  ! Blended spoke is
+                        angle, px, py, pz, qx, qy, qz)    ! rotated about nose
+
+         xrim(1) = x12  ! 12 o'clock rim pt. moves along a circle centered on Ox
+         yrim(1) = y12
+         zrim(1) = z12
+
+         call rotate3d (1, xrim, yrim, zrim, angle, p0x, p0y, p0z, &
+                        q0x, q0y, q0z)
+
+         xspoke(1,i) = px          ! Inner end point is the nose for all spokes
+         yspoke(1,i) = py
+         zspoke(1,i) = pz
+
+         xspoke(ngen1,i) = xrim(1)  ! Outer end pt. of each spoke is on a circle
+         yspoke(ngen1,i) = yrim(1)
+         zspoke(ngen1,i) = zrim(1)
+
+         call nuline3d (1, ngen1, xblend, yblend, zblend, &     ! Morph to new
+                        xspoke(:,i), yspoke(:,i), zspoke(:,i))  ! end point
+
+      end do  ! Next spoke
+
+      xspoke(:,nspokes) = xgen1(:)
+      yspoke(:,nspokes) = zero
+      zspoke(:,nspokes) = zinterp2(:)
+
+      end subroutine blend_forebody
+
+!     --------------------------------------------------------------------------
+      subroutine merge_spokes ()
+!
+!     Description:
+!        Hypgen doesn't handle a multipatch surface for its 3D volume gridding.
+!     Therefore, we merge the forebody and aftbody spoked forms of the surface
+!     as a single-patch full-body spoked surface.  Furthermore, we write it in
+!     unformatted form because that seems to have to match the desired format
+!     of the volume grid in Hypgen.
+!     --------------------------------------------------------------------------
+
+      integer :: j1, j2, j21, j22, jinc, naft, nfore, ngen
+      real    :: d1sq, d2sq
+
+      naft  = numi_aft_body   ! Avoid long lines in the loops
+      nfore = numi_forebody
+      ngen  = numi_generatrix
+
+      spoke_grid%ni = ngen
+      spoke_grid%nj = numj
+      spoke_grid%nk = 1
+
+      allocate (spoke_grid%x(ngen,numj,1), spoke_grid%y(ngen,numj,1), &
+                spoke_grid%z(ngen,numj,1))
+
+!     The spokes meet at the nose and tail where i = 1, but it's uncertain
+!     which way they match in the j direction.  Look for a close match:
+
+      d1sq = distance (spoke_fore%x(nfore,1,1),    spoke_fore%z(nfore,1,1), &
+                       spoke_aft %x(nfore,1,1),    spoke_aft %z(nfore,1,1))
+      d2sq = distance (spoke_fore%x(nfore,1,1),    spoke_fore%z(nfore,1,1), &
+                       spoke_aft %x(nfore,numj,1), spoke_aft %z(nfore,numj,1))
+
+      if (d1sq < d2sq) then
+         j21 = 1;     j22 = numj;  jinc =  1
+      else
+         j21 = numj;  j22 = 1;     jinc = -1
+      end if
+
+      j2 = j21
+      do j1 = 1, numj
+         spoke_grid%x(1:nfore,j1,1)    = spoke_fore%x(:,j1,1)
+         spoke_grid%y(1:nfore,j1,1)    = spoke_fore%y(:,j1,1)
+         spoke_grid%z(1:nfore,j1,1)    = spoke_fore%z(:,j1,1)
+         spoke_grid%x(nfore:ngen,j1,1) = spoke_aft%x(naft:1:-1,j2,1)
+         spoke_grid%y(nfore:ngen,j1,1) = spoke_aft%y(naft:1:-1,j2,1)
+         spoke_grid%z(nfore:ngen,j1,1) = spoke_aft%z(naft:1:-1,j2,1)
+         j2 = j2 + jinc
+      end do
+
+      open  (lunspoke, file='spoked_surface.gu', form='unformatted', &
+             status='unknown')
+      write (lunspoke) 1
+      write (lunspoke) ngen, numj, 1
+      write (lunspoke) spoke_grid%x, spoke_grid%y, spoke_grid%z
+      close (lunspoke)
+
+      end subroutine merge_spokes
 
    end program capsule_grid
