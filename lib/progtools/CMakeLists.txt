@@ -58,6 +58,7 @@ cfdtools_add_library(progtools
   token4.f90
   token_count.f90
   tokens.f
+  transcribe.f90
   upcase.f
   writer.f
 )
