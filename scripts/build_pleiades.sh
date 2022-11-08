@@ -20,22 +20,16 @@ if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
 fi
 
 # Configure the build environment
-case $preset in
-    *intel, deploy-nas)
+case "${preset}" in
+    *intel|deploy-nas)
         module purge
         module add pkgsrc/2021Q2
         module add comp-intel/2020.4.304
-        export FC=ifort
-        export CC=icc
-        export CXX=icpc
         ;;
     *gnu)
         module purge
         module add pkgsrc/2021Q2
         module add gcc/9.3
-        export FC=gfortran
-        export CC=gcc
-        export CXX=g++
         ;;
     *)
         echo "ERROR: No module configuration specifed for preset ${preset}"
@@ -48,10 +42,11 @@ esac
 # If we sourced the script, stop after configuring the env.
 # If we executed the script, proceed with build
 if [[ ${sourced} ]]; then
-    echo "Environment configured for CFDTOOLS build ($toolchain)"
+    echo "Environment configured for CFDTOOLS development (${preset})"
     return
 fi
 
 # Configure/build/install
-cmake ..
-make -j8 install
+cmake --preset="${preset}" -G Ninja
+cmake --build "build-${preset}" --target install -j8
+

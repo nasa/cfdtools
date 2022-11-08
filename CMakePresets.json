@@ -11,6 +11,7 @@
       "inherits": "gnu",
       "displayName": "Sofware Development Config (GNU)",
       "description": "Default config for software development with GNU compilers.",
+      "binaryDir": "build-dev-gnu",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_Fortran_FLAGS_DEBUG": "-g -O0 -Wall -Wextra -Wcharacter-truncation -Wno-maybe-uninitialized -fcheck=all -fbacktrace"
@@ -21,6 +22,7 @@
       "inherits": "intel",
       "displayName": "Sofware Development Config (Intel)",
       "description": "Config for software development with Intel Compilers.",
+      "binaryDir": "build-dev-intel",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_Fortran_FLAGS_DEBUG": "-g -O0 -warn all -check all -traceback"
@@ -31,7 +33,7 @@
       "inherits": "intel",
       "displayName": "NAS Deployment Config",
       "description": "Deploy Intel build to development module in /swbuild/tsa.",
-      "binaryDir": "build_tsa",
+      "binaryDir": "build-deploy-nas",
       "cacheVariables": {
         "CMAKE_INSTALL_DIR": "/swbuild/tsa/apps/cfdtools/develop"
       }
@@ -40,7 +42,7 @@
       "name": "gnu",
       "displayName": "Baseline GNU Compiler Config",
       "description": "Default config for GNU compiliers. See also: cmake/cfdtools_compile_options.cmake",
-      "binaryDir": "build_gnu",
+      "binaryDir": "build-gnu",
       "generator": "Unix Makefiles",
       "cacheVariables": {
         "CMAKE_Fortran_COMPILER": "gfortran",
@@ -53,7 +55,7 @@
       "name": "intel",
       "displayName": "Baseline Intel Compiler Config",
       "description": "Default config for Intel compilier. See also: cmake/cfdtools_compile_options.cmake",
-      "binaryDir": "build_intel",
+      "binaryDir": "build-intel",
       "generator": "Unix Makefiles",
       "cacheVariables": {
         "CMAKE_Fortran_COMPILER": "ifort",
