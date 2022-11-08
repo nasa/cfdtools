@@ -20,16 +20,6 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
         -extend-source 132  # Allows long lines in source files
     )
 
-    # Debug
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        list(APPEND options
-            -check all      # Runtime bounds checking
-            -fpe0           # Abort if get NaN, etc.
-            -traceback      # Emit stacktrace on error
-            -warn all       # Full warning analysis
-        )
-    endif()
-
 
 #-----------------------------------------------------------------------
 # GNU
@@ -52,16 +42,6 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
     check_fortran_compiler_flag("-fallow-argument-mismatch" has_flag)
     if (has_flag)
       list(APPEND options "-fallow-argument-mismatch")
-    endif()
-
-    # Debug
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        list(APPEND options
-            -fcheck=all                       # Runtime bounds checking
-            -ffpe-trap=invalid,zero,overflow  # Abort if NaN, etc.
-            -fbacktrace                       # Emit stacktrace on error
-            -Wall -Wextra                     # Full warning analysis
-        )
     endif()
 
 

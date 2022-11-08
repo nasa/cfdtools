@@ -5,20 +5,13 @@
 #
 # Useage:
 #   cd <dplr_root_directory>
-#   ./scripts/build_pleiades.sh [toolchain [build_dir]]
+#   ./scripts/build_pleiades.sh [preset]
 #
 # Arguments:
-#   toolchain   Toolchain used to build CFDTOOLS: intel, gnu [def: intel]
-#   build_dir   Directory where CFDTOOLS is built [def: build]
-#               Final outputs will be in $build_dir/install
+#   preset      CMake preset used for build: intel, gnu, etc. [def: intel]
 
 # Process arguments
-toolchain="${1:-intel}"
-build_dir_suffix=""
-if [[ "${toolchain}" != "intel" ]]; then
-    build_dir_suffix="_${toolchain}"
-fi
-build_dir="${2:-"build${build_dir_suffix}"}"
+preset="${1:-intel}"
 
 # Remember if script was sourced
 sourced=""
@@ -27,8 +20,8 @@ if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
 fi
 
 # Configure the build environment
-case $toolchain in
-    intel)
+case $preset in
+    *intel, deploy-nas)
         module purge
         module add pkgsrc/2021Q2
         module add comp-intel/2020.4.304
@@ -36,7 +29,7 @@ case $toolchain in
         export CC=icc
         export CXX=icpc
         ;;
-    gnu)
+    *gnu)
         module purge
         module add pkgsrc/2021Q2
         module add gcc/9.3
@@ -45,7 +38,7 @@ case $toolchain in
         export CXX=g++
         ;;
     *)
-        echo "ERROR: Unsupported toolchain (${toolchain})"
+        echo "ERROR: No module configuration specifed for preset ${preset}"
         if [[ ! ${sourced} ]]; then
             exit 1
         fi
@@ -58,23 +51,6 @@ if [[ ${sourced} ]]; then
     echo "Environment configured for CFDTOOLS build ($toolchain)"
     return
 fi
-
-# Stop if any command below fails
-set -e
-
-# Create the build dir
-if [ -d "$build_dir" ]; then
-    echo "Previous build directory ($build_dir) exists! Delete? [y/n]"
-    read response
-    if [ "$response" == "y" ]; then
-        rm -rf "$build_dir"
-    else
-        echo "Aborting"
-        exit 1
-    fi
-fi
-mkdir "$build_dir"
-cd "$build_dir"
 
 # Configure/build/install
 cmake ..

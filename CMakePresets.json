@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 19,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "dev-gnu",
+      "inherits": "gnu",
+      "displayName": "Sofware Development Config (GNU)",
+      "description": "Default config for software development with GNU compilers.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_Fortran_FLAGS_DEBUG": "-g -O0 -Wall -Wextra -Wcharacter-truncation -Wno-maybe-uninitialized -fcheck=all -fbacktrace"
+      }
+    },
+    {
+      "name": "dev-intel",
+      "inherits": "intel",
+      "displayName": "Sofware Development Config (Intel)",
+      "description": "Config for software development with Intel Compilers.",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_Fortran_FLAGS_DEBUG": "-g -O0 -warn all -check all -traceback"
+      }
+    },
+    {
+      "name": "deploy-nas",
+      "inherits": "intel",
+      "displayName": "NAS Deployment Config",
+      "description": "Deploy Intel build to development module in /swbuild/tsa.",
+      "binaryDir": "build_tsa",
+      "cacheVariables": {
+        "CMAKE_INSTALL_DIR": "/swbuild/tsa/apps/cfdtools/develop"
+      }
+    },
+    {
+      "name": "gnu",
+      "displayName": "Baseline GNU Compiler Config",
+      "description": "Default config for GNU compiliers. See also: cmake/cfdtools_compile_options.cmake",
+      "binaryDir": "build_gnu",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_Fortran_COMPILER": "gfortran",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "intel",
+      "displayName": "Baseline Intel Compiler Config",
+      "description": "Default config for Intel compilier. See also: cmake/cfdtools_compile_options.cmake",
+      "binaryDir": "build_intel",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_Fortran_COMPILER": "ifort",
+        "CMAKE_C_COMPILER": "icc",
+        "CMAKE_CXX_COMPILER": "icpc",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ]
+}
+
