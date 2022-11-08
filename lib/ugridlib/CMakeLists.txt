@@ -28,4 +28,5 @@ target_link_libraries(cfdtools_ugridlib
   PRIVATE
     cfdtools_intrinsics
     cfdtools_triangulation_io
+    cfdtools_geomlib
 )

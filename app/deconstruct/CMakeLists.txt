@@ -4,7 +4,6 @@ cfdtools_add_executable(deconstruct
 )
 target_link_libraries(cfdtools_deconstruct
   cfdtools_xyzq_io
-  cfdtools_string_justify
   cfdtools_triangulation_io
   cfdtools_gridlib
   cfdtools_ugridlib

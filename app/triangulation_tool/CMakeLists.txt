@@ -7,4 +7,5 @@ target_link_libraries(cfdtools_triangulation_tool
   cfdtools_progtools
   cfdtools_eigenlib
   cfdtools_geomlib
+  cfdtools_ugridlib
 )

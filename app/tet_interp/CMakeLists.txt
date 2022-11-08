@@ -11,4 +11,5 @@ target_link_libraries(cfdtools_tet_interp
   cfdtools_gridlib
   cfdtools_xyzq_io
   cfdtools_geomlib
+  cfdtools_ugridlib
 )

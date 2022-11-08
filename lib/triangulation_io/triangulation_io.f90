@@ -36,7 +36,7 @@
       integer            :: nnodes                  ! # points or nodes forming such a combined triangulation (or volume)
       integer            :: nelements               ! # triangles|tetra/hexahedra forming the combined surface or volume mesh
       integer, dimension (:,:), pointer :: conn     ! Connectivity for all zones if needed for rapid searching, as for tri_type
-      real,    dimension (:,:), pointer :: xyz      ! Element vertex coordinates for all zones for rapid searching   "   "   " 
+      real,    dimension (:,:), pointer :: xyz      ! Element vertex coordinates for all zones for rapid searching   "   "   "
       real,    dimension (:,:), pointer :: f        ! Vertex-centered function values for all zones  "   "   "   "   "   "   "
       character (80)          :: title              ! Dataset title
       character (32)          :: zone_type          ! Kludge to enable it to be transferred to the (likely only one) zone header
@@ -65,7 +65,7 @@
       real                   :: zmin, zmax          ! z data ranges for this zone
       real                   :: cm(3)               ! Center of mass for this zone
       real                   :: solutiontime        ! Time (or some other useful real number) associated with the zone
-      real                   :: surface_area        ! Total surface area of this zone if it is a triangulation 
+      real                   :: surface_area        ! Total surface area of this zone if it is a triangulation
       real                   :: enclosed_volume     ! Total volume defined by this triangulation zone and header%interior_point
       real                   :: solid_volume        ! Total volume of all elements of this zone of a volume mesh (all tets|hexes)
       logical                :: allocated_conn      ! "if (allocated(zone%conn))" is illegal for a pointer argument;
@@ -152,7 +152,7 @@
 !                            not all of the initial %xyz array remains used.  The nf=0 case needs explicit indexing as for nf/=0.
 !
 !  Author:  David Saunders, ELORET Corporation/NASA Ames Research Center, CA (later with ERC, Inc. and AMA, Inc. at NASA ARC).
-! 
+!
 !  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    use tri_header_structure  ! Defines "tri_header" derived data type for one unstructured multizone dataset
@@ -348,7 +348,7 @@
 !        (Later:  But ZONETYPE belongs in a zone header, not a file header.
 !        Still, a single zone header (common) might act as part of the file header.)
 !        Later still: try to detect CELLCENTERED as well.
- 
+
          header_case = 0
 
          do  ! Until either ZONETYPE or ET is found
@@ -945,7 +945,7 @@
                      nfileheaderlines = nfileheaderlines + 1
 
                      call pack_names ()
-               
+
                   else ! No more variables
 
                      read_a_line = false
@@ -1107,7 +1107,7 @@
 
             case ('D')  ! Data types or DATAPACKING
 
-               if (mark - first == 1) then  ! DT = (....LE ....LE ...LE ) 
+               if (mark - first == 1) then  ! DT = (....LE ....LE ...LE )
 
                   if (buffer(first:mark) == 'DT') then
 
@@ -1189,7 +1189,7 @@
                else
                   valid = false
                   if (mark - first == 1) valid = buffer(first:mark) == 'ET'  ! Element type
-               
+
                   if (valid) then
                      call next_token ()  ! Skip it - can't save it till the right # zones has been allocated
                   else
@@ -1205,7 +1205,7 @@
                   call next_token ()
                   valid = false
                   if (mark - first == 6) then
-                     if (buffer(first:mark) == 'FEBLOCK') then 
+                     if (buffer(first:mark) == 'FEBLOCK') then
                         if (nz == 1) header%datapacking = 1
                         valid = true
                      else if  (buffer(first:mark) == 'FEPOINT') then
@@ -1338,7 +1338,7 @@
 
          if (verbose) then
             write (*, '(a, i6)') ' # zones found:', nz, ' # variables:  ', nvar
-            if (nz == 1) write (*, '(a, i9)') ' # nodes:   ', nnodes(1), ' # elements:', nelements(1) 
+            if (nz == 1) write (*, '(a, i9)') ' # nodes:   ', nnodes(1), ' # elements:', nelements(1)
          end if
 
          end subroutine count_zones
@@ -1956,10 +1956,10 @@
 !     Local variables:
 
       integer                :: i, in, iv, lc, le, ln, nelements, nnodes
-      character (14), static :: form1    = '(a, i*, a, i*)'
-      character (11), static :: form2    = '(***es16.8)'
-      character (5),  static :: form3    = '(*i*)'
-      character (6),  static :: centered = '[4-*] '
+      character (14), save :: form1    = '(a, i*, a, i*)'
+      character (11), save :: form2    = '(***es16.8)'
+      character (5),  save :: form3    = '(*i*)'
+      character (6),  save :: centered = '[4-*] '
 
 !     Execution:
 
@@ -3234,7 +3234,7 @@
 !     Local constants:                               ! see also vol_center_of_mass
 
       character (26), parameter :: routine = ' vol_zone_center_of_mass: '
-      
+
 !     Local variables:
 
       integer :: i1, i2, i3, i4, i5, icell, ios, n
@@ -3418,7 +3418,7 @@
       subroutine cross_product (a, b, c)  ! This should be an F90 intrinsic;  it is private to this module
 
 !     Calculate the cross product c = a x b for vectors in three-space.  The argument description is obvious.
-!   
+!
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !     Arguments:
@@ -3539,7 +3539,7 @@
 !     Execution:
 
       buffer(1:nsline)  = blank  ! 8 fields
-      igpid = 0   
+      igpid = 0
 
       buffer(1:nsfield) = GRID   ! Field 1
       call left_justify (nsfield, igpid, buffer(2*nsfield+1:3*nsfield))  ! Field 3

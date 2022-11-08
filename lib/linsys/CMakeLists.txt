@@ -32,3 +32,8 @@ cfdtools_add_library(linsys
   trid3r.f
   trip.f
 )
+
+target_link_libraries(cfdtools_linsys
+  PRIVATE
+    cfdtools_lapacksubset
+)
