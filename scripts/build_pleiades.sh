@@ -20,6 +20,7 @@ if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
 fi
 
 # Configure the build environment
+source /usr/share/modules/init/bash
 case "${preset}" in
     *intel|deploy-nas)
         module purge
@@ -47,6 +48,6 @@ if [[ ${sourced} ]]; then
 fi
 
 # Configure/build/install
-cmake --preset="${preset}" -G Ninja
+cmake --preset="${preset}" 
 cmake --build "build-${preset}" --target install -j8
 
