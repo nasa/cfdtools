@@ -271,6 +271,7 @@ C = CFD, G = General Numerics, P = Programming Tool
 | **usinterp**                  | C    | Driver for the optimal interpolation package (scattered data interpolation in n dimensions) |
 | **uslos**                     | C    | Merge of LINES_OF_SIGHT & HEMISPHERES_OF_SIGHT for unstructured surfaces |
 | **v2c**                       | C    | Convert grid [+ optional flow]: cell vertices to centers |
+! **wedge**                     ! C    ! Convert a structured 2D grid & optional solution to wedge form for US3D or LAURA
 | **wingsections**              | C    | B-spline sections + chord/thickness data --> B-spline wing |
 | **xdeck**                     | P    | Ancient precursor of TRAIL: remove trailing / leading characters |
 | **xline**                     | P    | Remove lines starting with a target string |
@@ -361,6 +362,7 @@ C = CFD, G = General Numerics, P = Programming Tool
                    and POLAR_INTERP has had an option added to generate spoked
                    body points (but see also CAPSULE_SPOKES, which had been over-
                    looked here as well).
+* **Oct 23 2022**: Added DECONSTRUCT (3D structured grid/flow --> unstructured form).
 * **Nov 07 2018**: Added SLOS (structured grid form of USLOS for lines of sight).
 * **Mar 07 2021**: Release updated CMake build system. Move repository to NASA's
                    public [GitHub](https://www.github.com/nasa/cfdtools). Various
@@ -378,3 +380,4 @@ C = CFD, G = General Numerics, P = Programming Tool
                    and tri_to_quad.  An lapacksubset library has also been added
                    because of changes to lib/optinterp/optimal_interpolation.f90.
                    It is needed by the symmetric eigenvalue routines added to linsys.
+* **Dec 05 2022**: Added WEDGE (2D structured --> 3D wedge grid & optional solution).

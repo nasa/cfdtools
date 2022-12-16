@@ -1,0 +1,31 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+   program wedge
+!
+!  Description:
+!
+!     For a given grid and optional flow solution in Plot2D form (as from the
+!     DPLR2D solver), generate a 3D wedge form of the file(s) as needed by some
+!     other flow solver such as LAURA and US3D.  Input files are prompted for
+!     (no control file), as is the total wedge angle.  (The wedge is symmetric
+!     about the xz plane.)  Any functions are necessarily vertex-centered.
+!     Output file(s) are in Plot3D form.
+!
+!     The initial singular line along Ox may optionally be tweaked as two
+!     separate lines either side of Ox, 2*epsilon apart, via simple y shifts.
+!
+!     Earlier utility DECONSTRUCT by the present author can convert the wedge
+!     file(s) into unstructured form with no repeated cell vertices.  At the
+!     time of writing, Tecplot form with hexahedral cells is the only option,
+!     but that may be supplemented with an HDF5 output option.
+!
+!  History:
+!
+!     11/23/2022  D.A.Saunders  Initial implementation following a conversation
+!                               with Khalil Bensassi.
+!     12/03/2022    "      "    Included an option to avoid the singular line
+!                               along Ox, by simple y shifts.
+!
+!  Author:  David Saunders, AMA, Inc. at NASA Ames Research Center, CA
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
