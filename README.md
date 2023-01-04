@@ -362,7 +362,6 @@ C = CFD, G = General Numerics, P = Programming Tool
                    and POLAR_INTERP has had an option added to generate spoked
                    body points (but see also CAPSULE_SPOKES, which had been over-
                    looked here as well).
-* **Oct 23 2022**: Added DECONSTRUCT (3D structured grid/flow --> unstructured form).
 * **Nov 07 2018**: Added SLOS (structured grid form of USLOS for lines of sight).
 * **Mar 07 2021**: Release updated CMake build system. Move repository to NASA's
                    public [GitHub](https://www.github.com/nasa/cfdtools). Various
@@ -380,4 +379,6 @@ C = CFD, G = General Numerics, P = Programming Tool
                    and tri_to_quad.  An lapacksubset library has also been added
                    because of changes to lib/optinterp/optimal_interpolation.f90.
                    It is needed by the symmetric eigenvalue routines added to linsys.
+* **Oct 23 2022**: Added DECONSTRUCT (3D structured grid/flow --> unstructured form).
 * **Dec 05 2022**: Added WEDGE (2D structured --> 3D wedge grid & optional solution).
+* **Dec 30 2022**: Added 1-D radial basis function interpolation (interplib & SMOOTH).

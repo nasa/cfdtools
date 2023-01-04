@@ -210,6 +210,7 @@ C    QHSFIT   INTERPLIB  Quasi-Hermite spline (reimplementation of IQHSCU).
 C    QINTERP  INTERPLIB  Quadratic interpolation.
 C    QPLDAT   PRMODULES  Writes data, including namelist, to a QPLOTable
 C                        file through entry points QPLCRV, QPLFRM, QPLNXY.
+C    RADIAL_BASIS_1D*    INTERPLIB routines for use of radial basis functions.
 C    RDLIST   PRMODULES  Reads an indefinite number of integers.
 C    RDXYZ2   PRMODULES  Reads X[,Y[,Z]] dataset in SMOOTH-like format.
 C    READER   PRMODULES  Prompting utility (ENTRY points READC, READI, ...).
@@ -368,6 +369,7 @@ C    DAS   11/23/16   Make the comment character # instead of !, for Tecplot
 C                     compatibility.  This required RDXYZ2 variant with COMMENT
 C                     as an argument.  Suppress output of deviations by default.
 C    DAS   07/01/20   Added LEGENDRE option.
+C    DAS   12/29/22   Added RADIAL_BASIS_1D_WEIGHTS & RADIAL_BASIS_1D_EVAL.
 C
 C  AUTHOR:  David Saunders, Sterling Software/NASA Ames, Moffett Field, CA
 C                  Now with AMA, Inc. at NASA ARC.
@@ -393,7 +395,7 @@ C     ----------
       INTEGER, PARAMETER ::
      >   IMODE = 0, IOMIT = 0, LUNDAT = 1, LUNXGR = 2, LUNPLT = 3,
      >   LUNDEV = 4, LUNKBD = 5, LUNCRT = 6, LUNLOG = 7, LUNOUT = 8,
-     >   MXFSFIT = 20, MXLTYP = 6, MXMENU = 23, MXNXK = 28, MXNDEG = 12,
+     >   MXFSFIT = 20, MXLTYP = 6, MXMENU = 24, MXNXK = 28, MXNDEG = 12,
      >   MXLEGENDRE = 20, ! Presumably too-high a degree isn't wise
      >   MXLSFIT1 = 100,  ! Must match hard-coded limit in LSFIT1
      >   MXPTS = 100000, MXPLOT = MXPTS, MXVEC = 10, MXWAG = 20,
@@ -435,9 +437,9 @@ C     ----------
 
       REAL
      >   AE, ARROW, BE, CE, DELTAT, DERIVL, DERIVR, DEVMAX, DIS, ERROR,
-     >   FWHM, RMSDEV, SCR, SM, SSQ, SSQMIN, TBEGIN, TEND, TENSE, TIMEA,
-     >   TIMEB, TIME1, TIME2, TOTALT, TWOPI, XAXIS, XMAX, XMEAN, XMIN,
-     >   YMAX, YMIN, YNNORM, Y1
+     >   FWHM, RMSDEV, SCR, SHAPE, SM, SSQ, SSQMIN, TBEGIN, TEND, TENSE,
+     >   TIMEA, TIMEB, TIME1, TIME2, TOTALT, TWOPI, XAXIS, XMAX, XMEAN,
+     >   XMIN, YMAX, YMIN, YNNORM, Y1
 
       LOGICAL
      >   ADD, ARRHENIUS, AUGMENTED, CLOSED, CYCLIC, DEFAULT, DISTINCT,
@@ -473,6 +475,9 @@ C     -----------
      >   READY,    SECOND,    SELECT,   SHIFTX,    SMOOTHXYZ, TABLE1,
      >   TOGGLE,   TSUBJ,     UGETIO,   USESCALE,  VECFIT,    WAGFIT,
      >   XGRID
+
+      EXTERNAL
+     >   RADIAL_BASIS_1D_WEIGHTS, RADIAL_BASIS_1D_EVAL
 
 C     Storage:
 C     --------
@@ -528,7 +533,8 @@ C     --------
      >' 20:  QINTERP- quadratic interpolation                         ',
      >' 21:  AXBECX - or AEBXPLUSC exponential curve fits (lst. sqrs.)',
      >' 22:  AX^B+C - power law curve fit (least squares)             ',
-     >' 23:  LEGENDRE (linear combination of Legendre polynomials 0:n)'/
+     >' 23:  LEGENDRE (linear combination of Legendre polynomials 0:n)',
+     >' 24:  Radial basis functions (interpolation/no smoothing)      '/
 
 
 C     Execution
@@ -2494,6 +2500,52 @@ CC                END DO
 
                CALL PRCOEF (0, NDEG, LEGENDRE_COEFS, IDATASET, 'COEFS:',
      >                      IOMIT)
+
+            CASE (24)  ! *** Radial basis functions ***
+
+C              Interpolation of smooth data (not noisy data; no smoothing):
+
+               IF (FIRSTSET) THEN
+                  SHAPE = ZERO
+                  DO WHILE (SHAPE <= ZERO)
+                     SHAPE = 3.
+                     CALL READR (LUNCRT,
+     >                           'Shape parameter > 0.; <CR> = 3: ',
+     >                           LUNKBD, SHAPE, DEFAULT, QUIT)
+                     IF (QUIT) GO TO 710
+                  END DO
+                  LEGEND = 'Radial basis functions:  SHAPE = rr.rr'
+                  WRITE (LEGEND (34:38), '(F5.2)') SHAPE
+                  WRITE (LUNLOG, 1100) TRIM (LEGEND)
+
+                  LEASTSQRS = TRUE
+                  CLOSED    = FALSE
+               END IF
+
+               CALL SECOND (TIMEA)
+
+               CALL RADIAL_BASIS_1D_WEIGHTS (NX, X, Y, SHAPE, WGHTS,
+     >                                       IER)
+               IF (IER /= 0) GO TO 860
+
+               IF (PLTCRV) THEN
+CC   >            CALL CSEVAL (NDATA, X, Y, NPLOT, XPLOT, COEFS (1,1),
+CC   >                         COEFS (1,2), COEFS (1,3), YPLOT)
+
+                  CALL RADIAL_BASIS_1D_EVAL (NX, X, WGHTS, SHAPE, NPLOT,
+     >                                       XPLOT, YPLOT)
+               END IF
+
+               IF (PLTABS) THEN
+CC   >            CALL CSEVAL (NDATA, X, Y, NEVAL, XEVAL, COEFS (1,1),
+CC   >                         COEFS (1,2), COEFS (1,3), YEVAL)
+
+                  CALL RADIAL_BASIS_1D_EVAL (NX, X, WGHTS, SHAPE, NEVAL,
+     >                                       XEVAL, YEVAL)
+               END IF
+
+               CALL SECOND (TIMEB)
+
             END SELECT
 
 C:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

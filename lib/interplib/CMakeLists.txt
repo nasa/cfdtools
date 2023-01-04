@@ -49,6 +49,8 @@ cfdtools_add_library(interplib
   quartic2.f90
   quintic.f
   quintic2.f
+  radial_basis_1d_weights.f90
+  radial_basis_1d_eval.f90
   rfft2n.f
   smooth1d.f
   smooth1d_niters.f

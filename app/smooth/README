@@ -247,6 +247,7 @@ HISTORY:
                    compatibility.  This required RDXYZ2 variant with COMMENT
                    as an argument.  Suppress output of deviations by default.
   DAS   07/01/20   Added LEGENDRE option.
+  DAS   12/29/22   Added RADIAL_BASIS_1D_WEIGHTS & RADIAL_BASIS_1D_EVAL.
 
 AUTHOR:  David Saunders, Sterling Software/NASA Ames, Moffett Field, CA
          Now with AMA, Inc. at NASA ARC.

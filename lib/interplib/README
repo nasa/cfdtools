@@ -86,6 +86,8 @@ quartic.f          Coefs. of a quartic defined by (x,y,y') and (x,y,y',y")
 quartic2.f90       Determines & evaluates a quartic defined as for QUARTIC
 quintic.f          Compute coefs. of a quintic between a (x,y,y',y") pair
 quintic2.f         Compute quintic defined by (x,y,y') & (x,y,y',y",y"')
+radial_basis_1d_weights.f90  Implementation of the radial basis function
+radial_basis_1d_eval.f90     interpolation technique described in Wikipedia
 rfft2n.f           Fast Fourier coefs. for a sequence of 2n values, n = 2^m
 smooth1d.f         Explicit in-place smoothing of a vector; end pts. fixed
 smooth1d_niters.f  Variant of SMOOTH1D with a variable number of iterations
