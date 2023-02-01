@@ -29,9 +29,6 @@
 !     Note that the maxima at each index line of each surface patch could be
 !  hard to interpret if the patches were not indexed consistently.
 !
-!     Note that the maxima at each index line of each surface patch could be
-!  hard to interpret if the patches were not indexed consistently.
-!
 !  This Version:
 !
 !     An option has been retrofitted that could be used to locate the stagnation
@@ -52,7 +49,17 @@
 !  than very close to the true forebody stag. point, this option looks for an
 !  x (presumably near that of the max. diameter) beyond which surface points are
 !  ignored in the search.  Enter this x in place of the output dataset line in
-!  the control file, line 3.
+!  the control file, line 3.  [No: enter it on line 4 now; none is an option for
+!  line 3 as well. This x applies to the extrema.dat file only.]]
+!
+!     Ancillary files are also written:  idirection.dat and jdirection.dat
+!  These indicate peaks along each index line for each surface zone.  E.g.,:
+!
+!        Zone  j          fmin imin          fmax imax
+!          1   1  2.584626E+05   19  2.826368E+05   13
+!          1   2  2.581957E+05   19  2.819879E+05   13
+!          1   3  2.574232E+05   19  2.805266E+05   13
+!          :   :   :       :      :   :       :      :
 !
 !  Control:
 !
@@ -60,15 +67,19 @@
 !
 !        blayer.dat       ! Input surface dataset (Tecplot ASCII)
 !        17               ! Function number to treat; 0 => |tauw|
-!        peaks.dat        ! Output Tecplotable file name (or an x if ifun = 0)
+!        peaks.dat        ! Output Tecplotable file name, or none
+!        0.9999           ! x beyond which to ignore surface points
 !
 !     If the function number is not 0, the output file contains (x,y,z,f) for
 !  each surface grid line in the i direction followed by likewise for the j
-!  direction.  No such file is written for the stag. point case, ifun = 0.
+!  direction.  No such file is written if the input file name is 'none'.
 !
 !     File extrema.dat is written to show the global max. and min., except this
-!  written as tauw.dat instead if ifun = 0 to avoid clobbering existing files
+!  is written as tauw.dat instead if ifun = 0 to avoid clobbering existing files
 !  named extrema.dat.
+!
+!     [Later:]  Now, the global min/max file is written as extrema_nnn.dat for
+!  function number nnn < 1000 as a better way to avoid overwriting.
 !
 !  History:
 !
@@ -87,6 +98,11 @@
 !     01/27/2023  "     "     Retrofitted treatment of the stag. point location
 !                             as an option (ifun = 0 on line 2 and xignore on
 !                             line 3 of the control file).  tauw.dat is written.
+!     01/31/2023  "     "     File extrema.dat is now named extrema_n.dat to
+!                             avoid overwriting an output for a different fn. n.
+!                             The xignore input is now entered on line 4 so it
+!                             can apply to all cases.  The output file can be
+!                             suppressed by entering the name as none.
 !
 !  Author:  David Saunders, ELORET/NASA Ames Research Center, Moffett Field, CA
 !           Now with AMA, Inc.  at NASA ARC.
@@ -120,17 +136,17 @@
 
    integer :: &
       i, ib, ibmax, ibmin, ifmax, ifmin, igmax, igmin, ifun, ios, &
-      j, jb, jbmax, jbmin, jfmax, jfmin, jgmax, jgmin, l, nblocks, nbout, &
-      nf, ni, nj, numf
+      j, jb, jbmax, jbmin, jfmax, jfmin, jgmax, jgmin, l, length, &
+      nblocks, nbout, nf, ni, nj, numf
 
    real :: &
       fmax, fmin, gmax, gmin, xignore
 
    logical :: &
-      formatted
+      formatted, ij_line_output
 
    character (132) :: &
-      filename
+      extrema_name, filename
 
 !  Derived data types:
 
@@ -158,16 +174,19 @@
    read  (lunkbd, *, iostat=ios) ifun
    if (ios /= 0) go to 99
 
-   if (ifun > 0) then
-      write (luncrt, '(a)', advance='no') &
-         ' Output surface dataset (*.dat|*.plt): '
-      read  (lunkbd, *, iostat=ios) filename;  l = len_trim (filename)
-   else
-      write (luncrt, '(a)', advance='no') &
-         ' x beyond which to suppress stag. point search: '
-      read  (lunkbd, *, iostat=ios) xignore
-   end if
+   if (ifun > 0) write (luncrt, '(a)', advance='no') &
+      ' Output surface dataset (*.dat|*.plt): '
+   read  (lunkbd, *, iostat=ios) filename;  l = len_trim (filename)
+   ij_line_output = filename(1:l) /= 'none'
+
+   write (luncrt, '(a)', advance='no') &
+      ' x beyond which to suppress surface point search: '
+   read  (lunkbd, *, iostat=ios) xignore
    if (ios /= 0) go to 99
+
+!  It is easier to leave the output file handling intact; just don't write it
+!  if the file name is 'none.
+
    header_out%filename    = filename;  formatted = filename(l-2:l) /= 'plt'
    header_out%formatted   = formatted
    header_out%ndim        = ndim
@@ -247,6 +266,7 @@
       do j = 1, nj
          fmin = huge (fmin);  fmax = -fmin
          do i = 1, ni
+            if (surf_in(ib)%x(i,j,1) > xignore) cycle
             if (surf_in(ib)%q(ifun,i,j,1) < fmin) then
                 fmin  = surf_in(ib)%q(ifun,i,j,1)
                 ifmin = i;  jfmin = j
@@ -286,6 +306,7 @@
       do i = 1, ni
          fmin = huge (fmin);  fmax = -fmin
          do j = 1, nj
+            if (surf_in(ib)%x(i,j,1) > xignore) cycle
             if (surf_in(ib)%q(ifun,i,j,1) < fmin) then
                 fmin  = surf_in(ib)%q(ifun,i,j,1)
                 ifmin = i;  jfmin = j
@@ -308,7 +329,11 @@
 
    end do ! Next block
 
-   open (lunglbl, file='extrema.dat', status='unknown')
+   call numbered_name ('extrema_', ifun, extrema_name, length)
+   extrema_name(length+1:length+4) = '.dat';  length = length + 4
+
+   open (lunglbl, file=extrema_name(1:length), status='unknown')
+
    do l = luncrt, lunglbl, lunglbl - luncrt
       write (l, '(es14.6, 2x, 3es14.6, 3i5, a)') &
          gmin, &
@@ -320,13 +345,15 @@
    end do
    close (lunglbl)
 
-   call Tecplot_write (lunout, header_out, surf_out, ios)
-   if (ios /= 0) go to 99
+   if (ij_line_output) then
+      call Tecplot_write (lunout, header_out, surf_out, ios)
+      if (ios /= 0) go to 99
 
-   if (header_out%formatted) then
-      close (lunout)
-   else
-      ios = TecEnd110 ()
+      if (header_out%formatted) then
+         close (lunout)
+      else
+         ios = TecEnd110 ()
+      end if
    end if
 
    deallocate (header_in%varname, header_out%varname)

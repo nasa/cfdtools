@@ -1,0 +1,27 @@
+Note to BLAYER users:
+
+Ancillary program EXTRACT_BLAYER_DATA automates tabulating selected
+variables from a list of BLAYER outputs for one body point at a time.
+
+Sample control file (where the trailing comments can stay):
+
+1 1                           ! (iblock, i) for a 2-D case
+5 26 6 58 32 7 27 28          ! pw, qconv, Tw, CH, Hedge, Hw, tauwx, tauwy
+MHL-t52.0/Baldwin-Lomax/blayer.Re-theta.dat ! Any number of BLAYER outputs
+MHL-t55.3/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t57.9/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t61.2/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t64.2/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t65.8/Baldwin-Lomax/blayer.Re-theta.dat
+MHL-t70.0/Baldwin-Lomax/blayer.Re-theta.dat
+
+Corresponding output:
+
+  pw (Pa)          qw (W/m^2)       Tw (K)           CH (kg/m^2.s)    ...
+  1.015842438E+04  4.485145706E+06  3.107182014E+03  6.644886509E-02  ...
+  3.740018736E+04  7.853650464E+06  3.574295442E+03  1.203493771E-01  ...
+  9.548843572E+04  1.160357837E+07  3.940674287E+03  1.899228560E-01  ...
+  2.367064900E+05  1.546494660E+07  4.234085869E+03  3.137207389E-01  ...
+  3.591160591E+05  1.251104156E+07  4.015558173E+03  3.819044204E-01  ...
+  3.768805570E+05  9.299941983E+06  3.728572697E+03  3.887879077E-01  ...
+  2.860373898E+05  2.720219644E+06  2.742038501E+03  3.272788944E-01  ...
