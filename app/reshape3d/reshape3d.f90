@@ -82,6 +82,11 @@
 !                                 limit significantly.  Add saving of before and
 !                                 after cell growth rates for this option.
 !
+!     02/04/23   DAS              This is as good a place as any to add a way of
+!                                 calculating arc lengths.  It is written as a
+!                                 fourth column immediately (no further trans-
+!                                 formations).  See also CURVATURE3D.
+!
 !  AUTHORS (Original): David Saunders, Michael Wong,   Sterling Software/ARC, CA
 !          (Later):    David Saunders, ELORET Corp/NASA Ames Research Center, CA
 !                      Now with AMA, Inc. at NASA ARC.
@@ -94,7 +99,7 @@
 
    integer, parameter :: &
       luncrt   = 6, lunkbd = 5, lunin = 7, lunout = 8, &
-      mxmenu   = 24,     &
+      mxmenu   = 25,     &
       ndisplay = 30,     &  ! Don't display huge numbers of data points
       nundo    = 999999, &  ! Allocating an extra 6 x N can be extravagant
       halfm    = (mxmenu + 4) / 2 ! 4 here allows for -2, -1, 0, and mxmenu + 1
@@ -120,7 +125,7 @@
 !  Procedures:
 
    logical :: &
-      alpha
+      alpha, arcs_present
    external &
       alpha  ! Distinguishes numeric text from alphanumeric
 
@@ -153,7 +158,8 @@
       '  21: RIGID_TRANSFORM (new end pts)', &
       '  22: NULINE3D morph  (new end pts)', &
       '  23: CHANGEN: new N; same rel. sp.', &
-      '  24: Done',                          &
+      '  24: Add arc lengths as column 4.',  &
+      '  25: Done',                          &
       '                                   '/ ! Last ' ' eases display
                                              ! of menu as two columns.
 
@@ -212,8 +218,9 @@
       end do
    end if
 
-   first    = .true.
-   datalost = .false.
+   first        = .true.
+   datalost     = .false.
+   arcs_present = .false.
 
 !  :::::::::::::::::::::::::::::::::::::::::::::::::::
 !  Loop over possibly several transformations per run:
@@ -596,7 +603,16 @@
             close (lunout)
             deallocate (arc)
 
-         case (24)  ! Done (may work better than ^D)
+         case (24)  ! Add arc lengths as column 4
+
+            allocate (arc(n))
+
+            call chords3d (n, x, y, z, .false., total, arc)
+
+            arcs_present = .true.
+            go to 800
+
+         case (25)  ! Done (may work better than ^D)
 
             go to 800
 
@@ -625,7 +641,12 @@
         write (lunout, 1003, err=903) n
      end if
 
-     write (lunout, '(3es24.15)', err=903) (x(i), y(i), z(i), i = 1, n)
+     if (arcs_present) then
+        write (lunout, '(4es24.15)', err=903) &
+           (x(i), y(i), z(i), arc(i), i = 1, n)
+     else
+        write (lunout, '(3es24.15)', err=903) (x(i), y(i), z(i), i = 1, n)
+     end if
 
      deallocate (x, y, z)
      if (undo) deallocate (xorig, yorig, zorig, xlast, ylast, zlast)

@@ -80,6 +80,11 @@ HISTORY:
                                limit significantly.  Add saving of before and
                                after cell growth rates for this option.
 
+   02/04/23   DAS              This is as good a place as any to add a way of
+                               calculating arc lengths.  It is written as a
+                               fourth column immediately (no further trans-
+                               formations).  See also CURVATURE3D.
+
 AUTHORS (Original): David Saunders, Michael Wong,   Sterling Software/ARC, CA
         (Later):    David Saunders, ELORET Corp/NASA Ames Research Center, CA
         (Current):  David Saunders, AMA, Inc. at NASA ARC.
