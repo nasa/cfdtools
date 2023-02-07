@@ -83,9 +83,11 @@
 !                                 after cell growth rates for this option.
 !
 !     02/04/23   DAS              This is as good a place as any to add a way of
-!                                 calculating arc lengths.  It is written as a
-!                                 fourth column immediately (no further trans-
-!                                 formations).  See also CURVATURE3D.
+!                                 calculating arc lengths.  They ares written as
+!                                 a fourth column immediately (no further trans-
+!                                 formations).  See also program CURVATURE3D.
+!
+!     02/06/23   DAS              Minor glitches fixed.
 !
 !  AUTHORS (Original): David Saunders, Michael Wong,   Sterling Software/ARC, CA
 !          (Later):    David Saunders, ELORET Corp/NASA Ames Research Center, CA
@@ -118,14 +120,14 @@
    real, allocatable, dimension (:) :: &
       arc, x, y, z, xlast, ylast, zlast, xnew, ynew, znew, xorig, yorig, zorig
    logical :: &
-      cr, datalost, eof, first, header, undo
+      arcs_present, cr, datalost, eof, first, header, undo
    character :: &
       coord*1, dataset*48, menu (-2:mxmenu + 1)*35, method*1, test*2, title*80
 
 !  Procedures:
 
    logical :: &
-      alpha, arcs_present
+      alpha
    external &
       alpha  ! Distinguishes numeric text from alphanumeric
 

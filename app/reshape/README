@@ -60,6 +60,11 @@ HISTORY:
    12/08/21   DAS   Minimal Fortran 90 translation, prompted by a new option
                     to tabulate angles between adjacent points (in turn,
                     prompted by a capsule generatrix issue).
+   02/06/23   DAS   This is as good a place as any to add a way of
+                    calculating arc lengths.  They are written as a third
+                    column immediately (no further transformations).
+                    See also program CURVATURE.
+
 
 AUTHOR:  David Saunders, Sterling Software/NASA Ames, Mt. View, CA.
          Later with ELORET, Inc. and AMA, Inc. at NASA ARC.

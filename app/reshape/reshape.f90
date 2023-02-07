@@ -34,6 +34,7 @@
 !
 !     ALPHA      Distinguishes text and numeric data
 !     CHANGEN2D  Change the number of points proportionally
+!     CHORDS2D   Arc lengths in 2-space
 !     GETLINE    Gets next significant line
 !     OPENER     File opening utility
 !     RDLIST     Gets an indefinite number of integers
@@ -66,13 +67,16 @@
 !     12/08/21   DAS   Minimal Fortran 90 translation, prompted by a new option
 !                      to tabulate angles between adjacent points (in turn,
 !                      prompted by a capsule generatrix issue).
+!     02/06/23   DAS   This is as good a place as any to add a way of
+!                      calculating arc lengths.  They are written as a third
+!                      column immediately (no further transformations).
+!                      See also program CURVATURE.
 !
 !  AUTHOR:  David Saunders, Sterling Software/NASA Ames, Mt. View, CA.
 !           Later with ELORET, Inc. and AMA, Inc. at NASA ARC.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      use trigd
       implicit none
 
 !     Constants:
@@ -82,7 +86,7 @@
          lunkbd = 5,        &
          lunin  = 7,        &
          lunout = 8,        &
-         mxmenu = 14,       &
+         mxmenu = 15,       &
          mxpts  = 200000,   &
          halfm  = (mxmenu + 4) / 2 ! 4 here allows for -2, -1, 0, and mxmenu+1
 
@@ -97,7 +101,7 @@
       real, allocatable, dimension (:) :: &
          arc, xnew, ynew
       logical :: &
-         cr, eof, finis, yestitle
+         arcs_present, cr, eof, finis, yestitle
       character :: &
          dataset*128, menu(-2 : mxmenu + 1)*33, method*1, title*80
 
@@ -128,7 +132,8 @@
          '  11: Scale X & Y the same way',    &
          '  12: Change N; same rel. sp.',     &
          '  13: Display adjacent pt. angles', &
-         '  14: Done',                        &
+         '  14: Add arc lengths as column 3', &
+         '  15: Done',                        &
          '                              '/    ! Last blank eases display
                                               ! of menu as two columns.
 !     Execution:
@@ -184,6 +189,7 @@
          ylast(i) = y(i)
       end do
 
+      arcs_present = .false.
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !     Loop over possibly several transformations per run:
@@ -413,7 +419,16 @@
                write (luncrt, '(i4, 3es16.8)') i, x(i), y(i), angle
             end do
 
-         else if (choice == 14) then  ! Done (works better than ^D)
+         else if (choice == 14) then  ! Add arc lenghts as column 3
+
+            allocate (arc(n))
+
+            call chords2d (n, x, y, .false., total, arc)
+
+            arcs_present = .true.
+            go to 800
+
+         else if (choice == 15) then  ! Done (works better than ^D)
 
             go to 800
 
@@ -445,7 +460,12 @@
          write (lunout, 1003, err=902) n
       end if
 
-      write (lunout, '(2es24.15)', err=902) (x(i), y(i), i = 1, n)
+      if (arcs_present) then
+         write (lunout, '(3es24.15)', err=902) &
+            (x(i), y(i), arc(i), i = 1, n)
+      else
+         write (lunout, '(2es24.15)', err=902) (x(i), y(i), i = 1, n)
+      end if
 
       go to 999
 
