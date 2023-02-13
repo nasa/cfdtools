@@ -88,5 +88,10 @@ HISTORY:
                            suppressed if f' and f" are the main interest.
      "           07/12/89  FSARBE call needs B(0), not B(1) now.
      "           03/13/90  Installed LCSFIT (no 2nd derivatives though).
+     "           03/06/17  Dinesh wanted to try locating maxima and
+                           minima within a very large radiation dataset.
+     "           02/12/23  Minor edits after a cfdtools module version
+                           was found to misbehave.
+
 
 AUTHOR:  David Saunders, NASA Ames/Sterling Software, June/July 1983.
