@@ -1,11 +1,12 @@
 SURFACE_INTERP control file
-m32-a33tsst7-11sp.BL.std.dat    ! Target file name
-2                   ! 1 = list of points; 2 = Tecplot ASCII
+SRL-stat-surf.dat  ! File to interp. in (*.g[u] if Plot3D; *.f[u] assumed)
+2                  ! 1|2|3 = Plot3D|Tecplot structured|Tecplot unstructured
+16-block-221.dat   ! Target file to interpolate to
+2                  ! 1|2|3|4 = Plot3D|Tec struct.|Tec unstruct.|(x,y,z) list
 Subset of functions in output file(s):
-1 2 3
-heating.dat         ! File to be searched (Tecplot ASCII)
-heating.interp.dat  ! Plottable results
-heating.interp.txt  ! Tabulated results (mode 1 only)
-1 1 1               ! Block, i, j for debug output; 0s suppress this
-BLOCK               ! BLOCK | POINT output order
-0.779347  0.        ! X & F to use for x > X
+1 4 7
+SRL.interp.dat     ! Plottable results
+SRL.interp.txt     ! Tabulated results (target mode 4 only)
+T                  ! Interpolation details at initial target point?
+2                  ! 1|2 = BLOCK|POINT order output
+999.      0.       ! X & F to use for x > X
