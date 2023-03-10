@@ -251,6 +251,11 @@
 !                             gradient-based redistribution if specified.  Try
 !                             the defaults of 1 and 1 for the exponent and the
 !                             shape function only to smooth.
+!     02/27/23    "     "     The 500 K minimum T for protecting NEQAIR is no
+!                             longer needed and isn't good for a blackbody BC.
+!     02/28/23    "     "     Brett found that the loop looking for Tmin over
+!                             the whole line was actually just over i = 1 to 1
+!                             after an exchange of %ni and %nk.
 !
 !  Author: David Saunders, ERC Inc./NASA Ames Research Center, Moffett Field/CA
 !          Later with AMA, Inc. at NASA ARC.
@@ -280,6 +285,7 @@
       m_to_cm  = 100.,   &    ! Meters --> cms
       cm_to_cc = 1.e-6,  &    ! Per m^3 --> per cm^3
       Nmin     = 1000.,  &    ! Minimum number density allowed (any species)
+      Tlowbound= 10.,    &    ! Originally 500. to pretect NEQAIR; now unneeded
       Tmin     = 500.         ! For suppressing points outside the shock via Tv
 
    logical, parameter ::   &
@@ -528,6 +534,10 @@
                              input_los(iline)%q, ios)
       else  ! 3D
 
+!        All lines are (1,1,nk), but it is more convenient to treat them as
+!        (nk,1,1).  But resetting %nk to 1 has been the source of an error,
+!        now fixed.:
+
          input_los(iline)%ni = input_los(iline)%nk
          input_los(iline)%nk = 1
          npts = input_los(iline)%ni
@@ -562,7 +572,7 @@
       if (Stardust_case) then
          if (iline_use == 1) then
             Tfree = 1.e+6
-            do i = 1, input_los(iline)%nk
+            do i = 1, input_los(iline)%ni  ! %nk here was a mistake
                Tfree = min (input_los(iline)%q(1,i,1,1), Tfree)
             end do
             write (luncrt, '(a, f7.1)') 'Apparent free-stream T:', Tfree
@@ -666,10 +676,10 @@
 
             do i = 1, npts - is0 + 1
                if (Stardust_case) then  ! Protect NEQAIR differently
-                  input_los(iline)%q(iTv-1:num_T,i,1,1) = max (Tmin, &
+                  input_los(iline)%q(iTv-1:num_T,i,1,1) = max (Tlowbound, &
                   input_los(iline)%q(iTv-1:num_T,i,1,1))
 !                 Guard against high black body Ts in the outflow:
-                  if (input_los(iline)%x(1,1,1) > D) then
+                  if (input_los(iline)%x(1,1,1) > D) then  ! D is 3D by now
                       input_los(iline)%q(1:num_T,1,1,1) = Tfree
                   end if
                   if (input_los(iline)%q(1,i,1,1) > 1.e+10) then

@@ -249,6 +249,11 @@ History:
                            gradient-based redistribution if specified.  Try
                            the defaults of 1 and 1 for the exponent and the
                            shape function only to smooth.
+   02/27/23    "     "     The 500 K minimum T for protecting NEQAIR is no
+                           longer needed and isn't good for a blackbody BC.
+   02/28/23    "     "     Brett found that the loop looking for Tmin over
+                           the whole line was actually just over i = 1 to 1
+                           after an exchange of %ni and %nk.
 
-Author: David Saunders, ERC Inc./NASA Ames Research Center, Moffett Field/CA
-        Later with AMA, Inc. at NASA ARC.
+Author: David Saunders, ERC, Inc. at NASA Ames Research Center, Moffett Field, CA
+             Later with AMA, Inc. at NASA ARC.
