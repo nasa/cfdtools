@@ -16,7 +16,7 @@ C     Results are presented in QPLOTable form.
 C
 C     This version concerns itself with 1st and 2nd derivatives.
 C
-C METHOD:  
+C METHOD:
 C
 C     MAXMIN is basically SMOOTH (which fits curves to data points)
 C     adapted to look at 1st and 2nd derivatives, with an option to
@@ -497,7 +497,7 @@ C              evaluating fitted curves and/or derivatives:
 
 C  *        Apply selected method.
 
-            CALL SECOND (TIME1)
+            CALL CPU_TIME (TIME1)
 
             GO TO (410,420,430,440,450,460,470,480,490,500,510,520,530)
      +         METHOD
@@ -579,7 +579,7 @@ C  *           ICSVKU: Least squares spline with variable knots.
 C              Cannot get here, but...
 
                GO TO 200
-               
+
   440          CONTINUE
 
 C  *           PNFIT/PNDVAL: Polynomial by linear least squares:
@@ -661,7 +661,7 @@ C ***          CALL FSARBU (M, F, F, NFCOF, B(1), IER) works but Fs are lost
                IF (SHOFPP) ION = ION + 1
                IF (SHOFPP) NFPP= NEVAL
 
-               CALL FSARBE (NEVAL, XEVAL, M, X, F, NFCOF, 
+               CALL FSARBE (NEVAL, XEVAL, M, X, F, NFCOF,
      +                      B(0), WORK, ION, FEVAL, FPEVAL, FPPEVAL)
                GO TO 600
 
@@ -688,7 +688,7 @@ C              Compute coefficients appropriate in transformed space:
                IF (SHOFPP) ION = ION + 1
                IF (SHOFPP) NFPP= NEVAL
 
-               CALL FSARBE (NEVAL, XEVAL, M, X, F, NFCOF, 
+               CALL FSARBE (NEVAL, XEVAL, M, X, F, NFCOF,
      +                      B(0), WORK, ION, FEVAL, FPEVAL, FPPEVAL)
                GO TO 600
 
@@ -815,7 +815,7 @@ C  *           LCSFIT: Local cubic spline method (low-storage; monotone option).
 
 C  *        Save the results for this method:
 
-            CALL SECOND (TIME2)
+            CALL CPU_TIME (TIME2)
             CPU = TIME2 - TIME1
             WRITE (LUNCRT, 1007) 'CPU seconds for current method: ',
      +         CPU
