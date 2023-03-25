@@ -33,7 +33,7 @@ if(CFDTOOLS_BUILD_TESTING)
   )
   set_tests_properties(refine_grid_cube2d PROPERTIES
     ENVIRONMENT "PATH=${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}"
-    PASS_REGULAR_EXPRESSION  "The file appears to be two dimensional"
+    PASS_REGULAR_EXPRESSION  "Loading two dimensional grid file"
   )
 
 endif()

@@ -136,7 +136,7 @@
 
    integer :: &
       ib, ios, method_i, method_j, method_k, mi, mj, mk, &
-      nblocks, ndigits, nf, ni, nj, nk, npad, npts, nspaces
+      nblocks, ndigits, nf, ni, nj, nk, npad, npts, nspaces, ndim
 
    real :: &
       ds2_fraction_i, ds2_fraction_j, ds2_fraction_k, scale_i, scale_j, scale_k
@@ -158,45 +158,44 @@
 !  Read the controls from standard input:
 
    call read_controls ()  ! Local procedure below
-
-   if (ios /= 0) go to 99
+   if (ios /= 0) call abort("Failure reading program controls")
 
 !  Check for thinning dimensions by an integer multiple (unnecessary round-off):
 
    call scale_check (scale_i)  ! Local procedure; may set ios /= 0 and
    call scale_check (scale_j)  ! urge use of THIN_GRID/THIN_FLOW
    call scale_check (scale_k)
-
-   if  (ios /= 0) go to 99
+   if  (ios /= 0) call abort("Scale check failed")
 
 !  The files are open.  Read the input grid header and allocate work-space:
 
-   threed = .true.
-   call xyz_header_io (1, luning, formatted_in, nblocks, gridin, ios)
-   if (ios /= 0) then
-      write(*,*) "Retry grid header read assuming 2D Plot3D format."
-      rewind luning
+   call determine_grid_dim("none", luning, formatted_in, ndim, ios)
+   if (ios /= 0) call abort("Unable to determine dimension of the input grid")
+   threed = (ndim == 3)
+
+   if (threed) then
+      write(*,*) "Loading three dimensional grid file."
+      call xyz_header_io (1, luning, formatted_in, nblocks, gridin, ios)
+   else
+      write(*,*) "Loading two dimensional grid file."
       call xy_header_io (1, luning, formatted_in, nblocks, gridin, ios)
-      if (ios /= 0) go to 99
-      write(*,*) "The grid file appears to be two dimensional."
       gridin%nk = 1  ! Not initialized by xy_header_io
-      threed = .false.
    endif
+   if (ios /= 0) call abort("Failure reading grid file header")
 
 !  Read the input function file header, if present, and ensure dimensions match:
 
    if (nf > 0) then
 
-      write(*,*) "Loading solution file"
-      call q_header_io (1, luninf, formatted_in, nblocks, nf, gridin, ios)
-      if (ios /= 0) then
-         write(*,*) "Retry solution header read assuming 2D Plot3D format."
-         rewind luninf
+      if (threed) then
+         write(*,*) "Loading three dimensional solution file"
+         call q_header_io (1, luninf, formatted_in, nblocks, nf, gridin, ios)
+      else
+         write(*,*) "Loading two dimensional solution file"
          call q_header_io_2d (1, luninf, formatted_in, nblocks, nf, gridin, ios)
-         write(*,*) "The solution file appears to be two dimensional."
-         if (ios /= 0) go to 99
          gridin%mk = 1
       end if
+      if (ios /= 0) call abort("Failure reading solution file header")
 
       do ib = 1, nblocks
          if (gridin(ib)%ni /= gridin(ib)%mi) then
@@ -212,11 +211,7 @@
              ios = 1
          end if
       end do
-
-      if (ios /= 0) then
-         write (luncrt, '(a)') 'Function file dimensions must match the grid.'
-         go to 99
-      end if
+      if (ios /= 0) call abort("Function file block dimensions must match the grid.")
 
    end if
 
@@ -235,17 +230,17 @@
 
    if (threed) then
       call xyz_header_io (2, lunoutg, formatted_out, nblocks, gridout, ios)
-      if (ios /= 0) go to 99
+      if (ios /= 0) call abort("Failure writing 3D grid file header")
       if (nf > 0) then
          call q_header_io (2, lunoutf, formatted_out, nblocks, nf, gridout, ios)
-         if (ios /= 0) go to 99
+         if (ios /= 0) call abort("Failure writing 3D solution file header")
       end if
    else
       call xy_header_io (2, lunoutg, formatted_out, nblocks, gridout, ios)
-      if (ios /= 0) go to 99
+      if (ios /= 0) call abort("Failure writing 2D grid file header")
       if (nf > 0) then
          call q_header_io_2d (2, lunoutf, formatted_out, nblocks, nf, gridout, ios)
-         if (ios /= 0) go to 99
+         if (ios /= 0) call abort("Failure writing 2D solution file header")
       end if
    end if
 
@@ -271,9 +266,11 @@
    do ib = 1, nblocks
 
       call xyz_allocate (gridin(ib), ios)
-      if (ios /= 0) go to 99
+      if (ios /= 0) call abort("Failure allocating input block coordinate arrays")
 
-      ni = gridin(ib)%ni;  nj = gridin(ib)%nj;  nk = gridin(ib)%nk
+      ni = gridin(ib)%ni
+      nj = gridin(ib)%nj
+      nk = gridin(ib)%nk
       npts = ni * nj * nk
 
       if (threed) then
@@ -284,28 +281,30 @@
                              gridin(ib)%x, gridin(ib)%y, ios)
          gridin(ib)%z = 0.0d0
       end if
-      if (ios /= 0) go to 99
+      if (ios /= 0) call abort("Failure reading in block coordinates")
 
       call xyz_allocate (gridout(ib), ios)
-      if (ios /= 0) go to 99
+      if (ios /= 0) call abort("Failure allocating output block coordinate arrays")
 
       if (nf > 0) then
 
          call q_allocate (gridin(ib), nf, ios)
-         if (ios /= 0) go to 99
+         if (ios /= 0) call abort("Failure allocating input block solution arrays")
 
          call q_block_io (1, luninf, formatted_in, nf, ni, nj, nk,             &
                           gridin(ib)%q, ios)
-         if (ios /= 0) go to 99
+         if (ios /= 0) call abort("Failure reading in block solution data")
 
          call q_allocate (gridout(ib), nf, ios)
-         if (ios /= 0) go to 99
+         if (ios /= 0) call abort("Failure allocating output block solution arrays")
 
       else  ! Avoid unallocated arguments in the following call
          allocate (gridin(ib)%q(1,1,1,1), gridout(ib)%q(1,1,1,1))
       end if
 
-      mi = gridout(ib)%ni;  mj = gridout(ib)%nj;  mk = gridout(ib)%nk
+      mi = gridout(ib)%ni
+      mj = gridout(ib)%nj
+      mk = gridout(ib)%nk
 
       if (ib < 10) then
          ndigits = 2;  npad = nspaces
@@ -328,8 +327,7 @@
         ni, nj, nk, gridin(ib)%x,  gridin(ib)%y,  gridin(ib)%z,  gridin(ib)%q, &
         mi, mj, mk, gridout(ib)%x, gridout(ib)%y, gridout(ib)%z, gridout(ib)%q,&
         ios)
-
-      if (ios /= 0) go to 99
+      if (ios /= 0) call abort("Failure densifying block")
 
       deallocate (gridin(ib)%x,  gridin(ib)%y,  gridin(ib)%z,  stat=ios)
 
@@ -342,7 +340,7 @@
          call xy_block_io (2, lunoutg, formatted_out, npts, &
                             gridout(ib)%x, gridout(ib)%y, ios)
       end if
-      if (ios /= 0) go to 99
+      if (ios /= 0) call abort("Failure writing block coordinates to file")
 
 !     Warn the user if any cells have negative volumes (local procedure below):
 
@@ -356,7 +354,7 @@
       if (nf > 0) then
          call q_block_io (2, lunoutf, formatted_out, nf, mi, mj, mk,           &
                           gridout(ib)%q, ios)
-         if (ios /= 0) go to 99
+         if (ios /= 0) call abort("Failure writing block solution data")
       end if
 
       deallocate (gridin(ib)%q, gridout(ib)%q)
@@ -373,13 +371,19 @@
       close (lunoutf)
    end if
 
-99 continue
 
 ! *** stop ! Avoid system dependencies.
 
 !  Internal procedures for program refine_grid, in the order they're used:
 
    contains
+
+      subroutine abort(msg)
+      character(*), intent(in) :: msg
+      write(*,*) "ERROR: ", trim(msg)
+      error stop 1
+      end subroutine
+
 
 !     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
