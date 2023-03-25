@@ -174,34 +174,43 @@
    threed = .true.
    call xyz_header_io (1, luning, formatted_in, nblocks, gridin, ios)
    if (ios /= 0) then
-      write(*,*) "Retry header read assuming 2D Plot3D format."
+      write(*,*) "Retry grid header read assuming 2D Plot3D format."
       rewind luning
       call xy_header_io (1, luning, formatted_in, nblocks, gridin, ios)
       if (ios /= 0) go to 99
-   endif
-   if (any(gridin(:)%nk == 0)) then
-      write(*,*) "The file appears to be two dimensional."
-      gridin(:)%nk = 1  ! Not initialized by xy_header_io
+      write(*,*) "The grid file appears to be two dimensional."
+      gridin%nk = 1  ! Not initialized by xy_header_io
       threed = .false.
-   end if
+   endif
 
 !  Read the input function file header, if present, and ensure dimensions match:
 
    if (nf > 0) then
 
-      if (threed) then
-         call q_header_io (1, luninf, formatted_in, nblocks, nf, gridin, ios)
-         if (ios /= 0) go to 99
-      else
+      write(*,*) "Loading solution file"
+      call q_header_io (1, luninf, formatted_in, nblocks, nf, gridin, ios)
+      if (ios /= 0) then
+         write(*,*) "Retry solution header read assuming 2D Plot3D format."
+         rewind luninf
          call q_header_io_2d (1, luninf, formatted_in, nblocks, nf, gridin, ios)
+         write(*,*) "The solution file appears to be two dimensional."
          if (ios /= 0) go to 99
-         gridin(:)%mk = 1
+         gridin%mk = 1
       end if
 
       do ib = 1, nblocks
-         if (gridin(ib)%ni /= gridin(ib)%mi) ios = 1
-         if (gridin(ib)%nj /= gridin(ib)%mj) ios = 1
-         if (gridin(ib)%nk /= gridin(ib)%mk) ios = 1
+         if (gridin(ib)%ni /= gridin(ib)%mi) then
+             write(*,*) "ni mismatch for block ", ib, ": ", gridin(ib)%ni, gridin(ib)%mi
+             ios = 1
+         end if
+         if (gridin(ib)%nj /= gridin(ib)%mj) then
+             write(*,*) "nj mismatch for block ", ib, ": ", gridin(ib)%nj, gridin(ib)%mj
+             ios = 1
+         end if
+         if (gridin(ib)%nk /= gridin(ib)%mk) then
+             write(*,*) "nk mismatch for block ", ib, ": ", gridin(ib)%nk, gridin(ib)%mk
+             ios = 1
+         end if
       end do
 
       if (ios /= 0) then
