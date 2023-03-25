@@ -34,7 +34,9 @@ case "${preset}" in
         ;;
     *)
         echo "ERROR: No module configuration specifed for preset ${preset}"
-        if [[ ! ${sourced} ]]; then
+        if [[ ${sourced} ]]; then
+            return
+        else
             exit 1
         fi
         ;;

@@ -35,7 +35,7 @@
       "description": "Deploy Intel build to development module in /swbuild/tsa.",
       "binaryDir": "build-deploy-nas",
       "cacheVariables": {
-        "CMAKE_INSTALL_DIR": "/swbuild/tsa/apps/cfdtools/develop"
+        "CMAKE_INSTALL_PREFIX": "/swbuild/tsa/apps/cfdtools/develop"
       }
     },
     {
