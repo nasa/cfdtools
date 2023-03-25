@@ -115,7 +115,7 @@ C           ! ELSE ISTAT = 0 - a zero has been found.
 C
 C           END IF
 C
-C 
+C
 C     Notes on the ZEROIN algorithm:
 C
 C       ZEROIN determines a zero X in the given interval (AX, BX) to within
@@ -225,7 +225,7 @@ C        Second call to ZERORC.  We have F(AX) but need F(BX).
          GO TO 99
 
       ELSE IF (NUMFUN .EQ. 1) THEN
- 
+
 C        We now have F at both end points.
 C        These function values must have opposite signs, or at least
 C        one must be nonzero.
@@ -311,6 +311,7 @@ C     Is quadratic interpolation possible?
          S = FB / FA
          P = TWO * XM * S
          Q = ONE - S
+         R = -99999.99
 
       ELSE                ! Inverse quadratic interpolation
 
